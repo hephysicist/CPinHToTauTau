@@ -143,7 +143,11 @@ def getphotons(decay_tau: ak.Array) -> ak.Array :
 
 
 def getgenpizeros(decay_gentau: ak.Array) -> ak.Array :
-    ispizero = lambda col: (np.abs(col.pdgId) == 111) | (np.abs(col.pdgId) == 311) | (np.abs(col.pdgId) == 130) | (np.abs(col.pdgId) == 310)
+    #ispizero = lambda col: (np.abs(col.pdgId) == 111) | (np.abs(col.pdgId) == 311) | (np.abs(col.pdgId) == 130) | (np.abs(col.pdgId) == 310)
+    ispizero = lambda col: ((col.pdgId == 111) 
+                            | (col.pdgId == 311) 
+                            | (col.pdgId == 130) 
+                            | (col.pdgId == 310))
     pizeros_tau = decay_gentau[ispizero(decay_gentau)]
 
     return pizeros_tau
@@ -190,15 +194,12 @@ def reArrangeDecayProducts(
 
     #from IPython import embed; embed()
 
-    return events, {"p4_hcand1"         : p4_hcand1, 
-                    "p4_hcand1_pi"      : p4_hcand1_pi, 
-                    "p4_hcand1_pi0"     : p4_hcand1_pi0, 
-                    "p4_hcand2"         : p4_hcand2, 
-                    "p4_hcand2_pi"      : p4_hcand2_pi, 
-                    "p4_hcand2_pi0"     : p4_hcand2_pi0,
-                    "p4_hcand1AndProds" : hcand1AndProds,
-                    "p4_hcand2AndProds" : hcand2AndProds}
-
+    return events, {"p4h1"       : p4_hcand1, 
+                    "p4h1pi"     : p4_hcand1_pi, 
+                    "p4h1pi0"    : p4_hcand1_pi0, 
+                    "p4h2"       : p4_hcand2, 
+                    "p4h2pi"     : p4_hcand2_pi, 
+                    "p4h2pi0"    : p4_hcand2_pi0}
 
 @producer(
     uses={
@@ -209,6 +210,7 @@ def reArrangeDecayProducts(
     #produces={
     #    "GenTau.decayMode",
     #},
+    mc_only=True,
 )
 def reArrangeGenDecayProducts(
         self: Producer,
@@ -250,12 +252,9 @@ def reArrangeGenDecayProducts(
 
     #from IPython import embed; embed()
 
-    return events, {"p4_gen_hcand1"         : p4_hcand1, 
-                    "p4_gen_hcand1_pi"      : p4_hcand1_pi, 
-                    "p4_gen_hcand1_pi0"     : p4_hcand1_pi0, 
-                    "p4_gen_hcand2"         : p4_hcand2, 
-                    "p4_gen_hcand2_pi"      : p4_hcand2_pi, 
-                    "p4_gen_hcand2_pi0"     : p4_hcand2_pi0,
-                    "p4_gen_hcand1AndProds" : hcand1AndProds,
-                    "p4_gen_hcand2AndProds" : hcand2AndProds}
-
+    return events, {"p4h1"        : p4_hcand1, 
+                    "p4h1pi"      : p4_hcand1_pi, 
+                    "p4h1pi0"     : p4_hcand1_pi0, 
+                    "p4h2"        : p4_hcand2, 
+                    "p4h2pi"      : p4_hcand2_pi, 
+                    "p4h2pi0"     : p4_hcand2_pi0}

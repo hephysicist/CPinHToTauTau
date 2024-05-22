@@ -97,6 +97,8 @@ def tautau_selection(
         **kwargs,
 ) -> tuple[ak.Array, SelectionResult, ak.Array]:
 
+    #from IPython import embed; embed()
+
     # Sorting leps [Tau] by deeptau [descending]
     lep_sort_key       = events.Tau[lep_indices].rawDeepTau2018v2p5VSjet
     lep_sorted_indices = ak.argsort(lep_sort_key, axis=-1, ascending=False)

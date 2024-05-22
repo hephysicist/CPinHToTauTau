@@ -29,6 +29,7 @@ def add_config(
         config_id: Optional[int] = None,
         limit_dataset_files: Optional[int] = None,
 ) -> od.Config:
+    print(f"ADDING CONFIG ---> {config_name} ---> ID: {config_id}")
 
     # get all root processes
     procs = get_root_processes_from_campaign(campaign)
@@ -77,7 +78,10 @@ def add_config(
         # for testing purposes, limit the number of files to 2
         
         for info in dataset.info.values():
-            if limit_dataset_files: info.n_files = min(info.n_files, limit_dataset_files)
+            if limit_dataset_files: 
+                info.n_files = min(info.n_files, limit_dataset_files)
+            else: 
+                info.n_files = min(info.n_files, 1)
 
     # verify that the root process of all datasets is part of any of the registered processes
     verify_config_processes(cfg, warn=True)
@@ -151,19 +155,20 @@ def add_config(
     # https://twiki.cern.ch/twiki/bin/view/CMS/BtagRecommendation106XUL17?rev=15
     cfg.x.btag_working_points = DotDict.wrap(
         {
-            "deepjet": {
-                "loose": 0.0532,
-                "medium": 0.3040,
-                "tight": 0.7476,
-            },
-            "deepcsv": {
-                "loose": 0.1355,
-                "medium": 0.4506,
-                "tight": 0.7738,
-            },
+            2017 : {
+                "deepcsv": { #https://btv-wiki.docs.cern.ch/ScaleFactors/UL2017/
+                    "loose": 0.1355,
+                    "medium": 0.4506,
+                    "tight": 0.7738,
+                },
+                "deepjet": {
+                    "loose": 0.0532,
+                    "medium": 0.3040,
+                    "tight": 0.7476,
+                },
+            },                      
         },
     )
-    
     # names of electron correction sets and working points
     # (used in the muon producer)
     cfg.x.electron_sf_names = ("UL-Electron-ID-SF", f"{year}", "wp80iso")
@@ -174,6 +179,27 @@ def add_config(
     
     # register shifts
     cfg.add_shift(name="nominal", id=0)
+
+    cfg.x.deep_tau = DotDict.wrap({
+        "tagger": "DeepTau2018v2p5",
+        "vs_e"          : "VVLoose",
+        "vs_mu"         : "Tight",
+        "vs_jet"        : "Medium",
+        "vs_e_jet_wps"  : {'VVVLoose'   : 1,
+                           'VVLoose'    : 2,
+                           'VLoose'     : 3,
+                           'Loose'      : 4,
+                           'Medium'     : 5,
+                           'Tight'      : 6,
+                           'VTight'     : 7,
+                           'VVTight'    : 8},
+        "vs_mu_wps"     : {'VLoose' : 1,
+                           'Loose'  : 2,
+                           'Medium' : 3,
+                           'Tight'  : 4}
+        })
+
+
     
     # tune shifts are covered by dedicated, varied datasets, so tag the shift as "disjoint_from_nominal"
     # (this is currently used to decide whether ML evaluations are done on the full shifted dataset)
@@ -201,22 +227,22 @@ def add_config(
     add_shift_aliases(cfg, "mu", {"muon_weight": "muon_weight_{direction}"})
     
     # external files
-    json_mirror = "/afs/cern.ch/user/m/mrieger/public/mirrors/jsonpog-integration-849c6a6e"
-    json_local = "/afs/cern.ch/work/g/gsaha/public/TEMP/jsonpog-integration"
+    import os
+    external_path = os.path.join(os.environ.get('HTTCP_BASE'), "httcp/data/corrections")
     cfg.x.external_files = DotDict.wrap({
         # lumi files
         "lumi": {
-            "golden": (f"{json_local}/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt", "v1"),  # noqa
-            "normtag": (f"{json_local}/normtag_PHYSICS.json", "v1"),
+            "golden": (f"{external_path}/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt", "v1"),  # noqa
+            "normtag": (f"{external_path}/normtag_PHYSICS.json", "v1"),
         },
-
-        # electron scale factor 
-        "electron_sf": (f"{json_local}/POG/EGM/{year}_UL/electron.json.gz", "v1"),
-        
-        # muon scale factors
-        "muon_sf": (f"{json_local}/POG/MUO/{year}_UL/muon_Z.json.gz", "v1"),
+        "pileup":{
+            "data" : f"{external_path}/Data_PileUp_2022_preEE.root", #TODO: make a link to the common correction repo
+            "mc"   : f"{external_path}/MC_PileUp_2022.root" #TODO: make a link to the common correction repo
+        },
+        "muon_correction" : f"{external_path}/muon_SFs_2022_preEE.root", #TODO: make a link to the common correction repo
+        "tau_correction"  : f"{external_path}/tau_DeepTau2018v2p5_2022_preEE.json.gz", #TODO: make a link to the common correction repo
     })
-    
+
     # target file size after MergeReducedEvents in MB
     cfg.x.reduced_file_size = 512.0
     
@@ -227,10 +253,11 @@ def add_config(
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)
     cfg.x.event_weights = DotDict({
-        "normalization_weight": [],
-        #"muon_weight": get_shifts("mu"),
+        "normalization_weight"  : [],
+        "pu_weight"             : [],
+        "muon_weight"           : [],
+        "tau_id_sf"             : [],
     })
-    
     # versions per task family, either referring to strings or to callables receving the invoking
     # task instance and parameters to be passed to the task family
     cfg.x.versions = {
@@ -266,6 +293,7 @@ def add_config(
     
     # add met filters
     from httcp.config.met_filters import add_met_filters
+
     add_met_filters(cfg)
     
     cfg.x.get_dataset_lfns = get_dataset_lfns

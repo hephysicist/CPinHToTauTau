@@ -90,10 +90,10 @@ def get_sorted_pair(
     uses={
         # Electron
         "Electron.pt", "Electron.eta", "Electron.phi", "Electron.mass",
-        "Electron.charge", "Electron.pfRelIso03_all",
+        "Electron.charge", "Electron.pfRelIso03_all", "Electron.rawIdx",
         # Tau
         "Tau.pt", "Tau.eta", "Tau.phi", "Tau.mass",
-        "Tau.charge", "Tau.rawDeepTau2018v2p5VSjet",
+        "Tau.charge", "Tau.rawDeepTau2018v2p5VSjet", "Tau.rawIdx",
         # MET
         "MET.pt", "MET.phi",
     },

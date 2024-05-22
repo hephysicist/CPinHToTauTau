@@ -17,45 +17,64 @@ def keep_columns(cfg: od.Config) -> None:
             # general event info
             "run", "luminosityBlock", "event",
             "PV.npvs","Pileup.nTrueInt","Pileup.nPU","genWeight", "LHEWeight.originalXWGTUP",
-        } | {f"PuppiMET.{var}" for var in [
+        } | {
+            f"PuppiMET.{var}" for var in [
                 "pt", "phi", "significance",
                 "covXX", "covXY", "covYY",
-                ]     
-        } | {f"MET.{var}" for var in [
+            ]
+        } | {
+            f"MET.{var}" for var in [
                 "pt", "phi", "significance",
                 "covXX", "covXY", "covYY",
-                ]     
-        } | {f"Jet.{var}" for var in [
+            ]     
+        } | {
+            f"Jet.{var}" for var in [
                 "pt", "eta", "phi", "mass", 
                 "btagDeepFlavB", "hadronFlavour"
-                ] 
-        } | {f"Tau.{var}" for var in [
+            ] 
+        } | {
+            f"Tau.{var}" for var in [
                 "pt","eta","phi","mass","dxy","dz", "charge", 
                 "rawDeepTau2018v2p5VSjet","idDeepTau2018v2p5VSjet", "idDeepTau2018v2p5VSe", "idDeepTau2018v2p5VSmu", 
                 "decayMode", "decayModePNet", "genPartFlav", "rawIdx",
                 "pt_no_tes", "mass_no_tes"
-                ] 
-        } | {f"Muon.{var}" for var in [
+            ] 
+        } | {
+            f"Muon.{var}" for var in [
                 "pt","eta","phi","mass","dxy","dz", "charge",
 		"decayMode", "pfRelIso04_all","mT", "rawIdx"
-                ] 
-        } | {f"Electron.{var}" for var in [
+            ] 
+        } | {
+            f"Electron.{var}" for var in [
                 "pt","eta","phi","mass","dxy","dz", "charge", 
                 "decayMode", "pfRelIso03_all", "mT", "rawIdx"
-                ] 
-        } | {f"{var}_triggerd" for var in [ #Trigger variables to have a track of a particular trigger fired
-            "single_electron", "cross_electron",
-            "single_muon", "cross_muon",
-            "cross_tau",
+            ] 
+        } | {
+            f"{var}_triggerd" for var in [ #Trigger variables to have a track of a particular trigger fired
+                "single_electron", "cross_electron",
+                "single_muon", "cross_muon",
+                "cross_tau",
             ]
-        } | {f"TrigObj.{var}" for var in [
-            "id", "pt", "eta", "phi", "filterBits",
+        } | {
+            f"matched_triggerID_{var}" for var in [
+                "e", "mu", "tau",
             ]
-        } | {f"hcand.{var}" for var in [
-            "pt","eta","phi","mass", "charge", 
-             "decayMode", "rawIdx"
+        } | {
+            f"TrigObj.{var}" for var in [
+                "id", "pt", "eta", "phi", "filterBits",
             ]
-        } | {"GenTau.*", "GenTauProd.*",
+        } | {
+            f"hcand.{var}" for var in [
+                "pt","eta","phi","mass", "charge", 
+                "decayMode", "rawIdx"
+            ]
+        } | {
+            "GenTau.*", "GenTauProd.*",
+        } | {
+            f"hcandprod.{var}" for var in [
+                "pt", "eta", "phi", "mass", "charge",
+                "pdgId", "tauIdx",
+            ]
         } | {ColumnCollection.ALL_FROM_SELECTOR},
         "cf.MergeSelectionMasks": {
             "normalization_weight", 
@@ -296,11 +315,32 @@ def add_hcand_features(cfg: od.Config) -> None:
         x_title=r"$\Delta R(l,l)$",
     )
     cfg.add_variable(
-        name="phicp_NP",
-        expression="phicp_NP",
+        name="PhiCP_PVPV",
+        expression="PhiCP_PVPV",
         null_value=EMPTY_FLOAT,
-        binning=(10, 0, 6.4),
-        x_title=r"$PhiCP_NP$",
+        binning=(16, 0, 6.4),
+        x_title=r"$\Phi_{CP}^{PV-PV}$ (rad)",
+    )
+    cfg.add_variable(
+        name="PhiCPGen_PVPV",
+        expression="PhiCPGen_PVPV",
+        null_value=EMPTY_FLOAT,
+        binning=(16, 0, 6.4),
+        x_title=r"$\Phi_{CP}^{PV-PV}$ (rad)",
+    )
+    cfg.add_variable(
+        name="PhiCP_DPDP",
+        expression="PhiCP_DPDP",
+        null_value=EMPTY_FLOAT,
+        binning=(16, 0, 6.4),
+        x_title=r"$\Phi_{CP}^{DP-DP}$ (rad)",
+    )
+    cfg.add_variable(
+        name="PhiCPGen_DPDP",
+        expression="PhiCPGen_DPDP",
+        null_value=EMPTY_FLOAT,
+        binning=(16, 0, 6.4),
+        x_title=r"$\Phi_{CP}^{DP-DP}$ (rad)",
     )
 
 def add_test_variables(cfg: od.Config) -> None:

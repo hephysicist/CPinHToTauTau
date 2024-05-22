@@ -73,20 +73,28 @@ def get_dataset_lfns(
 
 def getGenTauDecayMode(prod: ak.Array):
     pids = prod.pdgId
+
     is_ele  = np.abs(pids) == 11
     is_muon = np.abs(pids) == 13
     is_charged = ((np.abs(pids) == 211) | (np.abs(pids) == 321))
     is_neutral = ((pids == 111) | (pids == 311) | (pids == 130) | (pids == 310))
 
     edecay = ak.sum(is_ele,  axis=-1) > 0
-    mdecay = ak.sum(is_muon, axis=-1) > 0 
+    mdecay = ak.sum(is_muon, axis=-1) > 0
+    hdecay = (ak.sum(is_charged, axis=-1) > 0) | (ak.sum(is_neutral, axis=-1) >= 0)
+
     Nc = ak.sum(is_charged, axis=-1)
     Np = ak.sum(is_neutral, axis=-1)
-    is_hadron = ((Nc >=0) | (Np >=0))
-    ones = ak.ones_like(prod.pdgId[:,:,:1])
-    dm = ak.where(edecay, -1*ones, 
-                  ak.where(mdecay, -2*ones, 
-                           ak.where(is_hadron, (5 * (Nc - 1) + Np), -9*ones)))
+
+    dm = ak.where(edecay, 
+                  -1, 
+                  ak.where(mdecay, 
+                           -2, 
+                           ak.where(hdecay, 
+                                    (5 * (Nc - 1) + Np),
+                                    -9)
+                       )
+              )
 
     return dm
 

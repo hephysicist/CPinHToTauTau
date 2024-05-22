@@ -80,15 +80,14 @@ has_one_pion    = lambda prods : (ak.sum(is_pion(prods),   axis = 1) == 1)[:,Non
 has_three_pions = lambda prods : (ak.sum(is_pion(prods),   axis = 1) == 3)[:,None]
 has_photons     = lambda prods : (ak.sum(is_photon(prods), axis = 1) >  0)[:,None]
 has_no_photons  = lambda prods : (ak.sum(is_photon(prods), axis = 1) == 0)[:,None]
+
 @selector(
     uses={
         "channel_id", "TauProd.*",
     },
     produces={
-        "hcand.pt", "hcand.eta", "hcand.phi", "hcand.mass", "hcand.charge", "hcand.rawIdx",
-        "hcand.decayMode",
-        "hcandprod.pt", "hcandprod.eta", "hcandprod.phi", "hcandprod.mass", 
-        "hcandprod.charge", "hcandprod.pdgId", "hcandprod.tauIdx",
+        "hcand.pt", "hcand.eta", "hcand.phi", "hcand.mass", "hcand.charge", "hcand.rawIdx", "hcand.decayMode",
+        "hcandprod.pt", "hcandprod.eta", "hcandprod.phi", "hcandprod.mass", "hcandprod.charge", "hcandprod.pdgId", "hcandprod.tauIdx",
     },
     exposed=False,
 )
@@ -121,7 +120,7 @@ def higgscandprod(
 
     dummy = (events.event >= 0)[:,None]
     hcand1_mask = ak.where(hcand1.decayMode == 0,
-                           has_one_pion(hcand1prods),
+                           (has_one_pion(hcand1prods) & has_no_photons(hcand1prods)),
                            ak.where(((hcand1.decayMode == 1) | (hcand1.decayMode == 2)),
                                     (has_one_pion(hcand1prods) & has_photons(hcand1prods)),
                                     ak.where(hcand1.decayMode == 10,
@@ -133,7 +132,7 @@ def higgscandprod(
                                 )
                        )
     hcand2_mask = ak.where(hcand2.decayMode == 0,
-                           has_one_pion(hcand2prods),
+                           (has_one_pion(hcand2prods) & has_no_photons(hcand2prods)),
                            ak.where(((hcand2.decayMode == 1) | (hcand2.decayMode == 2)),
                                     (has_one_pion(hcand2prods) & has_photons(hcand2prods)),
                                     ak.where(hcand2.decayMode == 10,
@@ -165,7 +164,6 @@ def higgscandprod(
     #for i in range(500): 
     #    print(f"ch : {events.channel_id[i]}\t{hcand1.decayMode[i]}\t{hcand2.decayMode[i]}\t{hcand1_mask[i]}\t{hcand2_mask[i]}\t{hcand1prods.pdgId[i]}\t{hcand2prods.pdgId[i]}")
 
-    #from IPython import embed; embed()
 
     return events, SelectionResult(
         steps={

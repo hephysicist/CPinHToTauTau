@@ -124,9 +124,10 @@ def muon_weight_setup(
     self.muon_sf = lambda self, pt, eta: self.evaluator['sf_trig'](pt,eta) * self.evaluator['sf_id'](pt,eta) * self.evaluator['sf_iso'](pt,eta)
 
 @producer(
-    uses={f"Tau.{var}" for var in [
-                "pt","eta","decayMode", "genPartFlav"
-                ] 
+    uses={
+        f"Tau.{var}" for var in [
+            "pt","eta","decayMode", "genPartFlav"
+        ] 
     },
     produces={
         "tau_id_sf"
@@ -183,7 +184,7 @@ def tau_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
                                                          "dm")
     
     #Calculate tau ID scale factors for electron fakes
-    
+    #from IPython import embed; embed()
     e_mask = ((match == tau_part_flav["prompt_e"]) | (match == tau_part_flav["tau->e"]))
     
     sf_nom[e_mask] = self.id_vs_e_corrector.evaluate(abseta[e_mask],
@@ -193,6 +194,7 @@ def tau_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
                                                      syst)
     
     #Calculate tau ID scale factors for muon fakes
+    #from IPython import embed; embed()
     mu_mask = ((match == tau_part_flav["prompt_mu"]) | (match == tau_part_flav["tau->mu"]))
     sf_nom[mu_mask] = self.id_vs_mu_corrector.evaluate(abseta[mu_mask],
                                                       match[mu_mask],
@@ -207,7 +209,7 @@ def tau_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     If event has more than 1 tau
     '''
     sf_flat = ak.prod(sf_shaped, axis=1)
-    from IPython import embed; embed()
+    #from IPython import embed; embed()
     
     events = set_ak_column(events, "tau_id_sf", sf_flat, value_type=np.float32)
     

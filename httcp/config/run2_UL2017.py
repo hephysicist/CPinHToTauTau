@@ -110,6 +110,7 @@ def add_run2_UL2017 (ana: od.Analysis,
         # "st_tbar_wplus_to_lnu2q",
         # "st_tbar_wplus_to_2l2nu",
         # "signal"
+        "h_ggf_tautau"
         ]
     
     for dataset_name in dataset_names:
@@ -125,8 +126,10 @@ def add_run2_UL2017 (ana: od.Analysis,
     verify_config_processes(cfg, warn=True)
 
   
-    from httcp.config.triggers import add_triggers_run2_UL2017
-    add_triggers_run2_UL2017(cfg)
+    #from httcp.config.triggers import add_triggers_run2_UL2017
+    #add_triggers_run2_UL2017(cfg)
+    from httcp.config.triggers import add_triggers_2017
+    add_triggers_2017(cfg)
     
     from httcp.config.met_filters import add_met_filters
     add_met_filters(cfg)
@@ -228,19 +231,20 @@ def add_run2_UL2017 (ana: od.Analysis,
             },                      
         },
     )
-    
+    import os
+    external_path = os.path.join(os.environ.get('HTTCP_BASE'), "httcp/data/corrections")
     cfg.x.external_files = DotDict.wrap({
         # lumi files
         "lumi": {
-            "golden": ("/eos/user/c/cmsdqm/www/CAF/certification/Collisions17/13TeV/Legacy_2017/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt", "v1"),  # noqa
-            "normtag": ("/afs/cern.ch/user/l/lumipro/public/Normtags/normtag_PHYSICS.json", "v1"),
+            "golden": (f"{external_path}/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt", "v1"),  # noqa
+            "normtag": (f"{external_path}/normtag_PHYSICS.json", "v1"),
         },
         "pileup":{
-            "data" : "/afs/cern.ch/user/s/stzakhar/work/CPinHToTauTau/httcp/data/corrections/Data_PileUp_2022_preEE.root", #TODO: make a link to the common correction repo
-            "mc"   : "/afs/cern.ch/user/s/stzakhar/work/CPinHToTauTau/httcp/data/corrections/MC_PileUp_2022.root" #TODO: make a link to the common correction repo
+            "data" : f"{external_path}/Data_PileUp_2022_preEE.root", #TODO: make a link to the common correction repo
+            "mc"   : f"{external_path}/MC_PileUp_2022.root" #TODO: make a link to the common correction repo
         },
-        "muon_correction" : "/afs/cern.ch/user/s/stzakhar/work/CPinHToTauTau/httcp/data/corrections/muon_SFs_2022_preEE.root", #TODO: make a link to the common correction repo
-        "tau_correction"  : "/afs/cern.ch/user/s/stzakhar/work/CPinHToTauTau/httcp/data/corrections/tau_DeepTau2018v2p5_2022_preEE.json.gz" #TODO: make a link to the common correction repo
+        "muon_correction" : f"{external_path}/muon_SFs_2022_preEE.root", #TODO: make a link to the common correction repo
+        "tau_correction"  : f"{external_path}/tau_DeepTau2018v2p5_2022_preEE.json.gz", #TODO: make a link to the common correction repo
     })
 
     # target file size after MergeReducedEvents in MB
