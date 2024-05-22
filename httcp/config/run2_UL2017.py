@@ -293,7 +293,7 @@ def add_run2_UL2017 (ana: od.Analysis,
                 basepath = "" 
             lfn_base = law.wlcg.WLCGDirectoryTarget(
                 f"{basepath}{dataset_key}",
-                fs="wlcg_fs_eoscms_redirector",
+                fs="local",
             )
             print(f"lfn basedir:{lfn_base}")  
             # loop though files and interpret paths as lfns
@@ -306,7 +306,7 @@ def add_run2_UL2017 (ana: od.Analysis,
         # define a custom sandbox
         cfg.x.get_dataset_lfns_sandbox = dev_sandbox("bash::$CF_BASE/sandboxes/cf.sh")
         # define custom remote fs's to look at
-        cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: "wlcg_fs_eoscms_redirector"
+        cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: "local"
         
     # add categories using the "add_category" tool which adds auto-generated ids
     from httcp.config.categories import add_categories

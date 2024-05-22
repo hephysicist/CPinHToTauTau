@@ -32,6 +32,8 @@ from httcp.selection.match_trigobj import match_trigobj
 from httcp.selection.lepton_veto import *
 from httcp.selection.higgscand import higgscand, higgscandprod
 
+from httcp.production.dilepton_features import rel_charge 
+from columnflow.production.categories import category_ids
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -114,7 +116,9 @@ def custom_increment_stats(
         custom_increment_stats,
         higgscand,
         gentau_selection,
-        higgscandprod,        
+        higgscandprod,   
+        rel_charge,
+        category_ids     
     },
     produces={
         # selectors / producers whose newly created columns should be kept
@@ -134,6 +138,8 @@ def custom_increment_stats(
         match_trigobj,
         higgscandprod,
         gentau_selection,
+        rel_charge,
+        category_ids
     },
     exposed=True,
 )
@@ -194,9 +200,8 @@ def main(
 
     # check if there are at least two leptons with at least one tau [before trigger obj matching]
     _lepton_indices = ak.concatenate([good_muon_indices, good_ele_indices, good_tau_indices], axis=1)
-    results.steps["at_least_two_leptons_[PreTrigObjMatching]"] = ((ak.num(_lepton_indices, axis=1) >= 2)
-                                                                  & (ak.num(good_tau_indices, axis=1) >= 1))
-
+    lep_pair_pre_trig_match  = ((ak.num(_lepton_indices, axis=1) >= 2) & (ak.num(good_tau_indices, axis=1) >= 1))
+    
     # trigger obj matching
     # INFO: The end bool is the switch to make it on or off
     events, good_ele_indices, good_muon_indices, good_tau_indices = self[match_trigobj](events,
@@ -208,9 +213,14 @@ def main(
 
     # check if there are at least two leptons with at least one tau [after trigger obj matching]
     _lepton_indices = ak.concatenate([good_muon_indices, good_ele_indices, good_tau_indices], axis=1)
-    results.steps["At least two leptons [PostTrigObjMatching]"] = ((ak.num(_lepton_indices, axis=1) >= 2)
-                                                                   & (ak.num(good_tau_indices, axis=1) >= 1))
-
+    lep_pair_post_trig_match = ((ak.num(_lepton_indices, axis=1) >= 2) & (ak.num(good_tau_indices, axis=1) >= 1))
+    lep_pair = SelectionResult(
+        steps = {
+            "has_lep_pair_b4_trigmatch"    : lep_pair_pre_trig_match,
+            "has_lep_pair_after_trigmatch" : lep_pair_post_trig_match,
+        }
+    )
+    results += lep_pair
     # double lepton veto
     events, extra_double_lepton_veto_results = self[double_lepton_veto](events,
                                                                         dlveto_ele_indices,
@@ -299,6 +309,9 @@ def main(
     # add the mc weight
     if self.dataset_inst.is_mc:
         events = self[mc_weight](events, **kwargs)
+    
+    events = self[rel_charge](events, **kwargs)
+    events = self[category_ids](events, **kwargs) 
 
 
     # increment stats
@@ -326,20 +339,18 @@ def main(
                 "mask_fn": (lambda v: events.channel_id == v),
             },
         }
-    events, results = self[increment_stats](
-        events,
-        results,
-        stats,
-        weight_map=weight_map,
-        group_map=group_map,
-        **kwargs,
-    )
-    """
+    # events, results = self[increment_stats](
+    #     events,
+    #     results,
+    #     stats,
+    #     weight_map=weight_map,
+    #     group_map=group_map,
+    #     **kwargs,
+    # )
+    
     events, results = self[custom_increment_stats]( 
         events,
         results,
         stats,
     )
-    """
-
     return events, results

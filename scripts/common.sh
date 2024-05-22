@@ -5,15 +5,27 @@ set_common_vars() {
 version="test"
 case $1 in
     "run2" )
-        config=run2_UL2018_nano_tau_v10_limited
+        config="run2_UL2018_nano_tau_v10_limited"
         datasets='data_ul2018_a_single_mu,data_ul2018_b_single_mu,'`
         `'data_ul2018_c_single_mu,data_ul2018_d_single_mu'
         processes="data"
     ;;
-    "run2_ul17_test" )
-        config=run2_UL2017_nano_tau_v10_limited
-        datasets='data_mu_f,wj_incl,dy_incl'
+    "run2_ul17_lim" )
+        version="test"
+        config="run2_UL2017_nano_tau_v10_limited"
+        datasets='data_mu_f' #,wj_incl,dy_incl'
+        processes='data_mu' #,wj,dy_lep,"
+    ;;
+    "run2_ul17" )
+        config="run2_UL2017_nano_tau_v10"
+        datasets='data_mu_b,data_mu_c,data_mu_d,data_mu_e,data_mu_f,wj_incl,dy_incl'
         processes="data_mu,wj,dy_lep,"
+    ;;
+
+    "run2_ul17_test" )
+        config="run2_UL2017_nano_tau_v10"
+        datasets='data_mu_e'
+        processes="data_mu"
     ;;
     "run3lim")
         config="run3_2022_preEE_nano_tau_v12_limited"

@@ -345,7 +345,7 @@ def jet_selection(
         #"jet_id"                  : events.Jet.jetId == 0b110,  # Jet ID flag: bit2 is tight, bit3 is tightLepVeto 
     }
     
-    if is_run2: good_selections["jet_puId"] = ((events.Jet.pt >= 50.0) | (events.Jet.puId)) #For the Run2 there was
+    #if is_run2: good_selections["jet_puId"] = ((events.Jet.pt >= 50.0) | (events.Jet.puId)) #For the Run2 there was
     
     # b-tagged jets, tight working point
     
@@ -440,7 +440,6 @@ def gentau_selection(
 
     gentau_indices = genpart_indices[good_gen_mask]
     
-    #from IPython import embed; embed()
 
     gentaus = ak.with_name(events.GenPart[gentau_indices], "PtEtaPhiMLorentzVector")
     hcands  = ak.with_name(events.hcand, "PtEtaPhiMLorentzVector")
@@ -450,8 +449,6 @@ def gentau_selection(
     if match:
         matched_gentaus = hcands.nearest(gentaus, threshold=0.5)
 
-    #from IPython import embed; embed()
-    #1/0
 
     is_none = ak.sum(ak.is_none(matched_gentaus, axis=1), axis=1) > 0
     matched_gentaus = ak.where(is_none, gentaus[:,:0], matched_gentaus)
@@ -479,10 +476,6 @@ def gentau_selection(
 
     mask_genmatchedtaus      = mask_genmatchedtaus_1 & mask_genmatchedtaus_2
     
-    #from IPython import embed; embed()
-    #1/0
-    #events = set_ak_column(events, "GenTau", matched_gentaus)
-    #events = set_ak_column(events, "GenTau.decayMode", gentaus_dm)
 
     dummy_decay_gentaus = decay_gentaus[:,:0][:,None]
     decay_1             = decay_gentaus[:,:1]
@@ -491,9 +484,6 @@ def gentau_selection(
     decay_2             = ak.where(ak.num(decay_2, axis=1) > 0, decay_2, dummy_decay_gentaus)
     decay_gentaus       = ak.concatenate([decay_1, decay_2], axis=1)
     
-    #from IPython import embed; embed()
-    #1/0
-    from IPython import embed; embed()
     events = set_ak_column(events, "GenTau",           ak.Array(ak.to_list(matched_gentaus)))
     events = set_ak_column(events, "GenTau.decayMode",                            gentaus_dm)
     events = set_ak_column(events, "GenTauProd",         ak.Array(ak.to_list(decay_gentaus)))

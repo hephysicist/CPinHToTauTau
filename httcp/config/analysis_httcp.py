@@ -69,13 +69,19 @@ add_run2_UL2017(
     config_id=3,
     limit_dataset_files=1)
 
+add_run2_UL2017(
+    analysis_httcp,
+    campaign_run2_UL2017_nano_tau_v10.copy(),
+    config_name=campaign_run2_UL2017_nano_tau_v10.name,
+    config_id=4)
+
 add_run3_preEE(analysis_httcp,
                   campaign_run3_2022_preEE_nano_tau_v12.copy(),
                   config_name=f"{campaign_run3_2022_preEE_nano_tau_v12.name}",
-                  config_id = 4)
+                  config_id = 5)
 
 add_run3_preEE(analysis_httcp,
                   campaign_run3_2022_preEE_nano_tau_v12.copy(),
                   config_name=f"{campaign_run3_2022_preEE_nano_tau_v12.name}_limited",
-                  config_id = 5,
+                  config_id = 6,
                   limit_dataset_files=1)

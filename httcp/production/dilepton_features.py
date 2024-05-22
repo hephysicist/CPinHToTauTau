@@ -49,13 +49,13 @@ def hcand_mass_(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         "hcand.charge",
     },
     produces={
-        "hcand_obj.rel_charge"
+        "rel_charge"
     },
 )
 def rel_charge(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     print("Producing  pair relative charge...")
     rel_ch = ak.prod(events.hcand.charge, axis = 1)
-    events = set_ak_column_f32(events, "hcand_obj.rel_charge", rel_ch) 
+    events = set_ak_column_f32(events, "rel_charge", rel_ch) 
     return events
 
 @producer(
@@ -114,7 +114,7 @@ def hcand_mass(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         ))
     hcand_obj = lep[0] + lep[1]
     events = set_ak_column_f32(events,f"hcand_obj.mass", ak.where(hcand_obj.mass2 >=0, hcand_obj.mass, EMPTY_FLOAT))
-    from IPython import embed; embed()
+    #from IPython import embed; embed()
      
     return events 
 
