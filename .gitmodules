@@ -1,0 +1,8 @@
+[submodule "modules/columnflow"]
+	path = modules/columnflow
+	url = git@github.com:columnflow/columnflow.git
+	branch = master
+[submodule "modules/cmsdb"]
+	path = modules/cmsdb
+	url = git@github.com:uhh-cms/cmsdb.git
+	branch = master
