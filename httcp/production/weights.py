@@ -103,7 +103,7 @@ def get_mc_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
                 "pt","eta","phi","mass", "charge", 
                 "decayMode", "rawIdx"
             ]
-    },
+    } | {"channel_id"},
     produces={
          f"muon_weight_{shift}"
         for shift in ["nom", "up", "down"]
@@ -322,29 +322,59 @@ def tau_weight_setup(
 
 
 
+# @producer(
+#     uses={
+#         f"TauSpinner*" 
+#     },
+#     produces={
+#         "tauspinner_odd", "tauspinner_even", "tauspinner_mixed", "tauspinner_no_weight"
+#     },
+#     mc_only=True,
+# )
+# def tauspinner_weight(self: Producer, events: ak.Array, cp_hypo: str, **kwargs) -> ak.Array:
+#     """
+#     A simple function that sets tauspinner_weight according to the cp_hypothesis
+    
+#     """
+#     names = ["odd", "even", "mixed","no_weight"]
+#     for the_name in names:
+#         if the_name == "even": the_weight = events.TauSpinner.weight_cp_0
+#         elif the_name == "odd": the_weight = events.TauSpinner.weight_cp_0p5
+#         elif the_name == "mixed": the_weight = events.TauSpinner.weight_cp_0p25
+#         elif the_name == "no_weight":  the_weight = ak.ones_like(events.event)
+#         else:  raise NotImplementedError('CP hypothesis is not known to the tauspinner weight producer!')   
+#         buf = ak.to_numpy(the_weight)
+#         if any(np.isnan(buf)):
+#             warn.warn("tauspinner_weight contains NaNs. Imputing them with zeros.")
+#             buf[np.isnan(buf)] = 0
+#             the_weight = buf
+#         events = set_ak_column_f32(events, f"tauspinner_{the_weight}", the_weight)  
+#     return events
+
 @producer(
     uses={
         f"TauSpinner*" 
     },
     produces={
-        "tauspinner_weight"
+        "tauspinner_weight_up", "tauspinner_weight", "tauspinner_weight_down"
     },
     mc_only=True,
 )
-def tauspinner_weight(self: Producer, events: ak.Array, cp_hypo: str, **kwargs) -> ak.Array:
+def tauspinner_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     """
     A simple function that sets tauspinner_weight according to the cp_hypothesis
     
     """
-    #from IPython import embed; embed()
-    if cp_hypo == "even": the_weight = events.TauSpinner.weight_cp_0
-    elif cp_hypo == "odd": the_weight = events.TauSpinner.weight_cp_0p5
-    elif cp_hypo == "mixed": the_weight = events.TauSpinner.weight_cp_0p25
-    else:  raise NotImplementedError('CP hypothesis is not known to the tauspinner weight producer!')   
-    buf = ak.to_numpy(the_weight)
-    if any(np.isnan(buf)):
-        warn.warn("tauspinner_weight contains NaNs. Imputing them with zeros.")
-        buf[np.isnan(buf)] = 0
-        the_weight = buf
-    events = set_ak_column_f32(events, "tauspinner_weight", the_weight)  
+    names = ["_up", "", "_down"]
+    for the_name in names:
+        if the_name == "_up": the_weight = events.TauSpinner.weight_cp_0
+        elif the_name == "_down": the_weight = events.TauSpinner.weight_cp_0p5
+        elif the_name == "":  the_weight = ak.ones_like(events.TauSpinner.weight_cp_0p5)
+        else:  raise NotImplementedError('CP hypothesis is not known to the tauspinner weight producer!')   
+        buf = ak.to_numpy(the_weight)
+        if any(np.isnan(buf)):
+            warn.warn("tauspinner_weight contains NaNs. Imputing them with zeros.")
+            buf[np.isnan(buf)] = 0
+            the_weight = buf
+        events = set_ak_column_f32(events, f"tauspinner_weight{the_name}", the_weight)  
     return events

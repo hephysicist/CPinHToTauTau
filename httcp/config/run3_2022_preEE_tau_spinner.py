@@ -227,6 +227,9 @@ def add_run3_2022_preEE_tau_spinner (ana: od.Analysis,
     add_shift_aliases(cfg, "mu", {"muon_weight": "muon_weight_{direction}"})
     
     
+    cfg.add_shift(name="tauspinner_up", id=5, type="shape") #cp-even
+    cfg.add_shift(name="tauspinner_down", id=6, type="shape") #cp-odd
+    add_shift_aliases(cfg, "tauspinner", {"tauspinner_weight": "tauspinner_weight_{direction}"})
     
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)
@@ -235,7 +238,7 @@ def add_run3_2022_preEE_tau_spinner (ana: od.Analysis,
         "pu_weight"             : [],
         "muon_weight_nom"       : [],
         "tau_weight_nom"        : [],
-        "tauspinner_weight"     : [],
+        "tauspinner_weight"     : get_shifts("tauspinner"),
     })
     cfg.x.cp_hypo = "even"
     cfg.x.default_weight_producer = "all_weights"
