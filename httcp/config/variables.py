@@ -342,13 +342,18 @@ def add_hcand_features(cfg: od.Config) -> None:
         binning=(20, 0, 2*np.pi),
         x_title=r"$\varphi_{CP}$ (rad)",
     )
-    for the_ch in ['pi', 'rho', 'a1_3pr']:
+    for the_ch in ['pi', 'rho', 'a1_1pr']:
+        if 'a1' in the_ch:
+            spitted_str = the_ch.split('_')
+            title_str = fr" a_1, {spitted_str[1]}"
+        else:
+             title_str = "\\" + the_ch
         cfg.add_variable(
             name=f"phi_cp_mu_{the_ch}",
             expression=f"phi_cp_mu_{the_ch}",
             null_value=EMPTY_FLOAT,
             binning=(20, 0, 2*np.pi),
-            x_title=rf"$\varphi_{{CP}} [\mu\{the_ch}]$ (rad)",
+            x_title=rf"$\varphi_{{CP}} [\mu{title_str}]$ (rad)",
         )
     # cfg.add_variable(
     #     name="PhiCP_PVPV",
