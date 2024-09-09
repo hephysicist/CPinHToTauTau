@@ -125,8 +125,8 @@ def muon_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) -> a
     #Create an instance of scale factor to make copies from
     
     # Create sf array template to make copies and dict for finnal results of all systematics
-    pt =  flat_np_view(events.hcand.pt[:,:1],axis=1) #take the first particle from the hcand pair
-    eta =  flat_np_view(events.hcand.eta[:,:1],axis=1)
+    pt =  flat_np_view(events.hcand.pt[:,0:1],axis=1) #take the first particle from the hcand pair
+    eta =  flat_np_view(events.hcand.eta[:,0:1],axis=1)
     _sf = np.ones_like(pt, dtype=np.float32)
     sf_values = {}
 
@@ -141,7 +141,7 @@ def muon_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) -> a
     for the_shift in shifts:
         sf_values[the_shift] = _sf.copy()
         sf_values[the_shift][is_mutau] = self.muon_sf.evaluate(*mu_sf_args(the_shift))
-        
+        #from IPython import embed; embed()
         events = set_ak_column_f32(events, f"muon_weight_{rename_systs[the_shift]}", sf_values[the_shift])
     return events
 
@@ -322,38 +322,9 @@ def tau_weight_setup(
 
 
 
-# @producer(
-#     uses={
-#         f"TauSpinner*" 
-#     },
-#     produces={
-#         "tauspinner_odd", "tauspinner_even", "tauspinner_mixed", "tauspinner_no_weight"
-#     },
-#     mc_only=True,
-# )
-# def tauspinner_weight(self: Producer, events: ak.Array, cp_hypo: str, **kwargs) -> ak.Array:
-#     """
-#     A simple function that sets tauspinner_weight according to the cp_hypothesis
-    
-#     """
-#     names = ["odd", "even", "mixed","no_weight"]
-#     for the_name in names:
-#         if the_name == "even": the_weight = events.TauSpinner.weight_cp_0
-#         elif the_name == "odd": the_weight = events.TauSpinner.weight_cp_0p5
-#         elif the_name == "mixed": the_weight = events.TauSpinner.weight_cp_0p25
-#         elif the_name == "no_weight":  the_weight = ak.ones_like(events.event)
-#         else:  raise NotImplementedError('CP hypothesis is not known to the tauspinner weight producer!')   
-#         buf = ak.to_numpy(the_weight)
-#         if any(np.isnan(buf)):
-#             warn.warn("tauspinner_weight contains NaNs. Imputing them with zeros.")
-#             buf[np.isnan(buf)] = 0
-#             the_weight = buf
-#         events = set_ak_column_f32(events, f"tauspinner_{the_weight}", the_weight)  
-#     return events
-
 @producer(
     uses={
-        f"TauSpinner*" 
+        optional("TauSpinner*") 
     },
     produces={
         "tauspinner_weight_up", "tauspinner_weight", "tauspinner_weight_down"
@@ -367,14 +338,17 @@ def tauspinner_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     """
     names = ["_up", "", "_down"]
     for the_name in names:
-        if the_name == "_up": the_weight = events.TauSpinner.weight_cp_0
-        elif the_name == "_down": the_weight = events.TauSpinner.weight_cp_0p5
-        elif the_name == "":  the_weight = ak.ones_like(events.TauSpinner.weight_cp_0p5)
-        else:  raise NotImplementedError('CP hypothesis is not known to the tauspinner weight producer!')   
-        buf = ak.to_numpy(the_weight)
-        if any(np.isnan(buf)):
-            warn.warn("tauspinner_weight contains NaNs. Imputing them with zeros.")
-            buf[np.isnan(buf)] = 0
-            the_weight = buf
+        if  "TauSpinner" in list(events.fields):
+            if the_name == "_up": the_weight = events.TauSpinner.weight_cp_0
+            elif the_name == "_down": the_weight = events.TauSpinner.weight_cp_0p5
+            elif the_name == "":  the_weight =  (events.TauSpinner.weight_cp_0p5 + events.TauSpinner.weight_cp_0)/2.
+            else:  raise NotImplementedError('CP hypothesis is not known to the tauspinner weight producer!')   
+            buf = ak.to_numpy(the_weight)
+            if any(np.isnan(buf)):
+                warn.warn("tauspinner_weight contains NaNs. Imputing them with zeros.")
+                buf[np.isnan(buf)] = 0
+                the_weight = buf
+        else:
+            the_weight = np.ones_like(events.event, dtype=np.float32)  
         events = set_ak_column_f32(events, f"tauspinner_weight{the_name}", the_weight)  
     return events

@@ -283,52 +283,29 @@ def add_triggers_run3_2022_preEE(config: od.Config) -> None:
             ],
             tags={"single_trigger", "single_mu", "channel_mu_tau"},
         ),
-    ])
-
-def add_triggers_run2_UL2017(config: od.Config) -> None:
-    """
-    Adds all triggers to a *config*. For the conversion from filter names to trigger bits, see
-    https://github.com/cms-sw/cmssw/blob/master/PhysicsTools/NanoAOD/python/triggerObjects_cff.py.
-    """
-    config.x.triggers = od.UniqueObjectIndex(Trigger,[
-        
-        #
-        # single muon
-        #
+        # #
+        # # tauh tauh
+        # #
+        # # https://github.com/cms-sw/cmssw/blob/203834e3ae301f2564423dd1cc84bebf660519b9/PhysicsTools/NanoAOD/python/triggerObjects_cff.py#L147 
         Trigger(
-            name="HLT_IsoMu24",
-            id=131, #13 is for muon pdg_id, 1 because it's first muon trigger
+            name="HLT_DoubleMediumDeepTauPFTauHPS35_L2NN_eta2p1",
+            id=5,
             legs=[
                 TriggerLeg(
-                    pdg_id=13,
-                    min_pt=25.0,
-                    trigger_bits=2,
+                    pdg_id=15,
+                    min_pt=40.0,
+                    # filter names:
+                    # hltHpsDoublePFTau35MediumDitauWPDeepTauDz02 (Deeptau + HPS)
+                    trigger_bits= 10, #8 + 32,
+                ),
+                TriggerLeg(
+                    pdg_id=15,
+                    min_pt=40.0,
+                    # filter names:
+                    # hltHpsDoublePFTau35MediumDitauWPDeepTauDz02 (Deeptau + HPS)
+                    trigger_bits= 10, #8 + 32,
                 ),
             ],
-            tags={"single_trigger", "single_mu", "channel_mu_tau"},
+            tags={"cross_trigger", "cross_tau_tau", "channel_tau_tau"},
         ),
     ])
-    
-def add_triggers_2018(config: od.Config) -> None:
-    """
-    Adds all triggers to a *config*. For the conversion from filter names to trigger bits, see
-    https://github.com/cms-sw/cmssw/blob/master/PhysicsTools/NanoAOD/python/triggerObjects_cff.py.
-    """
-    config.x.triggers = od.UniqueObjectIndex(Trigger,[
-        
-        #
-        # single muon
-        #
-        Trigger(
-            name="HLT_IsoMu24",
-            id=132, #13 is for muon pdg_id, 2 because it's second muon trigger
-            legs=[
-                TriggerLeg(
-                    pdg_id=13,
-                    min_pt=25.0,
-                    trigger_bits=2,
-                ),
-            ],
-            tags={"single_trigger", "single_mu", "channel_mu_tau"},
-        ),
-    ]) 

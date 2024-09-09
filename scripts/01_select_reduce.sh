@@ -6,10 +6,10 @@ wrapper_args=(
     --configs $config
     --datasets $datasets
     --version $version
-    --cf.CalibrateEvents-workflow htcondor
-    --cf.SelectEvents-workflow htcondor
-    --cf.ReduceEvents-workflow htcondor
-    --cf.MergeReducedEvents-workflow htcondor
+    --cf.CalibrateEvents-workflow $workflow
+    --cf.SelectEvents-workflow $workflow
+    --cf.ReduceEvents-workflow $workflow
+    --cf.MergeReducedEvents-workflow local
     "${@:2}"
     )
 echo law run cf.MergeReducedEventsWrapper "${wrapper_args[@]}"

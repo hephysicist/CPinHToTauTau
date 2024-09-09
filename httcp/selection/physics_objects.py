@@ -31,13 +31,13 @@ ak = maybe_import("awkward")
         # Muon nano columns
         f"Muon.{var}" for var in [
             "pt", "eta", "phi", "dxy", "dz", "mediumId", 
-            "pfRelIso04_all", "isGlobal", "isPFcand", 
+            "pfRelIso04_all", "isGlobal", "isPFcand", 'sip3d',
             #"isTracker",
         ]
     },
     produces={
         f"Muon.{var}" for var in [
-            "rawIdx", "decayMode",
+            "rawIdx", "decayMode", "decayModePNet","ip_sig"
         ]
     },
     exposed=False,
@@ -57,6 +57,8 @@ def muon_selection(
     # setting two new columns for the muons
     events = set_ak_column(events, "Muon.rawIdx",    ak.local_index(events.Muon))
     events = set_ak_column(events, "Muon.decayMode", -2)
+    events = set_ak_column(events, "Muon.decayModePNet", -2)
+    events = set_ak_column(events, "Muon.ip_sig", events.Muon.sip3d)
 
     good_selections = {
         "muon_pt_26"          : events.Muon.pt > 26,
@@ -117,6 +119,8 @@ def muon_selection(
     double_veto_muon_indices = sorted_indices[double_veto_muon_mask[sorted_indices]]
     double_veto_muon_indices = ak.values_astype(double_veto_muon_indices, np.int32)
 
+    #
+    
     return events, SelectionResult(
         objects={
             "Muon": {
@@ -142,11 +146,11 @@ def muon_selection(
         "Electron.pfRelIso03_all", "Electron.convVeto", #"lostHits",
         IF_NANO_V9("Electron.mvaFall17V2Iso_WP80", "Electron.mvaFall17V2Iso_WP90", "Electron.mvaFall17V2noIso_WP90"),
         IF_NANO_V11("Electron.mvaIso_WP80", "Electron.mvaIso_WP90", "Electron.mvaNoIso_WP90"),
-        "Electron.cutBased",
+        "Electron.cutBased", 'Electron.sip3d',
     },
     produces={
         f"Electron.{var}" for var in [
-            "rawIdx", "decayMode",
+            "rawIdx", "decayMode","decayModePNet","ip_sig"
         ]
     },
     exposed=False,
@@ -165,6 +169,8 @@ def electron_selection(
     # adding two new fields
     events = set_ak_column(events, "Electron.rawIdx",    ak.local_index(events.Electron))
     events = set_ak_column(events, "Electron.decayMode", -1)
+    events = set_ak_column(events, "Electron.decayModePNet", -1)
+    events = set_ak_column(events, "Electron.ip_sig", events.Electron.sip3d)
 
     # >= nano v10
     mva_iso_wp80 = events.Electron.mvaIso_WP80
@@ -254,12 +260,12 @@ def electron_selection(
         f"Tau.{var}" for var in [
             "pt", "eta", "phi", "dz", 
             "idDeepTau2018v2p5VSe", "idDeepTau2018v2p5VSmu", "idDeepTau2018v2p5VSjet",
-            "decayMode",
+            "decayMode","decayModePNet", 'ipLengthSig'
         ]
     },
     produces={
         f"Tau.{var}" for var in [
-            "rawIdx",
+            "rawIdx", "ip_sig"
         ]
     },
     exposed=False,
@@ -279,6 +285,7 @@ def tau_selection(
     """
     tau_local_indices = ak.local_index(events.Tau)
     events = set_ak_column(events, "Tau.rawIdx", tau_local_indices)
+    events = set_ak_column(events, "Tau.ip_sig", events.Tau.ipLengthSig)
 
     # https://cms-nanoaod-integration.web.cern.ch/integration/cms-swmaster/data106Xul17v2_v10_doc.html#Tau
     tau_vs_e = DotDict(vvloose=2, vloose=3)

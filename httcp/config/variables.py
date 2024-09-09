@@ -40,17 +40,17 @@ def keep_columns(cfg: od.Config) -> None:
                 "pt","eta","phi","mass","dxy","dz", "charge", 
                 "rawDeepTau2018v2p5VSjet","idDeepTau2018v2p5VSjet", "idDeepTau2018v2p5VSe", "idDeepTau2018v2p5VSmu", 
                 "decayMode", "decayModePNet", "genPartFlav", "rawIdx",
-                "pt_no_tes", "mass_no_tes", "IPx", "IPy", "IPz"
+                "pt_no_tes", "mass_no_tes", "IPx", "IPy", "IPz","ip_sig"
             ] 
         } | {
             f"Muon.{var}" for var in [
                 "pt","eta","phi","mass","dxy","dz", "charge",
-		"decayMode", "pfRelIso04_all","mT", "rawIdx","IPx", "IPy", "IPz"
+		"decayMode", "pfRelIso04_all","mT", "rawIdx","IPx", "IPy", "IPz","ip_sig"
             ] 
         } | {
             f"Electron.{var}" for var in [
                 "pt","eta","phi","mass","dxy","dz", "charge", 
-                "decayMode", "pfRelIso03_all", "mT", "rawIdx", "IPx", "IPy", "IPz"
+                "decayMode", "pfRelIso03_all", "mT", "rawIdx", "IPx", "IPy", "IPz","ip_sig"
             ] 
         } | {
             f"{var}_triggerd" for var in [ #Trigger variables to have a track of a particular trigger fired
@@ -74,14 +74,14 @@ def keep_columns(cfg: od.Config) -> None:
             } | {
             f"hcand.{var}" for var in [
                 "pt","eta","phi","mass", "charge", 
-                "decayMode", "rawIdx"
+                "decayMode", "rawIdx", "ip_sig", "IPx", "IPy","IPz"
             ]
         } | {
             "GenTau.*", "GenTauProd.*",
         } | {
             f"hcandprod.{var}" for var in [
                 "pt", "eta", "phi", "mass", "charge",
-                "pdgId", "tauIdx", "IPx", "IPy","IPz"
+                "pdgId", "tauIdx"
             ]
         } | {ColumnCollection.ALL_FROM_SELECTOR},
         "cf.MergeSelectionMasks": {
@@ -157,7 +157,15 @@ def add_lepton_features(cfg: od.Config) -> None:
             binning=(40, 0.0, 200.0),
             unit="GeV",
             x_title=obj + r"$m_{T}$",
-    )
+        )
+        cfg.add_variable(
+            name=f"{obj.lower()}_ip_sig",
+            expression=f"{obj}.ip_sig",
+            null_value=EMPTY_FLOAT,
+            binning=(40, 0.0, 10),
+            unit="",
+            x_title=obj + r"$\frac{|IP|}{\sigma(IP)}$",
+        )
 
 
 def add_jet_features(cfg: od.Config) -> None:
@@ -228,22 +236,14 @@ def add_highlevel_features(cfg: od.Config) -> None:
         null_value=EMPTY_FLOAT,
         binning=(50, 0,100),
         unit="GeV",
-        x_title=r"MET $p_T$",
+        x_title=r"PUPPI MET $p_T$",
     )
     cfg.add_variable(
         name="puppi_met_phi",
         expression="PuppiMET.phi",
         null_value=EMPTY_FLOAT,
-        binning=(30, -3,3),
-        x_title=r"MET $\phi$",
-    )
-    cfg.add_variable(
-        name="hcand_mass",
-        expression="hcand_obj.mass",
-        null_value=EMPTY_FLOAT,
-        binning=(40, 0.0, 200.0),
-        unit="GeV",
-        x_title=r"$m_{vis}$",
+        binning=(32, -3.2,3.2),
+        x_title=r"PUPPI MET $\phi$",
     )
     
     
@@ -257,7 +257,7 @@ def add_weight_features(cfg: od.Config) -> None:
     cfg.add_variable(
         name="mc_weight",
         expression="mc_weight",
-        binning=(200, -10, 10),
+        binning=(20, -2, 2),
         x_title="MC weight",
     )
     cfg.add_variable(
@@ -265,8 +265,26 @@ def add_weight_features(cfg: od.Config) -> None:
         expression="pu_weight",
         null_value=EMPTY_FLOAT,
         binning=(30, 0,3),
-        unit="GeV",
+        unit="",
         x_title=r"Pileup weight",
+    )
+    
+    cfg.add_variable(
+        name="muon_weight",
+        expression="muon_weight_nom",
+        null_value=EMPTY_FLOAT,
+        binning=(50, 0.5,1.5),
+        unit="",
+        x_title=r"muon weight",
+    )
+    
+    cfg.add_variable(
+        name="tau_weight",
+        expression="tau_weight_nom",
+        null_value=EMPTY_FLOAT,
+        binning=(50, 0.5,1.5),
+        unit="",
+        x_title=r"tau weight",
     )
     
     for var in ["0", "0p25", "0p375", "0p5", "minus0p25"]:
@@ -321,13 +339,13 @@ def add_hcand_features(cfg: od.Config) -> None:
     )
     """
     cfg.add_variable(
-        name="hcand_invm",
-        expression="hcand_invm",
-        null_value=EMPTY_FLOAT,
-        binning=(50, 0, 400),
-        unit="GeV",
-        x_title=r"$m_{ll}$",
-    )
+            name="mT",
+            expression="mT",
+            null_value=EMPTY_FLOAT,
+            binning=(40, 0.0, 200.0),
+            unit="GeV",
+            x_title=r"$m_{T}$",
+        )
     cfg.add_variable(
         name="hcand_dr",
         expression="hcand_dr",
@@ -336,53 +354,146 @@ def add_hcand_features(cfg: od.Config) -> None:
         x_title=r"$\Delta R(l,l)$",
     )
     cfg.add_variable(
+        name="hcand_mass",
+        expression="hcand_invm",
+        null_value=EMPTY_FLOAT,
+        binning=(40, 0.0, 200.0),
+        unit="GeV",
+        x_title=r"$m_{vis}$",
+    )
+    
+    cfg.add_variable(
         name="phi_cp",
         expression="phi_cp",
         null_value=EMPTY_FLOAT,
-        binning=(20, 0, 2*np.pi),
+        binning=(12, 0, 2*np.pi),
         x_title=r"$\varphi_{CP}$ (rad)",
     )
-    for the_ch in ['pi', 'rho', 'a1_1pr']:
-        if 'a1' in the_ch:
-            spitted_str = the_ch.split('_')
-            title_str = fr" a_1, {spitted_str[1]}"
-        else:
-             title_str = "\\" + the_ch
+    # leg-specific variables 
+    for i in range(2):
         cfg.add_variable(
-            name=f"phi_cp_mu_{the_ch}",
-            expression=f"phi_cp_mu_{the_ch}",
+            name=f"hcand_leg{i+1}_ip_sig",
+            expression=f"hcand[:,{i}:{i+1}].ip_sig",
             null_value=EMPTY_FLOAT,
-            binning=(20, 0, 2*np.pi),
-            x_title=rf"$\varphi_{{CP}} [\mu{title_str}]$ (rad)",
+            binning=(40, 0.0, 10),
+            unit="",
+            x_title= rf"lep_{i+1} $\frac{{|IP|}}{{\sigma(IP)}}$",
         )
-    # cfg.add_variable(
-    #     name="PhiCP_PVPV",
-    #     expression="PhiCP_PVPV",
-    #     null_value=EMPTY_FLOAT,
-    #     binning=(16, 0, 6.4),
-    #     x_title=r"$\Phi_{CP}^{PV-PV}$ (rad)",
-    # )
-    # cfg.add_variable(
-    #     name="PhiCPGen_PVPV",
-    #     expression="PhiCPGen_PVPV",
-    #     null_value=EMPTY_FLOAT,
-    #     binning=(16, 0, 6.4),
-    #     x_title=r"$\Phi_{CP}^{PV-PV}$ (rad)",
-    # )
-    # cfg.add_variable(
-    #     name="PhiCP_DPDP",
-    #     expression="PhiCP_DPDP",
-    #     null_value=EMPTY_FLOAT,
-    #     binning=(16, 0, 6.4),
-    #     x_title=r"$\Phi_{CP}^{DP-DP}$ (rad)",
-    # )
-    # cfg.add_variable(
-    #     name="PhiCPGen_DPDP",
-    #     expression="PhiCPGen_DPDP",
-    #     null_value=EMPTY_FLOAT,
-    #     binning=(16, 0, 6.4),
-    #     x_title=r"$\Phi_{CP}^{DP-DP}$ (rad)",
-    #)
+        cfg.add_variable(
+            name=f"hcand_leg{i+1}_pt",
+            expression=f"hcand[:,{i}:{i+1}].pt",
+            null_value=EMPTY_FLOAT,
+             binning=(30, 20, 80.),
+            unit="GeV",
+            x_title= rf"lep_{i+1} $p_{{T}}$",
+            )
+        cfg.add_variable(
+                name=f"hcand_leg{i+1}_phi",
+                expression=f"hcand[:,{i}:{i+1}].phi",
+                null_value=EMPTY_FLOAT,
+                binning=(32, -3.2, 3.2),
+                x_title=rf"lep_{i+1} $\phi$",
+            )
+        cfg.add_variable(
+                name=f"hcand_leg{i+1}_eta",
+                expression=f"hcand[:,{i}:{i+1}].eta",
+                null_value=EMPTY_FLOAT,
+                binning=(32, -3.2, 3.2),
+                x_title=rf"lep_{i+1} $\eta$",
+            )
+        cfg.add_variable(
+                name=f"hcand_leg{i+1}_mass",
+                expression=f"hcand[:,{i}:{i+1}].mass",
+                null_value=EMPTY_FLOAT,
+                binning=(30, 0, 3),
+                unit="GeV",
+                x_title=rf"lep_{i+1} m",
+            )
+        cfg.add_variable(
+                name=f"hcand_leg{i+1}_decayModePNet",
+                expression=f"hcand[:,{i}:{i+1}].decayModePNet",
+                null_value=EMPTY_FLOAT,
+                binning=(12,0,12),
+                unit="",
+                x_title=rf"lep_{i+1} decay mode (PNet)",
+            )
+        cfg.add_variable(
+                name=f"hcand_leg{i+1}_decayMode",
+                expression=f"hcand[:,{i}:{i+1}].decayMode",
+                null_value=EMPTY_FLOAT,
+                binning=(12,0,12),
+                unit="",
+                x_title=rf"lep_{i+1} decay mode",
+            )
+        
+            
+        for proj in ['x','y','z']:
+            cfg.add_variable(
+                name=f"hcand_leg{i+1}_ip_{proj}",
+                expression=f"hcand[:,{i}:{i+1}].IP{proj}",
+                null_value=EMPTY_FLOAT,
+                binning=(30, -0.002, 0.002),
+                unit="",
+                x_title= rf"lep_{i+1} $IP_{proj}$",
+            )
+        
+    n_bins_phi_cp = 11
+    for the_ch in ['mu_pi', 'mu_rho', 'mu_a1_1pr', "rho_rho"]:
+        spitted_str = the_ch.split('_')
+        if 'a1' in the_ch: 
+            title_str = "\\" + spitted_str[0] + fr" a_1, {spitted_str[2]}"
+        else:
+             title_str = "\\" + spitted_str[0] + "\\" + spitted_str[1]
+        cfg.add_variable(
+            name=f"phi_cp_{the_ch}",
+            expression=f"phi_cp_{the_ch}",
+            null_value=EMPTY_FLOAT,
+            binning=(n_bins_phi_cp, 0, 2*np.pi),
+            x_title=rf"$\varphi_{{CP}} [{title_str}]$ (rad)",
+        )
+        cfg.add_variable(
+            name=f"phi_cp_{the_ch}_reg1",
+            expression=f"phi_cp_{the_ch}_reg1",
+            null_value=EMPTY_FLOAT,
+            binning=(n_bins_phi_cp, 0, 2*np.pi),
+            x_title=rf"$\varphi_{{CP}} [{title_str}], \alpha < \pi/4$ (rad)",
+        )
+        cfg.add_variable(
+            name=f"phi_cp_{the_ch}_reg2",
+            expression=f"phi_cp_{the_ch}_reg2",
+            null_value=EMPTY_FLOAT,
+            binning=(n_bins_phi_cp, 0, 2*np.pi),
+            x_title=rf"$\varphi_{{CP}} [{title_str}], \alpha \geq \pi/4$ (rad)",
+        )
+        # 2-bin histograms
+        cfg.add_variable(
+            name=f"phi_cp_{the_ch}_2bin",
+            expression=f"phi_cp_{the_ch}_2bin",
+            null_value=EMPTY_FLOAT,
+            binning=(2, 0, 2*np.pi), 
+            x_title=rf"$\varphi_{{CP}} [{title_str}]$ (rad)",
+        )
+        cfg.add_variable(
+            name=f"phi_cp_{the_ch}_reg1_2bin",
+            expression=f"phi_cp_{the_ch}_reg1_2bin",
+            null_value=EMPTY_FLOAT,
+            binning=(2, 0, 2*np.pi),
+            x_title=rf"$\varphi_{{CP}} [{title_str}], \alpha < \pi/4$ (rad)",
+        )
+        cfg.add_variable(
+            name=f"phi_cp_{the_ch}_reg2_2bin",
+            expression=f"phi_cp_{the_ch}_reg2_2bin",
+            null_value=EMPTY_FLOAT,
+            binning=(2, 0, 2*np.pi),
+            x_title=rf"$\varphi_{{CP}} [{title_str}], \alpha \geq \pi/4$ (rad)",
+        )
+        cfg.add_variable(
+            name=f"alpha_{the_ch}",
+            expression=f"alpha_{the_ch}",
+            null_value=EMPTY_FLOAT,
+            binning=(6, 0, np.pi/2),
+            x_title=rf"$ \alpha [{title_str}] $(rad)",
+        )
 
 def add_test_variables(cfg: od.Config) -> None:
         cfg.add_variable(

@@ -6,15 +6,16 @@ args=(
         --config $config
         --processes $processes
         --datasets $datasets
-        --version signal_test
-        --categories mutau
-        --cf.CalibrateEvents-workflow htcondor
-        --cf.SelectEvents-workflow htcondor
-        --cf.ReduceEvents-workflow htcondor
-        --variables phi_cp_mu_pi,phi_cp_mu_rho
+        --version $version
+        --categories 'mutau_signal_reg,mutau_signal_reg_inv_mt,mutau_control_reg,mutau_control_reg_inv_mt'
+        --cf.CalibrateEvents-workflow $workflow
+        --cf.SelectEvents-workflow $workflow
+        --cf.ReduceEvents-workflow $workflow
+        --variables phi_cp_mu_pi,phi_cp_mu_rho,phi_cp_mu_a1
         --shift-sources tauspinner
-        --process-settings "tauspinner_up,label=cp_odd:tauspinner_down,label=cp_even"
-        --general-settings "cms-label=pw"
+        --general-settings "cms-label=simpw"
+        --cf.PlotShiftedVariables1D-hide-errors True
+        --hide-errors True
         "${@:2}"
     )
 echo law run cf.PlotShiftedVariables1D "${args[@]}"

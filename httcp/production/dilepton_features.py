@@ -65,16 +65,25 @@ def rel_charge(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         f"PuppiMET.{var}" for var in ["pt","phi"] 
     } | {attach_coffea_behavior},
     produces={
-        "hcand_obj.mT"
+        "mT"
     },
 )
 def mT(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     print("producing mT...")
-    events = self[attach_coffea_behavior](events, **kwargs)
-    cos_dphi = np.cos(events.Muon.delta_phi(events.PuppiMET))
-    mT_values = np.sqrt(2 * events.Muon.pt * events.PuppiMET.pt * (1 - cos_dphi))
+    lep1 = ak.zip({
+            "pt": events.hcand[:,0:1].pt,
+            "eta": events.hcand[:,0:1].eta,
+            "phi": events.hcand[:,0:1].phi,
+            "mass": events.hcand[:,0:1].mass,
+           
+        },
+        with_name="PtEtaPhiMLorentzVector",
+        behavior=coffea.nanoevents.methods.vector.behavior,)
+
+    cos_dphi = np.cos(lep1.delta_phi(events.PuppiMET))
+    mT_values = np.sqrt(2 * lep1.pt * events.PuppiMET.pt * (1 - cos_dphi))
     mT_values = ak.fill_none(mT_values, EMPTY_FLOAT)
-    events = set_ak_column_f32(events, Route("Muon.mT"), mT_values)
+    events = set_ak_column_f32(events,"mT", mT_values)
     return events
 
 

@@ -1,3 +1,5 @@
+#
+#source $CF_BASE/sandboxes/venv_columnar_dev.sh
 import matplotlib.pyplot as plt
 import mplhep
 import pickle
@@ -124,12 +126,13 @@ def get_hist_values(pickle_file):
 
 #path22 = "/afs/cern.ch/user/s/stzakhar/work/higgs_cp/data/cf_store/analysis_higgs_cp/cf.CreateCutflowHistograms/run3_2022_postEE_nano_tau_v12/data_mu_g/nominal/calib__example/sel__default__steps_trigger_muon_pt_26_muon_eta_2p4_mediumID_muon_dxy_0p045_muon_dz_0p2_muon_iso_0p15_DeepTauVSjet_DeepTauVSe_DeepTauVSmu_tau_eta_2p3_tau_dz_0p2_tau_pt_20_single_pair_extra_lep_veto_dilep_veto/condor_production/cutflow_hist__event.pickle"
 #path22 = "/afs/desy.de/user/s/stzakhar/nfs/CPinHToTauTau/data/cf_store/analysis_httcp/cf.CreateCutflowHistograms/run3_2022_preEE_tau_spinner_limited/h_ggf_htt_filtered/nominal/calib__main/sel__main__steps_trigger_met_filter_b_veto_trigobj_prematch_trigobj_postmatch_dilepton_veto_extra_lepton_veto_One_higgs_cand_per_event_has_proper_tau_decay_products/test/cutflow_hist__event.pickle"
-path22 = "//afs/desy.de/user/s/stzakhar/nfs/CPinHToTauTau/data/cf_store/analysis_httcp/cf.CreateCutflowHistograms/run3_2022_preEE_tau_spinner_limited/h_ggf_htt_filtered/nominal/calib__main/sel__main__steps_trigger_met_filter_b_veto_trigobj_prematch_trigobj_postmatch_dilepton_veto_extra_lepton_veto_multiple_hcands_has_proper_tau_decay_products/test/cutflow_hist__event.pickle"
+#path22 = "//afs/desy.de/user/s/stzakhar/nfs/CPinHToTauTau/data/cf_store/analysis_httcp/cf.CreateCutflowHistograms/run3_2022_preEE_tau_spinner_limited/h_ggf_htt_filtered/nominal/calib__main/sel__main__steps_trigger_met_filter_b_veto_trigobj_prematch_trigobj_postmatch_dilepton_veto_extra_lepton_veto_multiple_hcands_has_proper_tau_decay_products/test/cutflow_hist__event.pickle"
+path22 = "/afs/desy.de/user/s/stzakhar/nfs/httcp/data/cf_store/analysis_httcp/cf.CreateCutflowHistograms/run3_2022_preEE_tau_spinner/h_ggf_htt_filtered/nominal/calib__main/sel__main__steps_trigger_met_filter_b_veto_trigobj_prematch_trigobj_postmatch_dilepton_veto_extra_lepton_veto_single_hcand_has_proper_tau_decay_products/test/cutflow_hist__event.pickle"
 cuts, values22 = get_hist_values(path22)
 
 create_cutflow_histogram(cuts, 
                          data={"2022 preEE": values22},
-                         save_path="cutflow_histogram_2022_preEE1.pdf",
+                         save_path="cutflow_histogram_2022_preEE_full.pdf",
                          ylabel="N evt",
                          log=True,
                          rel=False)
