@@ -134,9 +134,9 @@ def etau_selection(
     lep1_idx, lep2_idx = ak.unzip(lep_indices_pair)
 
     preselection = {
-        "etau_is_os"         : (lep1.charge * lep2.charge) < 0,
+        #"etau_is_os"         : (lep1.charge * lep2.charge) < 0,
         "etau_dr_0p5"        : (1*lep1).delta_r(1*lep2) > 0.5,  # deltaR(lep1, lep2) > 0.5,
-        "etau_mT_50"         : transverse_mass(lep1, events.PuppiMET) < 50
+        #"etau_mT_50"         : transverse_mass(lep1, events.PuppiMET) < 50
     }
     # get preselected pairs
     good_pair_mask = lep1_idx >= 0

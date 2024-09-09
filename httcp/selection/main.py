@@ -17,7 +17,6 @@ from columnflow.selection.cms.met_filters import met_filters
 from columnflow.production.processes import process_ids
 from columnflow.production.cms.mc_weight import mc_weight
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.production.categories import category_ids
 
 from columnflow.util import maybe_import
 from columnflow.columnar_util import optional_column as optional
@@ -148,7 +147,7 @@ def custom_increment_stats(
         gentau_selection,
         higgscandprod,
         rel_charge,
-        category_ids
+        "category_ids"
     },
     exposed=True,
 )
@@ -305,28 +304,17 @@ def main(
             #print("hcand-gentau matching")
             events, gentau_results = self[gentau_selection](events, True)
             results += gentau_results
-
-
-   
+            
+    events = set_ak_column(events, "category_ids", ak.ones_like(events.event), value_type=np.int64)
     # combined event selection after all steps
     
     event_sel = reduce(and_, results.steps.values())
     
     results.event = event_sel
-    
-    # add the mc weight
-    if self.dataset_inst.is_mc:
-        events = self[mc_weight](events, **kwargs)
-    
+       
     events = self[rel_charge](events, **kwargs)
-    events = self[category_ids](events, **kwargs) 
-
-    # rel-charge
-    events = self[rel_charge](events, **kwargs)
-
     events = self[process_ids](events, **kwargs)
-    events = self[category_ids](events, **kwargs)     
-
+   
    
     # increment stats
     weight_map = {
@@ -335,6 +323,7 @@ def main(
     }
     group_map = {}
     if self.dataset_inst.is_mc:
+        events = self[mc_weight](events, **kwargs)
         weight_map = {
             **weight_map,
             # mc weight for all events

@@ -128,9 +128,9 @@ def mutau_selection(
     lep1_idx, lep2_idx = ak.unzip(lep_indices_pair)
 
     preselection = {
-        "mutau_is_os"         : (lep1.charge * lep2.charge) < 0,
+        #"mutau_is_os"         : (lep1.charge * lep2.charge) < 0,
         "mutau_dr_0p5"        : (1*lep1).delta_r(1*lep2) > 0.5,  #deltaR(lep1, lep2) > 0.5,
-        "mutau_mT_50"         : transverse_mass(lep1, events.PuppiMET) < 50,
+        #"mutau_mT_50"         : transverse_mass(lep1, events.PuppiMET) < 50,
         "mutau_invmass_40"    : (1*lep1 + 1*lep2).mass > 40,  # invariant_mass(lep1, lep2) > 40
     }
 
