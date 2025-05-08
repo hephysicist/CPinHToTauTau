@@ -296,7 +296,9 @@ def add_run3(ana: od.Analysis,
         # add the dataset
         dataset = cfg.add_dataset(campaign.get_dataset(dataset_name))
         if dataset_name.startswith("h_"):
-            dataset.add_tag("signal")
+            dataset.add_tag("signal")   
+        if dataset.name.startswith("tt_"):
+            dataset.add_tag({"has_top", "ttbar", "tt"})    
         # for testing purposes, limit the number of files to 1
         for info in dataset.info.values():
             if limit_dataset_files:
@@ -515,7 +517,19 @@ def add_run3(ana: od.Analysis,
     #     "SinglePionHCAL",
     #     "TimePtEta",
     # ]
-
+    
+    # ##################################
+    # # Parameters fot top pT reweight #
+    # ##################################
+    # https://twiki.cern.ch/twiki/bin/view/CMS/TopPtReweighting#TOP_PAG_corrections_based_on_the
+    cfg.x.top_pt_reweighting_params = {
+            "a": 0.0615,
+            "a_up": 0.0615 * 1.5,
+            "a_down": 0.0615 * 0.5,
+            "b": -0.0005,
+            "b_up": -0.0005 * 1.5,
+            "b_down": -0.0005 * 0.5,
+        }
 
     ################################
     # luminosity and normalization #
@@ -668,11 +682,12 @@ def add_run3(ana: od.Analysis,
     jsonpog_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_latest/POG/"
     jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
     corr_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/"
-
+    j_dir ="/afs/cern.ch/user/j/jmalvaso/public/hleprare/TriggerScaleFactors/"
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
         2023 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"
-    }    
+    }  
+     
     cfg.x.external_files = DotDict.wrap({
         "lumi": {
             "golden": (golden_ls[year], "v1"),
@@ -688,12 +703,15 @@ def add_run3(ana: od.Analysis,
         "zpt_weight"                    : f"{corr_dir}zpt_reweighting_LO_2022.root",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
-        #"fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_{cfg.x.year}_{campaign.x.tag}_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
         "fake_factors"                  : (f"{corr_dir}fake_factors_mutau_2022_postEE_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
         "met_recoil"                    : (f"{corr_dir}hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
+        "cross_mutau_mu_leg" : f"{j_dir}/{cfg.x.year}{campaign.x.tag}/CrossMuTauHlt_MuLeg_v1.json",
+        "HLT_mu_eff"      : f"{j_dir}/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
+        "jet_jerc"  : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
+        "jet_veto_map"  : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
+        #"fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_{cfg.x.year}_{campaign.x.tag}_mt{cfg.x.mt_cut_value}_exp_and_pol2.json", "v2"),
         #"met_phi_corr": (f"{jsonpog_dir}JME/{cfg.x.year}{tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
     })
-    
     # --------------------------------------------------------------------------------------------- #
     # electron settings
     # names of electron correction sets and working points
@@ -720,19 +738,36 @@ def add_run3(ana: od.Analysis,
     # --------------------------------------------------------------------------------------------- #
 
     cfg.x.muon_sf = DotDict.wrap({ 
+                                  
         'ID': {'corrector': "NUM_MediumID_DEN_TrackerMuons",
                'year': f"{year}_{tag}"},
+        
         'iso': {'corrector': "NUM_TightPFIso_DEN_MediumID",
                 'year': f"{year}_{tag}"},
+        
         'trig': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
                  'year': f"{year}_{tag}"},
+        
+        'trig_data_eff': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_MCeff",
+                 'year': f"{year}_{tag}"},
+        
+        'trig_mc_eff': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff",
+                 'year': f"{year}_{tag}"},
+        
         'xtrig': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight",
-                  'year': f"{year}_{tag}"}
+                  'year': f"{year}_{tag}"},
+        
+        'MC_eff_mutau': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_MCeff"},
+        
+        'Data_eff_mutau': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff"},
     })
     
     # target file size after MergeReducedEvents in MB
     cfg.x.reduced_file_size = 512.0
     
+    ##########
+    # shifts #
+    ##########
     from httcp.config.variables import keep_columns
     keep_columns(cfg)
  
@@ -753,6 +788,12 @@ def add_run3(ana: od.Analysis,
     cfg.add_shift(name="electron_up", id=8, type="shape")
     cfg.add_shift(name="electron_down", id=9, type="shape")
     add_shift_aliases(cfg, "electron", {"electron_weight": "electron_weight_{direction}"})
+    
+    cfg.add_shift(name="top_pt_up", id=10, type="shape")
+    cfg.add_shift(name="top_pt_down", id=11, type="shape")
+    add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"})
+
+    
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
 

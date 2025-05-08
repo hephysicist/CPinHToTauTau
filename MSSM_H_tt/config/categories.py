@@ -1239,6 +1239,14 @@ def add_categories(config: od.Config,
                        ],
             label="$e\\mu$ CR\n",
         )
+        # emu_signal_reg_no_os = add_category(
+        #     config,
+        #     name="emu_signal_reg_no_os",
+        #     id=209 + emu.id,
+        #     selection=["cat_emu"  ,
+        #                ],
+        #     label="$e\\mu$ SR\n",
+        # )
     
     elif channel=='tautau':
         tautau = add_category(

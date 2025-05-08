@@ -32,24 +32,53 @@ def add_triggers_run3(config: od.Config) -> None:
             ],
             tags={"single_trigger", "single_mu", "channel_mu_tau"},
         ),
+        # #
+        # # single electron
+        # #    
+        # # https://github.com/cms-sw/cmssw/blob/203834e3ae301f2564423dd1cc84bebf660519b9/PhysicsTools/NanoAOD/python/triggerObjects_cff.py#L63
+        # Trigger(
+        # name="HLT_Ele30_WPTight_Gsf",
+        # id=111,
+        # legs=[
+        #     TriggerLeg(
+        #         pdg_id=11,
+        #         min_pt=31.0,
+        #         min_eta=2.4,
+        #         # filter names:
+        #         # hltEle32WPTightGsfTrackIsoFilter
+        #         trigger_bits=[2],
+        #     ),
+        # ],
+        # tags={"single_trigger", "single_e", "channel_e_tau"},
+        # ),
+        # mu tauh
         #
-        # single electron
-        #    
-        # https://github.com/cms-sw/cmssw/blob/203834e3ae301f2564423dd1cc84bebf660519b9/PhysicsTools/NanoAOD/python/triggerObjects_cff.py#L63
+        # Muon : https://github.com/cms-sw/cmssw/blob/203834e3ae301f2564423dd1cc84bebf660519b9/PhysicsTools/NanoAOD/python/triggerObjects_cff.py#L121
+        # Tau  : https://github.com/cms-sw/cmssw/blob/203834e3ae301f2564423dd1cc84bebf660519b9/PhysicsTools/NanoAOD/python/triggerObjects_cff.py#L149
         Trigger(
-        name="HLT_Ele30_WPTight_Gsf",
-        id=111,
-        legs=[
-            TriggerLeg(
-                pdg_id=11,
-                min_pt=31.0,
-                min_eta=2.4,
-                # filter names:
-                # hltEle32WPTightGsfTrackIsoFilter
-                trigger_bits=[2],
-            ),
-        ],
-        tags={"single_trigger", "single_e", "channel_e_tau"},
+            name="HLT_IsoMu20_eta2p1_LooseDeepTauPFTauHPS27_eta2p1_CrossL1",
+            id=13,
+            legs=[
+                TriggerLeg(
+                    pdg_id=13,
+                    min_pt=21.0,
+                    min_eta=2.1,
+                    # filter names:
+                    # hltL3crIsoBigORMu18erTauXXer2p1L1f0L2f10QL3f20QL3trkIsoFiltered  # TODO Twiki sugests 2
+                    # hltHpsOverlapFilterIsoMu20LooseMuTauWPDeepTauPFTau27L1Seeded (OverlapFilter PFTau) # TODO Twiki sugests 4 + 64  # noqa
+                    trigger_bits= [2,4],#[2,3,7], #4,
+                ),
+                TriggerLeg(
+                    pdg_id=15,
+                    min_pt=32.0,
+                    min_eta=2.1,
+                    # filter names:
+                    # (DeepTau + HPS) # TODO Twiki sugests 8 + 32 + 512 + 262144
+                    # hltHpsOverlapFilterIsoMu20LooseMuTauWPDeepTauPFTau27L1Seeded
+                    trigger_bits= [4,10],#[4,14,29],
+                ),
+            ],
+            tags={"cross_trigger", "cross_mu_tau", "channel_mu_tau"},
         ),
      ])
 

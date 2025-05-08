@@ -247,6 +247,7 @@ def hlt_path_matching(self: Producer, events: ak.Array, triggers: ak.Array, pair
                 single_mu_matches_leg0 = ak.any(ak.flatten(single_mu_matches_leg0, axis=-1), axis=1)
                 single_muon_triggered = ak.where(trigger_fired & is_single_mu, True, single_muon_triggered)
                 hlt_path_fired_mu[trigger.hlt_field] = ak.where(single_mu_matches_leg0, trigger.id, -1)
+
             
             elif is_cross_mu:
                 assert trigger.n_legs == len(leg_masks) == 2
@@ -279,6 +280,7 @@ def hlt_path_matching(self: Producer, events: ak.Array, triggers: ak.Array, pair
                                         ak.any(ak.flatten(cross_mu_tau_matches_leg1, axis=-1), axis=1))
                 cross_muon_triggered = ak.where(trigger_fired & is_cross_mu, True, cross_muon_triggered)
                 hlt_path_fired_mutau[trigger.hlt_field] = ak.where(cross_mu_tau_matched, trigger.id, -1)
+
         
             triggerID_mu    = hlt_path_fired(events, hlt_path_fired_mu)
             triggerID_mutau = hlt_path_fired(events, hlt_path_fired_mutau)
@@ -383,8 +385,10 @@ def hlt_path_matching(self: Producer, events: ak.Array, triggers: ak.Array, pair
         
     for column_name, array in trigger_ID.items():
         events = set_ak_column(events, column_name, array)
+    
     matched_trigger_array = hlt_path_fired(events, trigger_ID)
     events = set_ak_column(events, "all_triggers_id", matched_trigger_array)
+    
     return events, matched_masks
 
 
@@ -407,3 +411,40 @@ def find_fields_with_nan(awk_array):
             fields_with_nan.append(field)
     
     return fields_with_nan
+
+def compute_eff(Pass_mu_trig,
+                Pass_mutau_trig,
+                muon_trig_eff,
+                muon_xtrig_eff,
+                tau_xtrig_eff):
+    """
+    Compute the efficiency for OR of single and cross trigger.
+
+    Parameters
+    ----------
+    Pass_mu_trig : float
+        Indicator (0 or 1) of passing the muon trigger.
+    Pass_mutau_trig : float
+        Indicator (0 or 1) of passing the mu-tau trigger.
+    muon_trig_eff : float
+        events.muon_trig_Data_eff_nom
+    muon_xtrig_eff : float
+        events.muon_xtrig_Data_eff_nom
+    tau_xtrig_eff : float
+        events.tau_xtrig_Data_eff_nom
+
+    Returns
+    -------
+    float
+        eff
+    """
+    
+    mask = muon_trig_eff>muon_xtrig_eff
+
+    mask_min = ak.where(mask, muon_xtrig_eff, muon_trig_eff)
+    
+    return (
+        Pass_mu_trig * muon_trig_eff
+        - Pass_mu_trig * Pass_mutau_trig * mask_min * tau_xtrig_eff
+        + Pass_mutau_trig * muon_trig_eff * tau_xtrig_eff
+    )

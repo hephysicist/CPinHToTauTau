@@ -42,6 +42,10 @@ def get_lep_p4(part): return ak.zip({f"{var}": part[var] for var in ['pt', 'eta'
                                     with_name="PtEtaPhiMLorentzVector",
                                     behavior=coffea.nanoevents.methods.vector.behavior)
 
+def get_p2(part): return ak.zip({f"{var}": part[var] for var in ['pt', 'phi']},
+                                    with_name="PolarTwoVector",
+                                    behavior=coffea.nanoevents.methods.vector.behavior)
+
 # lambda function to get 4-vector of impact parameter from the particle objects
 # Zeroth component of IP vector is set to zero by definition that can be found here: https://www.mdpi.com/2218-1997/8/5/256
 def get_ip_p4(part): return ak.zip({f'{var}': part[f'IP{var}']for var in ['x', 'y', 'z']} | {'t': ak.zeros_like(part.IPx)},
@@ -424,12 +428,12 @@ def hlt_path_matching(self: Producer, events: ak.Array, triggers: ak.Array, pair
             # For real data, apply the appropriate trigger selection if the 'emu' object is present.
             if 'emu' in pair_objects:
                 # For SingleMuon or Muon_Run datasets, select events where the muon trigger (HLT_IsoMu24) fired.
-                if 'SingleMuon' in dataset_name_tag or 'Muon_Run' in dataset_name_tag:
+                if ('SingleMuon' in dataset_name_tag) or ('Muon_Run' in dataset_name_tag):
                     matched_masks['emu'] = (triggerID_mu > 0)
-                # For EGamma datasets, select events where:
+                # For EGamma (MuonEG) datasets, select events where:
                 # - The electron trigger (HLT_Ele30_WPTight_gsf) fired.
                 # - The muon trigger (HLT_IsoMu24) did NOT fire.
-                elif 'EGamma' in dataset_name_tag:
+                elif ('EGamma' in dataset_name_tag) or ('MuonEG' in dataset_name_tag):
                     mask_e_not_mu_events = (triggerID_e == single_ele_id) & ~(triggerID_mu == single_mu_id)
                     # For events where the electron trigger is not isolated (i.e., doesn't meet the criteria), set its ID to -1.
                     triggerID_e = ak.where(mask_e_not_mu_events, triggerID_e, -1)
@@ -470,10 +474,9 @@ def hlt_path_matching(self: Producer, events: ak.Array, triggers: ak.Array, pair
             cross_tau_triggered = ak.where(trigger_fired & is_cross_tau, True, cross_tau_triggered)
             hlt_path_fired_tau[trigger.hlt_field] = ak.where(cross_tau_tau_matched, trigger.id, -1)
         
-        triggerID_tau   = hlt_path_fired(events, hlt_path_fired_tau)
-        matched_masks['tautau'] = (triggerID_tau > 0)
-        trigger_ID["triggerID_tau"]    = triggerID_tau
-            
+            triggerID_tau   = hlt_path_fired(events, hlt_path_fired_tau)
+            matched_masks['tautau'] = (triggerID_tau > 0)
+            trigger_ID["triggerID_tau"]    = triggerID_tau  
     for column_name, array in trigger_ID.items():
         events = set_ak_column(events, column_name, array)
     matched_trigger_array = hlt_path_fired(events, trigger_ID)

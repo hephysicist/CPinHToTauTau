@@ -165,7 +165,6 @@ def muon_weight_setup(
     correction_set = correctionlib.CorrectionSet.from_string(
         bundle.files.muon_correction.load(formatter="gzip").decode("utf-8"),
     )
-   
     self.muon_id = correction_set[self.config_inst.x.muon_sf.ID.corrector]
     self.muon_iso = correction_set[self.config_inst.x.muon_sf.iso.corrector]
     self.muon_trig = correction_set[self.config_inst.x.muon_sf.trig.corrector]

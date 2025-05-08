@@ -20,17 +20,33 @@ np = maybe_import("numpy")
 )
 def main(self: WeightProducer, events: ak.Array, **kwargs) -> ak.Array:
     # build the full event weight
+    processes = self.dataset_inst.processes.names()
+    
     weight = ak.Array(np.ones(len(events), dtype=np.float32))
     for column in self.weight_columns:
-        weight = weight * Route(column).apply(events)
-    processes = self.dataset_inst.processes.names()
+        if not ak.any(['tt' in proc for proc in processes]) and column == 'top_pt_weight':
+            print("===")
+            print(weight)
+            print(Route(column).apply(events),column)
+            print("Skipping top_pt_weight for:", processes)
+            print(weight)
+            print("===")
+            continue
+        else :
+            print("======")
+            print(weight)
+            weight = weight * Route(column).apply(events)
+            print(column, Route(column).apply(events),column)
+            print(weight)
+            print("======")
+            
     process_id = events.process_id
     Z_ee_weight = 1
     if ak.any(['dy' in proc for proc in processes]) and self.dataset_inst.campaign.x.tag == 'postEE':
         print("Applying an ad hoc weight to Z->ee...")
         weight = ak.where(process_id==51001,weight*Z_ee_weight,weight)
         print("The ad hoc weight to Z->ee was applied succefully...")
-        
+
     return events, weight
 
 
@@ -45,7 +61,9 @@ def main_init(self: WeightProducer) -> None:
         "tau_weight_nom",
         "electron_weight_nom",
         "tauspinner_weight",
-        "zpt_weight"
+        "zpt_weight",
+        "top_pt_weight",
+        "trigger_weight_mutau_nom",
     }
     self.uses |= self.weight_columns
     

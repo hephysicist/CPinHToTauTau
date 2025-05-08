@@ -83,7 +83,7 @@ def keep_columns(cfg: od.Config) -> None:
         } | {
             "GenTau.*", "GenTauProd.*", "nJet", "N_b_jets", "n_jets", 
             "leading_jet_pt","subleading_jet_pt","leading_jet_eta","subleading_jet_eta","leading_jet_phi","subleading_jet_phi","delta_eta_jj","mjj","n_jets_tag",
-            "all_triggers_id", "triggerID_e", "triggerID_mu", "triggerID_tau",
+            "all_triggers_id", "triggerID_e", "triggerID_mu", "triggerID_mutau","triggerID_tau"
         } | {
             f"hcandprod.{var}" for var in [
                 "pt", "eta", "phi", "mass", "charge",
