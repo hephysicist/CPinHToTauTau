@@ -476,10 +476,12 @@ def add_cutflow_features(cfg: od.Config) -> None:
 
 def phi_cp_variables(cfg: od.Config) -> None:
     n_bins_phi_cp = 11
-    for the_ch in ['mu_pi', 'mu_rho', 'mu_a1_1pr', "rho_rho","pi_pi"]:
+    for the_ch in ['mu_pi', 'mu_rho', 'mu_a1','mu_a1_pv', "rho_rho","pi_pi"]:
         spitted_str = the_ch.split('_')
         if 'a1' in the_ch: 
-            title_str = "\\" + spitted_str[0] + fr" a_1, {spitted_str[2]}"
+            title_str = "\\" + spitted_str[0] + fr" a_1"
+            if 'pv' in the_ch:
+                title_str += "(PV)"
         else:
              title_str = "\\" + spitted_str[0] + "\\" + spitted_str[1]
         cfg.add_variable(
