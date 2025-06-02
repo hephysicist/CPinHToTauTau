@@ -67,7 +67,11 @@ def jet_veto_map(
     #Create 
     presel_jet = ak.mask(jet,jet_mask)
     
-    veto_args = ["jetvetomap", presel_jet.eta, presel_jet.phi]
+    mapped_jet_phi = ak.where(abs(presel_jet.phi) > np.pi,
+                              presel_jet.phi -np.pi * np.sign(presel_jet.phi),
+                              presel_jet.phi)
+    
+    veto_args = ["jetvetomap", presel_jet.eta, mapped_jet_phi]
     veto_mask = ak.fill_none(self.veto_map.evaluate(*veto_args),False)
     jet_veto_per_evt = ~ak.any(veto_mask, axis=1)
     events = set_ak_column(events, "Jet.veto_map_mask", veto_mask)
