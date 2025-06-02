@@ -446,6 +446,7 @@ def is_photon(prods): return prods.pdgId == 22
 def has_one_pion(prods): return (ak.sum(is_pion(prods),   axis=1) == 1)
 
 def has_three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) == 3)
+def has_at_least_three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) >= 3)
 
 def has_photons(prods): return (ak.sum(is_photon(prods), axis=1) > 0)
 
@@ -541,9 +542,9 @@ def add_tau_prods(
                 #DM1
                 mask = mask | ak.fill_none(tau.decayMode==1, False) & has_one_pion(matched_tau_prods) & has_photons(matched_tau_prods)
                 #DM10
-                mask = mask | ak.fill_none(tau.decayMode==10, False) & has_three_pions(matched_tau_prods) 
+                mask = mask | ak.fill_none(tau.decayMode==10, False) & has_at_least_three_pions(matched_tau_prods) 
                 #DM11
-                mask = mask | ak.fill_none(tau.decayMode==11, False) & has_three_pions(matched_tau_prods) & has_photons(matched_tau_prods)
+                mask = mask | ak.fill_none(tau.decayMode==11, False) & has_at_least_three_pions(matched_tau_prods) & has_photons(matched_tau_prods)
                 events = set_ak_column(events, f'tau_decay_prods_{ch_str}_{lep_str}',  matched_tau_prods)
             else:
                 pass
@@ -588,5 +589,34 @@ def pion_energy_split(
                             EMPTY_FLOAT)
     pion_E_split = ak.fill_none(pion_E_split, EMPTY_FLOAT)
     events = set_ak_column_f32(events, "pion_E_split", pion_E_split)
+    return events
+
+
+
+@producer(
+    uses={
+        "hcand*",
+    },
+    produces={
+        "hcand*", 
+    },
+    exposed=False,
+)
+def tau_dm_one_hot_encoding(
+        self: Producer,
+        events: ak.Array,
+        **kwargs
+) -> ak.Array:
+    ch_str = self.config_inst.channels.names()[0]
+    tau = events[f"hcand_{ch_str}"].lep1
+    for the_dm in [0,1,2,10,11]:
+        if the_dm != 2: #HPS DMs are 0,1,10,11
+            tau[f'is_hps_dm{str(the_dm)}'] = (tau.decayMode == the_dm)
+        tau[f'is_pnet_dm{str(the_dm)}'] = (tau.decayModePNet == the_dm)
+    hcand = {}
+    hcand['lep0'] = events[f"hcand_{ch_str}"].lep0
+    hcand['lep1'] = tau
+    
+    events = set_ak_column_f32(events, f"hcand_{ch_str}", ak.zip(hcand))
     return events
 
