@@ -31,6 +31,8 @@ from MSSM_H_tt.selection.higgscand import new_higgscand, mask_nans
 
 from MSSM_H_tt.production.aux_columns import channel_id
 from MSSM_H_tt.selection.jets import jet_veto_map
+from MSSM_H_tt.production.btag import btag_weight
+from MSSM_H_tt.production.aux_columns import jets_taggable
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -61,6 +63,8 @@ coffea = maybe_import("coffea")
         new_higgscand,
         mask_nans,
         jet_veto_map,
+        btag_weight,
+        jets_taggable,
     },
     produces={
         # selectors / producers whose newly created columns should be kept
@@ -82,6 +86,8 @@ coffea = maybe_import("coffea")
         new_higgscand,
         mask_nans,
         jet_veto_map,
+        btag_weight,
+        jets_taggable,
         "category_ids",
         "OC_lepton_veto",
     },
@@ -205,18 +211,24 @@ def main(
     if self.has_dep(jet_veto_map):
         events, jet_veto_map_result = self[jet_veto_map](events, **kwargs)
         results += jet_veto_map_result
-    
+
     # combined event selection after all steps
     event_sel = reduce(and_, results.steps.values())
+    
     results.event = event_sel
+    
+    events = self[jets_taggable](events, **kwargs) 
     # add the mc weight
     if self.dataset_inst.is_mc:
         events = self[mc_weight](events, **kwargs)
+        events = self[btag_weight](events, do_syst=True, **kwargs)
+        events_b_weight = self[mc_weight](events, **kwargs)
+        w_event_btag = events.btag_weight_nom
     events = self[process_ids](events, **kwargs)
     events = set_ak_column(events, 'category_ids', ak.ones_like(events.event, dtype=np.uint8))
-
-  
-
+    
+    njets_taggable = events.n_jets_tag
+    
     weight_map = {
         "num_events": Ellipsis,
         "num_events_selected": event_sel,
@@ -228,6 +240,7 @@ def main(
             # mc weight for all events
             "sum_mc_weight": (events.mc_weight, Ellipsis),
             "sum_mc_weight_selected": (events.mc_weight, results.event),
+            "sum_mc_weight_selected_with_btag_weight": (events.mc_weight*w_event_btag, results.event),
         }
         group_map = {
             # per process
@@ -240,8 +253,15 @@ def main(
                 "values": events.channel_id,
                 "mask_fn": (lambda v: events.channel_id == v),
             },
+        
         }
-
+        # per jet multiplicity
+        if njets_taggable is not None:
+            group_map["njets_taggable"] = {
+                "values": njets_taggable,
+                "mask_fn": (lambda v: njets_taggable == v),
+            }
     events, results = self[increment_stats](
         events, results, stats, weight_map=weight_map, group_map=group_map, **kwargs)
+    
     return events, results

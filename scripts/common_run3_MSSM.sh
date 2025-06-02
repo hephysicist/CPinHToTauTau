@@ -9,11 +9,11 @@ variables_mutau='mutau_lep0_pt,mutau_lep0_eta,mutau_lep0_phi,mutau_lep0_ip_sig,m
 
 categories_etau="etau_signal_reg"
 # etau_signal_reg_no_mT,etau_signal_reg_b_jets,etau_signal_reg_b_jets_no_mT,etau_signal_reg_0_bjets,etau_signal_reg_0_bjets_endcap_tau,etau_signal_reg_0_bjets_barrel_tau,etau_signal_reg_0_bjets_no_mt,etau_signal_reg_0_bjets_endcap_tau_no_mt,etau_signal_reg_0_bjets_barrel_tau_no_mt,etau_signal_reg_1_bjets,etau_signal_reg_1_bjets_endcap_tau,etau_signal_reg_1_bjets_barrel_tau,etau_signal_reg_1_bjets_no_mt,etau_signal_reg_1_bjets_endcap_tau_no_mt,etau_signal_reg_1_bjets_barrel_tau_no_mt,etau_signal_reg_2_bjets,etau_signal_reg_2_bjets_endcap_tau,etau_signal_reg_2_bjets_barrel_tau,etau_signal_reg_2_bjets_no_mt,etau_signal_reg_2_bjets_endcap_tau_no_mt,etau_signal_reg_2_bjets_barrel_tau_no_mt"
-variables_etau='N_b_jets,N_jets_pT_20_eta_2_5_Tight,mjj,N_jets_pT_30_eta_4_7_Tight,Leading_jet_pt,Subleading_jet_pt,delta_eta_jj,jet_1_pt,etau_lep0_pt,etau_lep0_eta,etau_lep0_phi,etau_lep0_ip_sig,etau_lep1_pt,etau_lep1_eta,etau_lep1_phi,etau_lep1_mass,etau_lep1_decayModePNet,etau_lep1_decayMode,etau_mt,etau_mvis,etau_delta_r,etau_pt,puppi_met_pt,puppi_met_phi'
+variables_etau='N_b_jets,N_jets_pT_20_eta_2_5_Tight,mjj,N_jets_pT_20_eta_4_7_Tight,Leading_jet_pt,Subleading_jet_pt,delta_eta_jj,jet_1_pt,etau_lep0_pt,etau_lep0_eta,etau_lep0_phi,etau_lep0_ip_sig,etau_lep1_pt,etau_lep1_eta,etau_lep1_phi,etau_lep1_mass,etau_lep1_decayModePNet,etau_lep1_decayMode,etau_mt,etau_mvis,etau_delta_r,etau_pt,puppi_met_pt,puppi_met_phi'
 
 categories_emu="emu_signal_reg"
 #,emu_signal_reg_no_mT,emu_signal_reg_b_jets,emu_signal_reg_b_jets_no_mT,emu_signal_reg_0_bjets,emu_signal_reg_0_bjets_endcap_tau,emu_signal_reg_0_bjets_barrel_tau,emu_signal_reg_0_bjets_no_mt,emu_signal_reg_0_bjets_endcap_tau_no_mt,emu_signal_reg_0_bjets_barrel_tau_no_mt,emu_signal_reg_1_bjets,emu_signal_reg_1_bjets_endcap_tau,emu_signal_reg_1_bjets_barrel_tau,emu_signal_reg_1_bjets_no_mt,emu_signal_reg_1_bjets_endcap_tau_no_mt,emu_signal_reg_1_bjets_barrel_tau_no_mt,emu_signal_reg_2_bjets,emu_signal_reg_2_bjets_endcap_tau,emu_signal_reg_2_bjets_barrel_tau,emu_signal_reg_2_bjets_no_mt,emu_signal_reg_2_bjets_endcap_tau_no_mt,emu_signal_reg_2_bjets_barrel_tau_no_mt"
-variables_emu='leading_jet_eta,subleading_jet_eta,leading_jet_phi,subleading_jet_phi,N_b_jets,N_jets_pT_20_eta_2_5_Tight,mjj,N_jets_pT_30_eta_4_7_Tight,leading_jet_pt,subleading_jet_pt,delta_eta_jj,jet_1_pt,emu_lep0_pt,emu_lep0_eta,emu_lep0_phi,emu_lep0_ip_sig,emu_lep1_pt,emu_lep1_eta,emu_lep1_phi,emu_lep1_ip_sig,emu_mt,emu_mvis,emu_delta_r,emu_pt,puppi_met_pt,puppi_met_phi'
+variables_emu='emu_mt_tot,emu_mt_emu,D_zeta,emu_mt_e,emu_mt_mu,N_jets_pT_20_eta_4_7_Tight,leading_jet_eta,subleading_jet_eta,leading_jet_phi,subleading_jet_phi,N_b_jets,mjj,N_jets_pT_20_eta_4_7_Tight,leading_jet_pt,subleading_jet_pt,delta_eta_jj,jet_1_pt,emu_lep0_pt,emu_lep0_eta,emu_lep0_phi,emu_lep0_ip_sig,emu_lep1_pt,emu_lep1_eta,emu_lep1_phi,emu_lep1_ip_sig,emu_mvis,emu_delta_r,emu_pt,puppi_met_pt,puppi_met_phi'
 
 data_e_2022preEE='data_e_C,data_e_D,'
 data_egamma_2022preEE='data_egamma_C,data_egamma_D,'
@@ -48,9 +48,10 @@ case $1 in
     ;;
     "run3_2022preEE_emu_lim")
         config="run3_2022_preEE_emu_limited"	
-        datasets='data_e_C,dy_lep_madgraph'
-        processes='dy_lep,data'
-	    categories='N_b_jets'
+        datasets='h_tt_100' 
+        processes='h_ggf_htt' #data,dy_lep,
+	    categories='emu_signal_reg'
+	    variables='N_jets_pT_20_eta_4_7_Tight'
         workflow='local'
     ;;
     "run3_2022preEE_mutau_lim")
@@ -74,7 +75,7 @@ case $1 in
         processes='data,dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj'
 	    categories=$categories_etau
 	    variables=$variables_etau
-        workflow='local'
+        workflow='htcondor'
     ;;
     "run3_2022preEE_emu")
         config="run3_2022_preEE_emu"
@@ -84,9 +85,9 @@ case $1 in
         bkg_ttbar=$bkg_ttbar
         datasets=$data$bkg_ewk$bkg_top$bkg_ttbar
         processes='dy_lep,vv,tt,st,wj,data'
-	    categories=$categories_emu
+	    categories='emu_signal_reg'
 	    variables=$variables_emu
-	    workflow='htcondor'
+	    workflow='local'
     ;;
     "run3_2022preEE_mutau")
         config="run3_2022_preEE_mutau"
@@ -112,11 +113,11 @@ case $1 in
         workflow='local'
     ;;
     "run3_2022postEE_emu_lim")
-        config="run3_2022_postEE_emu_limited"	
-        datasets='data_egamma_E,dy_lep_madgraph'
-        processes='dy_lep,data'
+        config="run3_2022_postEE_emu_limited"
+        datasets='tt_sl'
+        processes='tt'
 	    categories='emu_signal_reg'
-	    variables='N_b_jets'
+	    variables='D_zeta' #emu_mt_e,emu_mt_mu,emu_mt_tot,emu_mt_emu'
         workflow='local'
     ;;
     "run3_2022postEE_mutau_lim")
@@ -144,7 +145,7 @@ case $1 in
     ;;
     "run3_2022postEE_emu")
         config="run3_2022_postEE_emu"
-        data=$data_e_2022postEE$data_mu_2022postEE
+        data=$data_egamma_2022postEE$data_mu_2022postEE
         bkg_ewk=$bkg_ewk
         bkg_top=$bkg_top
         bkg_ttbar=$bkg_ttbar
@@ -153,6 +154,26 @@ case $1 in
 	    categories=$categories_emu
 	    variables=$variables_emu
 	    workflow='htcondor'
+    ;;
+    "run3_2022postEE_emu_2D")
+        config="run3_2022_postEE_emu"
+        data=$data_e_2022postEE$data_mu_2022postEE
+        bkg_ewk=$bkg_ewk
+        bkg_top=$bkg_top
+        bkg_ttbar=$bkg_ttbar
+        datasets=$bkg_ewk$bkg_top$bkg_ttbar
+        processes='dy_lep,vv,tt,st,wj'
+	    categories=$categories_emu
+	    variables='leading_jet_eta-leading_jet_phi'
+	    workflow='htcondor'
+    ;;
+    "run3_2022postEE_emu_2D_dy")
+        config="run3_2022_postEE_emu"
+        datasets='dy_lep_madgraph'
+        processes='dy_lep'
+	    categories='emu_signal_reg'
+	    variables='leading_jet_eta-leading_jet_phi'
+	    workflow='local'
     ;;
     "run3_2022postEE_mutau")
         config="run3_2022_postEE_mutau"

@@ -22,7 +22,7 @@ logger = law.logger.get_logger(__name__)
 
 @selector(
     uses={
-        "Jet.{pt,eta,phi,mass,jetId,chEmEF}", 
+        "Jet.{pt,eta,phi,mass,jetId,chEmEF,neEmEF}", 
         "Muon.{pt,eta,phi,mass,isPFcand}",
         optional("Jet.puId"),
     },
@@ -61,7 +61,7 @@ def jet_veto_map(
     jet_mask = (
         (jet.pt > 15) &
         (jet.jetId >= 2) &  # tight id 
-        (jet.chEmEF < 0.9) &
+        ((jet.chEmEF + jet.neEmEF)< 0.9) &
         ak.all(events.Jet.metric_table(muon) >= 0.2, axis=2)
     )
 
@@ -114,14 +114,13 @@ def jet_veto_map(
     # evalute the veto map only for selected jets
     # (a map value of != 0 means the jet is vetoed)
     veto_mask = jet_mask
-    flat_veto_mask = flat_np_view(veto_mask)
-    flat_veto_mask[flat_veto_mask] = ak.flatten(self.veto_map(*inputs) != 0)
+    jet_veto = (self.veto_map(*inputs) != 0)
     # store the per-jet veto mask
     events = set_ak_column(events, "Jet.veto_map_mask", veto_mask)
 
     # create the selection result
     results = SelectionResult(
-        steps={"jet_veto_map": ~ak.any(veto_mask, axis=1)},
+        steps={"jet_veto_map": ~ak.any(jet_veto, axis=1)},
     )
 
     return events, results

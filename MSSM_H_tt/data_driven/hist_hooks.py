@@ -91,11 +91,11 @@ def add_hist_hooks(config: od.Config) -> None:
             qcd_array = data_array - mc_array
             qcd_values = qcd_array()
             qcd_values[qcd_array() < 0] = 0
-            qcd_variances = qcd_array(sn.UP, sn.ALL, unc=True)**2
-            
+            qcd_variances = qcd_array(sn.UP, sn.ALL, unc=True)**2     
             cat_idx = find_by_id(qcd_hist, the_category.id)
-            qcd_hist.view().value[cat_idx, ...] = qcd_values
-            qcd_hist.view().variance[cat_idx, ...] = qcd_variances
+            QCD_weight = 1
+            qcd_hist.view().value[cat_idx, ...] = qcd_values*QCD_weight
+            qcd_hist.view().variance[cat_idx, ...] = qcd_variances*QCD_weight
           
         # for group_name in complete_groups:
         

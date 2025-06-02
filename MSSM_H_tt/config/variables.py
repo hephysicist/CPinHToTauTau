@@ -83,7 +83,7 @@ def keep_columns(cfg: od.Config) -> None:
         } | {
             "GenTau.*", "GenTauProd.*", "nJet", "N_b_jets", "n_jets", 
             "leading_jet_pt","subleading_jet_pt","leading_jet_eta","subleading_jet_eta","leading_jet_phi","subleading_jet_phi","delta_eta_jj","mjj","n_jets_tag",
-            "all_triggers_id", "triggerID_e", "triggerID_mu", "triggerID_tau",
+            "all_triggers_id", "triggerID_e", "triggerID_mu", "triggerID_tau", "D_zeta",
         } | {
             f"hcandprod.{var}" for var in [
                 "pt", "eta", "phi", "mass", "charge",
@@ -256,16 +256,18 @@ def add_jet_features(cfg: od.Config) -> None:
         )
         
     cfg.add_variable(
-        name="N_jets_pT_30_eta_4_7_Tight",
+        name="N_jets_pT_20_eta_4_7_Tight",
         expression="n_jets",
+        null_value=EMPTY_FLOAT,
         binning=(11, -0.5, 10.5),
         discrete_x=True,
-        x_title="N_jets_pT_30_eta_4_7_Tight",
+        x_title="N_jets_pT_20_eta_4_7_Tight",
     )
     
     cfg.add_variable(
         name="N_jets_pT_20_eta_2_5_Tight",
         expression="n_jets_tag",
+        null_value=EMPTY_FLOAT,
         binning=(11, -0.5, 10.5),
         discrete_x=True,
         x_title="N_jets_pT_20_eta_2_5_Tight",
@@ -273,6 +275,7 @@ def add_jet_features(cfg: od.Config) -> None:
     cfg.add_variable(
         name="N_b_jets",
         expression="N_b_jets",
+        null_value=EMPTY_FLOAT,
         binning=(11, -0.5, 10.5),
         discrete_x=True,
         x_title="N_b_jets",
@@ -280,6 +283,7 @@ def add_jet_features(cfg: od.Config) -> None:
     cfg.add_variable(
         name="leading_jet_pt",
         expression="leading_jet_pt",
+        null_value=EMPTY_FLOAT,
         binning=(30, 30.0, 330.0),
         unit="GeV",
         x_title=r"Leading jet $p_{T}$",
@@ -287,6 +291,7 @@ def add_jet_features(cfg: od.Config) -> None:
     cfg.add_variable(
         name="subleading_jet_pt",
         expression="subleading_jet_pt",
+        null_value=EMPTY_FLOAT,
         binning=(25, 30.0, 280.0),
         unit="GeV",
         x_title=r"Subleading jet $p_{T}$",
@@ -294,24 +299,28 @@ def add_jet_features(cfg: od.Config) -> None:
     cfg.add_variable(
         name="leading_jet_eta",
         expression="leading_jet_eta",
+        null_value=EMPTY_FLOAT,
         binning=(47, -4.7, 4.7),
         x_title="Leading Jet $\\eta$",
     ) 
     cfg.add_variable(
         name="subleading_jet_eta",
         expression="subleading_jet_eta",
+        null_value=EMPTY_FLOAT,
         binning=(47, -4.7, 4.7),
         x_title="Subleading Jet $\\eta$",
     ) 
     cfg.add_variable(
         name="leading_jet_phi",
         expression="leading_jet_phi",
+        null_value=EMPTY_FLOAT,
         binning=(32, -3.2, 3.2),
         x_title="Leading Jet $\\phi$",
     )  
     cfg.add_variable(
         name="subleading_jet_phi",
         expression="subleading_jet_phi",
+        null_value=EMPTY_FLOAT,
         binning=(32, -3.2, 3.2),
         x_title="Subleading Jet $\\phi$",
     ) 
@@ -325,6 +334,7 @@ def add_jet_features(cfg: od.Config) -> None:
     cfg.add_variable(
         name="mjj",
         expression="mjj",
+        null_value=EMPTY_FLOAT,
         binning=(40, 10.0, 410.0),
         unit="GeV",
         x_title=r"$m_{jj}$",
@@ -396,7 +406,13 @@ def add_highlevel_features(cfg: od.Config) -> None:
         binning=(32, -3.2,3.2),
         x_title=r"PUPPI MET $\phi$",
     )  
-    
+    cfg.add_variable(
+        name="D_zeta",
+        expression="D_zeta",
+        null_value=EMPTY_FLOAT,
+        binning=(90, -300,150),
+        x_title="$D_{\\zeta}$"
+    )  
     
     
 
@@ -546,14 +562,47 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 unit="GeV",
                 x_title=r"$m_{vis}$",
             )
-        if ch_str != 'tautau':
+        if ch_str in ['etau', 'mutau']:
             cfg.add_variable(
                 name=f"{ch_str}_mt",
                 expression=f"hcand_{ch_str}.mt",
                 null_value=EMPTY_FLOAT,
                 binning=(40, 0.0, 200.0),
                 unit="GeV",
-                x_title=r"$m_{T}$",
+                x_title="$\\m_{T}$",
+            )
+        if ch_str == 'emu':
+            cfg.add_variable(
+                name=f"{ch_str}_mt_e",
+                expression=f"hcand_{ch_str}.mt_e",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0.0, 200.0),
+                unit="GeV",
+                x_title="$m_{T}^{e}$",
+            )
+            cfg.add_variable(
+                name=f"{ch_str}_mt_mu",
+                expression=f"hcand_{ch_str}.mt_mu",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0.0, 200.0),
+                unit="GeV",
+                x_title="$m_{T}^{\\mu}$",
+            )
+            cfg.add_variable(
+                name=f"{ch_str}_mt_emu",
+                expression=f"hcand_{ch_str}.mt_emu",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0.0, 400.0),
+                unit="GeV",
+                x_title="$m_{T}^{e\\mu}$",
+            )
+            cfg.add_variable(
+                name=f"{ch_str}_mt_tot",
+                expression=f"hcand_{ch_str}.mt_tot",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0.0, 400.0),
+                unit="GeV",
+                x_title="$m_{T}^{TOT}$",
             )
         cfg.add_variable(
             name=f"{ch_str}_delta_r",

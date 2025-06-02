@@ -22,6 +22,7 @@ from columnflow.production.util import attach_coffea_behavior
 from columnflow.util import maybe_import, DotDict
 from columnflow.columnar_util import optional_column as optional
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
+#from columnflow.production.cms.top_pt_weight import gen_parton_top
 
 from httcp.selection.physics_objects import jet_selection, muon_selection, electron_selection, tau_selection, gentau_selection
 from httcp.selection.trigger import trigger_selection
@@ -224,9 +225,11 @@ def main(
         events = self[mc_weight](events, **kwargs)
     events = self[process_ids](events, **kwargs)
     events = set_ak_column(events, 'category_ids', ak.ones_like(events.event, dtype=np.uint8))
-
-  
-
+    
+    # if self.dataset_inst.has_tag("ttbar"):
+    #     self.uses.add(gen_parton_top)
+    #     self.produces.add(gen_parton_top)
+    
     weight_map = {
         "num_events": Ellipsis,
         "num_events_selected": event_sel,

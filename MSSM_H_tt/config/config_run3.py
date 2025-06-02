@@ -128,6 +128,8 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
+        # signal
+        "h_ggf_htt",
     ]
     for process_name in process_names:
         # add the process
@@ -174,6 +176,10 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
+        #signal
+        "h_tt_100",
+        "h_tt_125",
+        "h_tt_1200",
         ]
 
     dataset_names_2022postEE = [
@@ -216,6 +222,10 @@ def add_run3(ana: od.Analysis,
         #"st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
+        #signal
+        "h_tt_100",
+        "h_tt_125",
+        "h_tt_1200",
         ]
     
     dataset_names_2023preBPix = [
@@ -252,6 +262,10 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
+        #signal
+        "h_tt_100",
+        "h_tt_125",
+        "h_tt_1200",
         ]
     
     dataset_names_2023postBPix = [
@@ -285,6 +299,10 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
+        #signal
+        "h_tt_100",
+        "h_tt_125",
+        "h_tt_1200",
         ]
     
     dataset_era = {
@@ -300,6 +318,8 @@ def add_run3(ana: od.Analysis,
         dataset = cfg.add_dataset(campaign.get_dataset(dataset_name))
         if dataset_name.startswith("h_"):
             dataset.add_tag("signal")
+        if dataset.name.startswith("tt_"):
+            dataset.add_tag({"has_top", "ttbar", "tt"})    
         # for testing purposes, limit the number of files to 1
         for info in dataset.info.values():
             if limit_dataset_files:
@@ -330,6 +350,7 @@ def add_run3(ana: od.Analysis,
     # process groups for conveniently looping over certain processs
     # (used in wrapper_factory and during plotting)
     cfg.x.process_groups = {
+        "signal": ["h_tt_100","h_tt_125","h_tt_1200"],
         "data" : ["data_mu", "data_tau","data_e"],
         "vv"   : ["ww", "wz", "zz"],
         "tt"   : ["tt_sl","tt_dl","tt_fh"],
@@ -474,48 +495,60 @@ def add_run3(ana: od.Analysis,
     #     "jet_type": jet_type,
     # })
 
-    # # JEC uncertainty sources propagated to btag scale factors
-    # # (names derived from contents in BTV correctionlib file)
-    # cfg.x.btag_sf_jec_sources = [
-    #     "",  # total
-    #     "Absolute",
-    #     "AbsoluteMPFBias",
-    #     "AbsoluteScale",
-    #     "AbsoluteStat",
-    #     f"Absolute_{year}",
-    #     "BBEC1",
-    #     f"BBEC1_{year}",
-    #     "EC2",
-    #     f"EC2_{year}",
-    #     "FlavorQCD",
-    #     "Fragmentation",
-    #     "HF",
-    #     f"HF_{year}",
-    #     "PileUpDataMC",
-    #     "PileUpPtBB",
-    #     "PileUpPtEC1",
-    #     "PileUpPtEC2",
-    #     "PileUpPtHF",
-    #     "PileUpPtRef",
-    #     "RelativeBal",
-    #     "RelativeFSR",
-    #     "RelativeJEREC1",
-    #     "RelativeJEREC2",
-    #     "RelativeJERHF",
-    #     "RelativePtBB",
-    #     "RelativePtEC1",
-    #     "RelativePtEC2",
-    #     "RelativePtHF",
-    #     "RelativeSample",
-    #     f"RelativeSample_{year}",
-    #     "RelativeStatEC",
-    #     "RelativeStatFSR",
-    #     "RelativeStatHF",
-    #     "SinglePionECAL",
-    #     "SinglePionHCAL",
-    #     "TimePtEta",
-    # ]
-
+    # JEC uncertainty sources propagated to btag scale factors
+    # (names derived from contents in BTV correctionlib file)
+    cfg.x.btag_sf_jec_sources = [
+        "",  # total
+        "Absolute",
+        "AbsoluteMPFBias",
+        "AbsoluteScale",
+        "AbsoluteStat",
+        f"Absolute_{year}",
+        "BBEC1",
+        f"BBEC1_{year}",
+        "EC2",
+        f"EC2_{year}",
+        "FlavorQCD",
+        "Fragmentation",
+        "HF",
+        f"HF_{year}",
+        "PileUpDataMC",
+        "PileUpPtBB",
+        "PileUpPtEC1",
+        "PileUpPtEC2",
+        "PileUpPtHF",
+        "PileUpPtRef",
+        "RelativeBal",
+        "RelativeFSR",
+        "RelativeJEREC1",
+        "RelativeJEREC2",
+        "RelativeJERHF",
+        "RelativePtBB",
+        "RelativePtEC1",
+        "RelativePtEC2",
+        "RelativePtHF",
+        "RelativeSample",
+        f"RelativeSample_{year}",
+        "RelativeStatEC",
+        "RelativeStatFSR",
+        "RelativeStatHF",
+        "SinglePionECAL",
+        "SinglePionHCAL",
+        "TimePtEta",
+    ]
+    
+    # ##################################
+    # # Parameters fot top pT reweight #
+    # ##################################
+    # https://twiki.cern.ch/twiki/bin/view/CMS/TopPtReweighting#TOP_PAG_corrections_based_on_the
+    cfg.x.top_pt_reweighting_params = {
+            "a": 0.0615,
+            "a_up": 0.0615 * 1.5,
+            "a_down": 0.0615 * 0.5,
+            "b": -0.0005,
+            "b_up": -0.0005 * 1.5,
+            "b_down": -0.0005 * 0.5,
+        }
 
     ################################
     # luminosity and normalization #
@@ -576,64 +609,174 @@ def add_run3(ana: od.Analysis,
                            'Medium' : 3,
                            'Tight'  : 4}
         })
+################################################################################################
+# b tagging
+################################################################################################
+    # name of the btag_sf correction set and jec uncertainties to propagate through
+    cfg.x.btag_sf = ("deepJet_shape", cfg.x.btag_sf_jec_sources)
 
     cfg.x.btag_working_points = DotDict.wrap(
-            {
-                2016 : {
-                    "deepjet": { #TODO: make a link to this numbers
-                        "loose": 0.0532,
-                        "medium": 0.3040,
-                        "tight": 0.7476,
-                    },
-                    "deepcsv": {
-                        "loose": 0.1355,
-                        "medium": 0.4506,
-                        "tight": 0.7738,
-                    },
-                },
-                2022 : {
+            {   2022 : {
                     "preEE":{
                         "deepjet" : { #https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/
-                            "loose": 0.0583,
-                            "medium": 0.3086,
-                            "tight": 0.7183,
+                            "loose"  : 0.0583,
+                            "medium" : 0.3086,
+                            "tight"  : 0.7183,
+                            "xtight" : 0.8111,
+                            "xxtight": 0.9512,
                         },
+                        "particleNet": {
+                            "loose"  : 0.047,
+                            "medium" : 0.245, 
+                            "tight"  : 0.6734, 
+                            "xtight" : 0.7862, 
+                            "xxtight": 0.961, 
+                        },
+                        "robustParticleTransformer": {
+                            "loose"  : 0.0849, 
+                            "medium" : 0.4319, 
+                            "tight"  : 0.8482, 
+                            "xtight" : 0.9151, 
+                            "xxtight": 0.9874,
+                        },                    
                     },
                     "postEE":{
                         "deepjet" : { #https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/
-                            "loose": 0.0614,
-                            "medium": 0.3196,
-                            "tight": 0.73,
+                            "loose"  : 0.0614,
+                            "medium" : 0.3196,
+                            "tight"  : 0.73,
+                            "xtight" : 0.8184,
+                            "xxtight": 0.9542, 
                         },
+                        "particleNet": {
+                            "loose"  : 0.0499,
+                            "medium" : 0.2605, 
+                            "tight"  : 0.6915, 
+                            "xtight" : 0.8033, 
+                            "xxtight": 0.9664, 
+                        },
+                        "robustParticleTransformer": {
+                            "loose"  : 0.0897, 
+                            "medium" : 0.451, 
+                            "tight"  : 0.8604, 
+                            "xtight" : 0.9234, 
+                            "xxtight": 0.9893,
+                        },             
+                        
                     },
                 },
                 2023 : {
                     "preBPix":{
                         "deepjet" : { #https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/
-                            "loose": 0.0479,
-                            "medium": 0.2431,
-                            "tight": 0.6553,
+                            "loose"  : 0.0479,
+                            "medium" : 0.2431,
+                            "tight"  : 0.6553,
+                            "xtight" : 0.7667, 
+                            "xxtight": 0.9459, 
                         },
+                        "particleNet": {
+                            "loose"  : 0.0358, 
+                            "medium" : 0.1917,
+                            "tight"  : 0.6172, 
+                            "xtight" : 0.7515, 
+                            "xxtight": 0.9659, 
+                        },
+                        "robustParticleTransformer": {
+                            "loose"  : 0.0681,
+                            "medium" : 0.3487, 
+                            "tight"  : 0.7969, 
+                            "xtight" : 0.8882,
+                            "xxtight": 0.9883,
+                        },             
                     },
                     "postBPix":{
                         "deepjet" : { #https://btv-wiki.docs.cern.ch/ScaleFactors/Run3Summer22/
-                            "loose": 0.048,
-                            "medium": 0.2435,
-                            "tight": 0.6563,
+                            "loose"  : 0.048,
+                            "medium" : 0.2435,
+                            "tight"  : 0.6563,
+                            "xtight" : 0.7671,
+                            "xxtight": 0.9483,
                         },
+                        "particleNet": {
+                            "loose"  : 0.0359,
+                            "medium" : 0.1919,
+                            "tight"  : 0.6133,
+                            "xtight" : 0.7544,
+                            "xxtight": 0.9688,
+                        },
+                        "robustParticleTransformer": {
+                            "loose"  : 0.0683,
+                            "medium" : 0.3494,
+                            "tight"  : 0.7994,
+                            "xtight" : 0.8877,
+                            "xxtight": 0.9883,
+                        },             
                     },
-
                 }
+            }
+        )
+    # JEC uncertainty sources propagated to btag scale factors
+    # (names derived from contents in BTV correctionlib file)
+    cfg.x.btag_sf_jec_sources = [
+        "",  # same as "Total"
+        "Absolute",
+        "AbsoluteMPFBias",
+        "AbsoluteScale",
+        "AbsoluteStat",
+        f"Absolute_{year}",
+        "BBEC1",
+        f"BBEC1_{year}",
+        "EC2",
+        f"EC2_{year}",
+        "FlavorQCD",
+        "Fragmentation",
+        "HF",
+        f"HF_{year}",
+        "PileUpDataMC",
+        "PileUpPtBB",
+        "PileUpPtEC1",
+        "PileUpPtEC2",
+        "PileUpPtHF",
+        "PileUpPtRef",
+        "RelativeBal",
+        "RelativeFSR",
+        "RelativeJEREC1",
+        "RelativeJEREC2",
+        "RelativeJERHF",
+        "RelativePtBB",
+        "RelativePtEC1",
+        "RelativePtEC2",
+        "RelativePtHF",
+        "RelativeSample",
+        f"RelativeSample_{year}",
+        "RelativeStatEC",
+        "RelativeStatFSR",
+        "RelativeStatHF",
+        "SinglePionECAL",
+        "SinglePionHCAL",
+        "TimePtEta",
+    ]
 
-
-
-            },
+    from columnflow.production.cms.btag import BTagSFConfig
+    cfg.x.btag_sf_deepjet = BTagSFConfig(
+        correction_set="deepJet_shape",
+        jec_sources=cfg.x.btag_sf_jec_sources,
+        discriminator="btagDeepFlavB",
     )
-    
+    if year >= 2022:
+        cfg.x.btag_sf_pnet = BTagSFConfig(
+            correction_set="particleNet_shape",
+            jec_sources=cfg.x.btag_sf_jec_sources,
+            discriminator="btagPNetB",
+        )   
+    ################################################################################################
+    # json file paths
+    ################################################################################################       
+     
     jsonpog_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_latest/POG/"
     jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
     corr_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/"
-    
+
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
         2023 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"
@@ -645,18 +788,20 @@ def add_run3(ana: od.Analysis,
             "normtag": ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json", "v1"), #/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags
         },
 
-        "pu_sf": (f"{jsonpog_dir}LUM/{cfg.x.year}_{tag}/puWeights.json.gz", "v1"),
-        "muon_correction" : f"{jsonpog_dir}MUO/{cfg.x.year}_{tag}/muon_Z.json.gz",
-        "electron_scaling_smearing"  : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
-        "electron_idiso"  : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
-        "electron_trigger": f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
-        "tau_correction"  : f"{jsonpog_tau_dir}TAU/{cfg.x.year}_{tau_tag}/tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}.json.gz",
-        "zpt_weight"      : f"{corr_dir}zpt_reweighting_LO_2022.root",
-        "jet_jerc"  : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
-        "jet_veto_map"  : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
-        #"met_phi_corr": (f"{jsonpog_dir}JME/{cfg.x.year}{tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
+        "pu_sf"                    : (f"{jsonpog_dir}LUM/{cfg.x.year}_{tag}/puWeights.json.gz", "v2"),
+        "muon_correction"          : f"{jsonpog_dir}MUO/{cfg.x.year}_{tag}/muon_Z.json.gz",
+        "electron_scaling_smearing": f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
+        "electron_idiso"           : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
+        "electron_trigger"         : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
+        "tau_correction"           : f"{jsonpog_tau_dir}TAU/{cfg.x.year}_{tau_tag}/tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}.json.gz",
+        "zpt_weight"               : f"{corr_dir}zpt_reweighting_LO_2022.root",
+        "jet_jerc"                 : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
+        "jet_veto_map"             : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
+        "btag_sf_corr"             : (f"{jsonpog_dir}BTV/{cfg.x.year}_{tag}/btagging.json.gz", "v2"),
+        "DY_pTll_recoil_corr"      : (f"{corr_dir}/hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
+        #"met_phi_corr"            : (f"{jsonpog_dir}JME/{cfg.x.year}{tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
     })
-
+    
     # --------------------------------------------------------------------------------------------- #
     # electron settings
     # names of electron correction sets and working points
@@ -665,7 +810,7 @@ def add_run3(ana: od.Analysis,
     cfg.x.electron_sf = DotDict.wrap({
         'ID': {'corrector': "Electron-ID-SF",
                'year': e_sf_tag,
-               'wp':"wp90iso"},
+               'wp':"wp90noiso"},
         'scale': {'corrector': e_scale_corrector},
         'smearing': {'corrector': e_smearing_corrector},
         'trig': {'corrector': "Electron-HLT-SF",
@@ -712,6 +857,11 @@ def add_run3(ana: od.Analysis,
     cfg.add_shift(name="electron_up", id=8, type="shape")
     cfg.add_shift(name="electron_down", id=9, type="shape")
     add_shift_aliases(cfg, "electron", {"electron_weight": "electron_weight_{direction}"})
+    
+    cfg.add_shift(name="top_pt_up", id=10, type="shape")
+    cfg.add_shift(name="top_pt_down", id=11, type="shape")
+    add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"})
+    
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
 

@@ -26,6 +26,7 @@ from httcp.production.dilepton_features import hcand_fields,hcand_mt
 
 from httcp.production.phi_cp import phi_cp
 from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split
+from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -51,12 +52,14 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_boson,
         met_recoil,
         get_mc_weight,
-        fake_factors,
+        #fake_factors,
         hcand_fields,
         hcand_mt,
         tauspinner_weight,
         phi_cp,
         category_ids,
+        gen_parton_top,
+        top_pt_weight,
         jet_pt_def,
         jets_taggable,
         number_b_jet,
@@ -83,12 +86,16 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         tauspinner_weight,
         phi_cp,
         category_ids,
+        gen_parton_top,
+        top_pt_weight,
         jet_pt_def,
         jets_taggable,
         number_b_jet,
         "Jet.jec_no_jec_diff",
         pion_energy_split,
     },
+    # whether weight producers should be added and called
+    produce_weights=True,
 )
 def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     
@@ -150,8 +157,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     print("Producing phi_cp...")
     events = self[phi_cp](events, **kwargs)
     return events
-
-
+        
 @producer(
     uses={
         normalization_weights,
@@ -169,6 +175,8 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         hcand_mt,
         tauspinner_weight,
         category_ids,
+        gen_parton_top,
+        top_pt_weight,
         jet_pt_def,
         pion_energy_split,
         },
@@ -188,9 +196,10 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         hcand_mt,
         tauspinner_weight,
         category_ids,
+        gen_parton_top,
+        top_pt_weight,
         jet_pt_def,
         pion_energy_split,
-
     },
 )
 def ff_method(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
@@ -226,6 +235,8 @@ def ff_method(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = self[tau_weight](events,do_syst = True, **kwargs)
         print("Producing Tauspinner weights...")
         events = self[tauspinner_weight](events, **kwargs)
+        print("Producing GenPartonTop...")
+        events = self[gen_parton_top](events, **kwargs)
         top_pt_weight_dummy = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)
         top_pt_weight_dummy = ak.ones_like(top_pt_weight_dummy)
         for variation in ("", "_up", "_down"):
@@ -234,3 +245,6 @@ def ff_method(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
             print("Producing Top pT weights...")
             events = self[top_pt_weight](events, **kwargs)
     return events
+
+
+

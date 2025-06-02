@@ -296,7 +296,9 @@ def add_run3(ana: od.Analysis,
         # add the dataset
         dataset = cfg.add_dataset(campaign.get_dataset(dataset_name))
         if dataset_name.startswith("h_"):
-            dataset.add_tag("signal")
+            dataset.add_tag("signal")   
+        if dataset.name.startswith("tt_"):
+            dataset.add_tag({"has_top", "ttbar", "tt"})    
         # for testing purposes, limit the number of files to 1
         for info in dataset.info.values():
             if limit_dataset_files:
@@ -515,7 +517,19 @@ def add_run3(ana: od.Analysis,
     #     "SinglePionHCAL",
     #     "TimePtEta",
     # ]
-
+    
+    # ##################################
+    # # Parameters fot top pT reweight #
+    # ##################################
+    # https://twiki.cern.ch/twiki/bin/view/CMS/TopPtReweighting#TOP_PAG_corrections_based_on_the
+    cfg.x.top_pt_reweighting_params = {
+            "a": 0.0615,
+            "a_up": 0.0615 * 1.5,
+            "a_down": 0.0615 * 0.5,
+            "b": -0.0005,
+            "b_up": -0.0005 * 1.5,
+            "b_down": -0.0005 * 0.5,
+        }
 
     ################################
     # luminosity and normalization #
@@ -750,6 +764,9 @@ def add_run3(ana: od.Analysis,
     # target file size after MergeReducedEvents in MB
     cfg.x.reduced_file_size = 512.0
     
+    ##########
+    # shifts #
+    ##########
     from httcp.config.variables import keep_columns
     keep_columns(cfg)
  
@@ -770,6 +787,12 @@ def add_run3(ana: od.Analysis,
     cfg.add_shift(name="electron_up", id=8, type="shape")
     cfg.add_shift(name="electron_down", id=9, type="shape")
     add_shift_aliases(cfg, "electron", {"electron_weight": "electron_weight_{direction}"})
+    
+    cfg.add_shift(name="top_pt_up", id=10, type="shape")
+    cfg.add_shift(name="top_pt_down", id=11, type="shape")
+    add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"})
+
+    
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
 

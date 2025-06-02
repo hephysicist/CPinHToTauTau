@@ -4,7 +4,7 @@ Produce channel_id column. This function is called in the main selector
 
 from columnflow.production import Producer, producer
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.columnar_util import set_ak_column
+from columnflow.columnar_util import set_ak_column, EMPTY_FLOAT
 from columnflow.util import maybe_import, DotDict
 from MSSM_H_tt.util import get_lep_p4, find_fields_with_nan
 
@@ -189,7 +189,7 @@ def jet_pt_def(
     mjj_mask = ((n_jets>=2) & (delta_phi != -999) & (delta_eta != -100) & (ls_product > 0))
     
     mjj = ak.where(mjj_mask,np.sqrt(2*ls_product*(np.cosh(delta_eta) - np.cos(delta_phi))),-999) 
-    
+
     events = set_ak_column(events, "n_jets"            , n_jets            )
     events = set_ak_column(events, "leading_jet_pt"    , leading_jet_pt    )
     events = set_ak_column(events, "subleading_jet_pt" , subleading_jet_pt )
