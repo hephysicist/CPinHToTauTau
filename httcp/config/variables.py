@@ -37,7 +37,10 @@ def keep_columns(cfg: od.Config) -> None:
                 "pt", "eta", "phi", "mass", "jetId", 
                 "btagDeepFlavB", "hadronFlavour", 
                 "pt_no_jec", "phi_no_jec","eta_no_jec", 
-                "mass_no_jec", "jec_no_jec_diff","chEmEF","neEmEF",
+                "mass_no_jec", "jec_no_jec_diff",
+                "neEmEF","chHEF","neHEF",
+                "chHEF","muEF","chEmEF",
+                "neMultiplicity","chMultiplicity",
             ] 
         } | {
             f"Tau.{var}" for var in [
@@ -112,13 +115,12 @@ def add_common_features(cfg: od.config) -> None:
         expression="event",
         binning=(1, 0, 2),
         x_title="Event number",
-        discrete_x=True,
     )
     cfg.add_variable(
         name="N_events",
-        expression="N_events",
-        binning=(1, 0.0, 1.0e9),
-        x_title="Event number",
+        expression="event",
+        binning=(1, 0, 2),
+        x_title="Number of events",
         discrete_x=True,
     )
     cfg.add_variable(

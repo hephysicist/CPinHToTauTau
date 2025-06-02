@@ -3,8 +3,11 @@
 """
 Example inference model.
 """
+import functools 
 
 from columnflow.inference import inference_model, ParameterType, ParameterTransformation
+from columnflow.config_util import get_datasets_from_process 
+
 
 
 @inference_model
@@ -12,47 +15,78 @@ def example(self):
 
     #
     # categories
-    #
+    
 
     self.add_category(
-        "cat1",
-        config_category="incl",
-        config_variable="jet1_pt",
-        config_data_datasets=["data_mu_b"],
-        mc_stats=True,
-    )
-    self.add_category(
-        "cat2",
-        config_category="2j",
-        config_variable="jet1_eta",
-        # fake data from TT
-        data_from_processes=["TT"],
+        "cat_emu_sr",
+        config_category="cat_emu_sr",
+        config_variable="emu_mt_tot",
+        config_data_datasets=["data_egamma_E","data_egamma_F","data_egamma_G","data_mu_E","data_mu_F","data_mu_G"],
         mc_stats=True,
     )
 
-    #
-    # processes
-    #
+    # TODO: think about defining a well motivated CR
+    # self.add_category(
+    #     "cat_mutau_abcd_ar",
+    #     config_category="cat_mutau_abcd_ar",
+    #     config_variable="mutau_mt",
+    #     config_data_datasets=["data_singlemu_C", "data_mu_C", "data_mu_D"],
+    #     mc_stats=True,
+    # )
 
-    self.add_process(
-        "ST",
-        is_signal=True,
-        config_process="st",
-        config_mc_datasets=["st_tchannel_t_powheg"],
-    )
-    self.add_process(
-        "TT",
-        config_process="tt",
-        config_mc_datasets=["tt_sl_powheg"],
-    )
+    
+    # processes and datasets
+    # Setting for preEE
+    process_vs_dataset_names = {
+        "data": ["data_egamma_E","data_egamma_F","data_egamma_G","data_mu_E","data_mu_F","data_mu_G"],       
+    
+        #Drell-Yan
+        "dy_lep": ["dy_lep_madgraph"],
+        # "dy_z2ee": ["dy_lep_madgraph"],
+        # "dy_z2mumu": ["dy_lep_madgraph"],
+        # "dy_z2tautau": ["dy_lep_madgraph"],
+  
+        "wj": ["wj_incl_madgraph"],
+        #diboson
+        "vv": ["ww", "wz", "zz"], #diboson inclusive
+        #ttbar
+        "tt": ["tt_sl","tt_dl","tt_fh"], #ttbar inclusive
+        #single top
+        "st": ["st_twchannel_t_sl", "st_twchannel_tbar_sl", "st_twchannel_tbar_dl", "st_tchannel_tbar", "st_tchannel_t", "st_schannel_t_lep", "st_schannel_tbar_lep"], #single top inclusive
+        #signal
+        "h_ggf_htt": ["h_tt_100"], #SM Higgs signal
+        "qcd": [""], 
+        #"jet_fakes": [""], #QCD data-driven
+    }
+ 
+    find_datasets = functools.partial(get_datasets_from_process, self.config_inst, strategy="all")
+
+    for process_name, dataset_names in process_vs_dataset_names.items():
+ 
+        is_signal = False
+        data_driven = False
+
+        if process_name == "h_ggf_htt": 
+            is_signal = True
+        if process_name == "qcd": #or process_name == "jet_fakes": 
+            data_driven = True
+            
+
+        self.add_process(
+            process_name,
+            config_process=process_name, 
+            config_mc_datasets=dataset_names,
+            is_signal=is_signal,
+            data_driven=data_driven,
+        )
 
     #
     # parameters
     #
 
     # groups
-    self.add_parameter_group("experiment")
-    self.add_parameter_group("theory")
+ #   self.add_parameter_group("experiment")
+ #   self.add_parameter_group("theory")
 
     # lumi
     lumi = self.config_inst.x.luminosity
@@ -63,39 +97,6 @@ def example(self):
             effect=lumi.get(names=unc_name, direction=("down", "up"), factor=True),
             transformations=[ParameterTransformation.symmetrize],
         )
-
-    # tune uncertainty
-    self.add_parameter(
-        "tune",
-        process="TT",
-        type=ParameterType.shape,
-        config_shift_source="tune",
-    )
-
-    # muon weight uncertainty
-    self.add_parameter(
-        "mu",
-        process=["ST", "TT"],
-        type=ParameterType.shape,
-        config_shift_source="mu",
-    )
-
-    # jet energy correction uncertainty
-    self.add_parameter(
-        "jec",
-        process=["ST", "TT"],
-        type=ParameterType.shape,
-        config_shift_source="jec",
-    )
-
-    # a custom asymmetric uncertainty that is converted from rate to shape
-    self.add_parameter(
-        "QCDscale_ttbar",
-        process="TT",
-        type=ParameterType.shape,
-        transformations=[ParameterTransformation.effect_from_rate],
-        effect=(0.5, 1.1),
-    )
 
 
 @inference_model

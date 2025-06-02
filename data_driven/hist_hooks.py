@@ -159,7 +159,7 @@ def add_hist_hooks(config: od.Config) -> None:
         
         hist_qcd_mc = get_mc_hist(hists[sr.aux['ff_regs']['dr_den_qcd_w_ff']])
         hist_wj_mc  = get_mc_hist(hists[sr.aux['ff_regs']['dr_den_wj_w_ff']])
-        #from IPython import embed; embed()
+
         fakes_wj  = (hist_wj.values()  - hist_wj_mc.values()) 
         fakes_qcd = (hist_qcd.values() - hist_qcd_mc.values()) 
         

@@ -77,7 +77,7 @@ def new_higgscand(
             events = set_ak_column(events, f"hcand_{the_ch}",  ak.zip(matched_pairs))
             n_pairs_postmatch =  n_pairs_postmatch + ak.num(events[f"hcand_{the_ch}"].lep0.pt>0, axis = 1)
         steps['selected_hcand_trigmatch'] = n_pairs_postmatch > 0
-        steps['single_hcand'] = n_pairs_postmatch == 1
+        steps['single_hcand'] = (n_pairs_postmatch == 1)
     else:
         for the_ch in channels:
             events = set_ak_column(events, f"hcand_{the_ch}",  ak.zip(pair_objects[the_ch]))

@@ -25,7 +25,6 @@ from httcp.production.met_recoil import gen_boson, met_recoil
 from httcp.production.dilepton_features import hcand_fields,hcand_mt
 
 from httcp.production.phi_cp import phi_cp
-<<<<<<< HEAD
 from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
 
@@ -118,7 +117,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     events = self[met_recoil](events,**kwargs)
     events = self[hcand_mt](events, **kwargs) 
     events = self[category_ids](events, **kwargs)
-    
+
     if self.dataset_inst.is_mc:
         events = self[get_mc_weight](events, **kwargs)
         print("Producing Normalization weights...")
@@ -153,10 +152,10 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
             print("Producing Top pT weights...")
             events = self[top_pt_weight](events, **kwargs)
-        print("Producing Fake Factor weights...")
-        events = self[fake_factors](events, **kwargs)
-        print("Producing phi_cp...")
-        events = self[phi_cp](events, **kwargs)
+    print("Producing Fake Factor weights...")
+    events = self[fake_factors](events, **kwargs)
+    print("Producing phi_cp...")
+    events = self[phi_cp](events, **kwargs)
     return events
         
 @producer(
@@ -242,10 +241,9 @@ def ff_method(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         top_pt_weight_dummy = ak.ones_like(top_pt_weight_dummy)
         for variation in ("", "_up", "_down"):
             events = set_ak_column(events, f"top_pt_weight{variation}", top_pt_weight_dummy)
-        if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
+        if self.dataset_inst.has_tag("ttbar"):
             print("Producing Top pT weights...")
             events = self[top_pt_weight](events, **kwargs)
-  
     return events
 
 

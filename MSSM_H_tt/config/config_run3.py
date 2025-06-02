@@ -94,6 +94,7 @@ def add_run3(ana: od.Analysis,
         "data_tau",
         "data_e",
         "data_egamma",
+        "data_muoneg",
         "data_singlemu",
         #Drell-Yan
         "dy_lep",
@@ -141,10 +142,10 @@ def add_run3(ana: od.Analysis,
     # add datasets we need to study
     dataset_names_2022preEE = [
         #data
-        "data_e_C",
-        "data_e_D",
         "data_egamma_C",
         "data_egamma_D",
+        "data_muoneg_C",
+        "data_muoneg_D",
         "data_singlemu_C",
         "data_mu_C",
         "data_mu_D",
@@ -184,12 +185,12 @@ def add_run3(ana: od.Analysis,
 
     dataset_names_2022postEE = [
         #data
-        "data_e_E",
-        "data_e_F",
-        "data_e_G",
         "data_egamma_E",
         "data_egamma_F",
         "data_egamma_G",
+        "data_muoneg_E",
+        "data_muoneg_F",
+        "data_muoneg_G",
         "data_mu_E",
         "data_mu_F",
         "data_mu_G",
@@ -230,10 +231,10 @@ def add_run3(ana: od.Analysis,
     
     dataset_names_2023preBPix = [
         #data
-        "data_e_Cv123",
-        "data_e_Cv4",
         "data_egamma_Cv123",
         "data_egamma_Cv4",
+        "data_muoneg_Cv123",
+        "data_muoneg_Cv4",
         "data_mu_Cv123",
         "data_mu_Cv4",
         #Drell-Yan
@@ -270,8 +271,8 @@ def add_run3(ana: od.Analysis,
     
     dataset_names_2023postBPix = [
         #data
-        "data_e_D",
         "data_egamma_D",
+        "data_muoneg_D",
         "data_mu_D",
         #Drell-Yan
         "dy_lep_madgraph",
@@ -318,6 +319,7 @@ def add_run3(ana: od.Analysis,
         dataset = cfg.add_dataset(campaign.get_dataset(dataset_name))
         if dataset_name.startswith("h_"):
             dataset.add_tag("signal")
+            dataset.add_tag("is_mc")
         if dataset.name.startswith("tt_"):
             dataset.add_tag({"has_top", "ttbar", "tt"})    
         # for testing purposes, limit the number of files to 1
@@ -569,11 +571,11 @@ def add_run3(ana: od.Analysis,
         })
     elif year == 2023 and campaign.x.tag =="preBPix":
         cfg.x.luminosity = Number(17_794, {
-            "lumi_13p6TeV_correlated": 0.0j,
+            "lumi_13p6TeV_correlated": 0.013j,
         })
     elif year == 2023 and campaign.x.tag =="postBPix":
         cfg.x.luminosity = Number(9_451, {
-            "lumi_13p6TeV_correlated": 0.0j,
+            "lumi_13p6TeV_correlated": 0.013j,
         })
     elif year == 2024:
         cfg.x.luminosity = Number(0, {
@@ -775,8 +777,8 @@ def add_run3(ana: od.Analysis,
      
     jsonpog_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_latest/POG/"
     jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
-    corr_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/"
-
+    #corr_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/"
+    corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/"
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
         2023 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"
@@ -790,6 +792,7 @@ def add_run3(ana: od.Analysis,
 
         "pu_sf"                    : (f"{jsonpog_dir}LUM/{cfg.x.year}_{tag}/puWeights.json.gz", "v2"),
         "muon_correction"          : f"{jsonpog_dir}MUO/{cfg.x.year}_{tag}/muon_Z.json.gz",
+        "HLT_mu_eff"               : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
         "electron_scaling_smearing": f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
         "electron_idiso"           : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
         "electron_trigger"         : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
@@ -798,7 +801,7 @@ def add_run3(ana: od.Analysis,
         "jet_jerc"                 : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"             : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
         "btag_sf_corr"             : (f"{jsonpog_dir}BTV/{cfg.x.year}_{tag}/btagging.json.gz", "v2"),
-        "DY_pTll_recoil_corr"      : (f"{corr_dir}/hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
+        "met_recoil"               : (f"{corr_dir}/hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
         #"met_phi_corr"            : (f"{jsonpog_dir}JME/{cfg.x.year}{tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
     })
     
@@ -818,7 +821,13 @@ def add_run3(ana: od.Analysis,
                  'wp': "HLT_SF_Ele30_TightID"},
         'xtrig': {'corrector': "Electron-HLT-SF",
                   'year': e_sf_tag,
-                  'wp': "HLT_SF_Ele24_TightID"}
+                  'wp': "HLT_SF_Ele24_TightID"},
+        'MC_eff': {'corrector': "Electron-HLT-McEff",
+                  'year': e_sf_tag,
+                  'wp': "HLT_SF_Ele30_TightID"},
+        'Data_eff': {'corrector': "Electron-HLT-DataEff",
+                     'year': e_sf_tag,
+                     'wp': "HLT_SF_Ele30_TightID"},
     })
     
     # --------------------------------------------------------------------------------------------- #
@@ -828,14 +837,28 @@ def add_run3(ana: od.Analysis,
     # --------------------------------------------------------------------------------------------- #
 
     cfg.x.muon_sf = DotDict.wrap({ 
+                                  
         'ID': {'corrector': "NUM_MediumID_DEN_TrackerMuons",
                'year': f"{year}_{tag}"},
+        
         'iso': {'corrector': "NUM_TightPFIso_DEN_MediumID",
                 'year': f"{year}_{tag}"},
+        
         'trig': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
                  'year': f"{year}_{tag}"},
+        
+        'trig_mc_eff': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_MCeff",
+                 'year': f"{year}_{tag}"},
+        
+        'trig_data_eff': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff",
+                 'year': f"{year}_{tag}"},
+        
         'xtrig': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight",
-                  'year': f"{year}_{tag}"}
+                  'year': f"{year}_{tag}"},
+        
+        'MC_eff_mutau': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_MCeff"},
+        
+        'Data_eff_mutau': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff"},
     })
     
     # target file size after MergeReducedEvents in MB
@@ -861,6 +884,10 @@ def add_run3(ana: od.Analysis,
     cfg.add_shift(name="top_pt_up", id=10, type="shape")
     cfg.add_shift(name="top_pt_down", id=11, type="shape")
     add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"})
+    
+    cfg.add_shift(name="Trigger_SF_up", id=12, type="shape")
+    cfg.add_shift(name="Trigger_SF_down", id=13, type="shape")
+    add_shift_aliases(cfg, "Trigger_SF", {"Trigger_SF_weight": "Trigger_SF_weight_{direction}"})
     
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
@@ -946,6 +973,29 @@ def add_run3(ana: od.Analysis,
         'tautau' : {'lep0' : 'Tau',
                     'lep1' : 'Tau'    },
     })
+
+    cfg.x.met_recoil = DotDict.wrap({
+        'datasets' : {'dy_lep_madgraph'  : "LO",
+                      'wj_incl_madgraph' : "LO"},
+    })
+    
+    cfg.x.fake_factor_method = DotDict.wrap({
+    "axes": {'tau_pt': {
+                'var_route': [f'hcand_{channel}', 'lep1', 'pt'],
+                'ax_str'  : 'Variable([20,30,40,60,80,200], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
+                },
+             'tau_dm_pnet': {
+                'var_route' : [f'hcand_{channel}', 'lep1', 'decayModePNet'],
+                'ax_str'   :'IntCategory([0,1,2,10,11], name="tau_dm_pnet", label="Tau PNet decayMode")',
+             },
+             "n_jets": {
+                'var_route' : ['n_jets'],
+                'ax_str'   : 'Integer(0, 3, name="n_jets", label="Number of jets",underflow=False, overflow=False)',
+            },
+    },
+    "columns" : ['ff_weight_wj','ff_weight_qcd'],
+    "shifts"  : ["up", "nominal", "down"]
+    })   
     
     if cfg.campaign.x("custom").get("creator") == "desy":  
         def get_dataset_lfns(dataset_inst: od.Dataset, shift_inst: od.Shift, dataset_key: str) -> list[str]:
@@ -980,9 +1030,6 @@ def add_run3(ana: od.Analysis,
     from MSSM_H_tt.config.variables import add_variables
     add_variables(cfg)
     
-    from MSSM_H_tt.data_driven.hist_hooks import add_hist_hooks
+    from data_driven.hist_hooks import add_hist_hooks # commond method for data_driven estimation, MSSM should only use good_old_abcd
     add_hist_hooks(cfg)
-
-
-    
-    
+        

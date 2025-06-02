@@ -4,7 +4,7 @@ from columnflow.util import maybe_import, safe_div, InsertableDict
 from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
 from columnflow.selection.util import sorted_indices_from_mask
-
+import json
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
 coffea = maybe_import("coffea")
@@ -102,8 +102,13 @@ def zpt_weight_setup(
         'hcand_*', 'event', 'all_triggers_id',
     },
     produces={
-         f"muon_weight_{shift}"
+        name
         for shift in ["nom", "up", "down"]
+        for name in (
+            f"muon_weight_{shift}",
+            f"muon_Data_eff_{shift}",
+            f"muon_MC_eff_{shift}",
+        )
     },
     mc_only=True,
 )
@@ -111,8 +116,16 @@ def muon_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) -> a
     
     shifts = ["nominal"]
     if do_syst: shifts=[*shifts,"systup", "systdown"] 
+    shifts_eff = ["nominal"]
+    if do_syst: shifts_eff=[*shifts_eff,"systup", "systdown"] 
     sf_values = {}
-    for the_shift in shifts: sf_values[the_shift] = np.ones_like(events.event, dtype=np.float32)
+    Data_eff_values = {}
+    MC_eff_values = {}
+    for the_shift in shifts: 
+        sf_values[the_shift] = np.ones_like(events.event, dtype=np.float32)
+    for the_shift in shifts_eff: 
+        Data_eff_values[the_shift] = np.ones_like(events.event, dtype=np.float32)
+        MC_eff_values[the_shift] = np.ones_like(events.event, dtype=np.float32)
     channels = self.config_inst.channels.names()
     ch_objects = self.config_inst.x.ch_objects
     for ch_str in channels:
@@ -121,26 +134,51 @@ def muon_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) -> a
             if ch_objects[ch_str][lep] == 'Muon':
                 muon = hcand[lep]
                 # Create sf array template to make copies and dict for finnal results of all systematics
-                pt =  flat_np_view(muon.pt,axis=1) #take the first particle from the hcand pair
+                pt =  flat_np_view(muon.pt,axis=1)
                 pt = ak.where(events.all_triggers_id == 132, pt, 26)
                 pt = flat_np_view(pt)
-                eta =  flat_np_view(abs(muon.eta),axis=1)
+                eta =  flat_np_view(abs(muon.eta),axis=1) 
+                O_mu = (pt > 26) & (abs(eta)<2.4)
                 #Prepare a tuple with the inputs of the correction evaluator
                 mu_sf_args = lambda syst : (eta,pt,syst)
+                
+                muon_sf_args_trigger_eff = lambda syst : (eta,pt,syst)
                 #Loop over the shifts and calculate for each shift muon scale factor
                 for the_shift in shifts:
                     flat_sf = ak.ones_like(pt)
-                    for the_sf in [self.muon_id, self.muon_iso, self.muon_trig]: 
+                    for the_sf in [self.muon_id, self.muon_iso]: # self.muon_trig]: 
                         flat_sf = flat_sf * the_sf.evaluate(*mu_sf_args(the_shift))
                     shaped_sf = ak.unflatten(flat_sf, ak.num(muon.pt, axis=1))
                     sf_values[the_shift] = sf_values[the_shift] * ak.fill_none(ak.firsts(shaped_sf,axis=1), 1.)
                     sf_values[the_shift] =  ak.where(events.all_triggers_id == 132, sf_values[the_shift],1.)
-                    
+                for the_shift in shifts_eff:
+                    flat_eff              = ak.ones_like(pt)
+                    flat_eff              = flat_eff * self.muon_trig_Data_eff.evaluate(*muon_sf_args_trigger_eff(the_shift))
+                    shaped_eff            = ak.unflatten(flat_eff, ak.num(muon.pt, axis=1))                    
+                    Data_eff_values[the_shift] = Data_eff_values[the_shift] * ak.fill_none(ak.firsts(shaped_eff,axis=1), 0)
+                    Data_eff_values[the_shift] =  ak.where(O_mu, Data_eff_values[the_shift],0)
+                    #evaluating the trigger MC efficiency
+                    flat_eff              = ak.ones_like(pt)
+                    flat_eff              = flat_eff * self.muon_trig_MC_eff.evaluate(*muon_sf_args_trigger_eff(the_shift))
+                    shaped_eff            = ak.unflatten(flat_eff, ak.num(muon.pt, axis=1))                    
+                    MC_eff_values[the_shift] = MC_eff_values[the_shift] * ak.fill_none(ak.firsts(shaped_eff,axis=1), 0)
+                    MC_eff_values[the_shift] =  ak.where(O_mu, MC_eff_values[the_shift],0)  
     rename_systs = {"nominal" : "nom",
                     "systup"  : "up",
                     "systdown": "down"
     }             
-    for the_shift in shifts: events = set_ak_column_f32(events, f"muon_weight_{rename_systs[the_shift]}", sf_values[the_shift])
+    for the_shift in shifts: 
+        events = set_ak_column_f32(events, f"muon_weight_{rename_systs[the_shift]}", sf_values[the_shift])
+    for the_shift in shifts_eff: 
+        events = set_ak_column_f32(events, f"muon_Data_eff_{rename_systs[the_shift]}", Data_eff_values[the_shift])
+        events = set_ak_column_f32(events, f"muon_MC_eff_{rename_systs[the_shift]}", MC_eff_values[the_shift])
+    #Setting up and down variations, only stat uncertainties for now
+    events = set_ak_column_f32(events, f"muon_Data_eff_up", Data_eff_values["systup"])
+    events = set_ak_column_f32(events, f"muon_Data_eff_down", Data_eff_values["systdown"])
+    events = set_ak_column_f32(events, f"muon_MC_eff_up", MC_eff_values["systup"])
+    events = set_ak_column_f32(events, f"muon_MC_eff_down", MC_eff_values["systdown"])
+
+
     return events
 
 @muon_weight.requires
@@ -167,7 +205,18 @@ def muon_weight_setup(
     )
     self.muon_id = correction_set[self.config_inst.x.muon_sf.ID.corrector]
     self.muon_iso = correction_set[self.config_inst.x.muon_sf.iso.corrector]
-    self.muon_trig = correction_set[self.config_inst.x.muon_sf.trig.corrector]
+    #self.muon_trig = correction_set[self.config_inst.x.muon_sf.trig.corrector]
+
+    # 1) load the JSON file into a Python dict
+    muon_corr = bundle.files.HLT_mu_eff.load(formatter="json")
+
+    # 2) serialize the dict back to a JSON string
+    muon_json = json.dumps(muon_corr)
+
+    # 3) build your CorrectionSet
+    correction_set_trig = correctionlib.CorrectionSet.from_string(muon_json)
+    self.muon_trig_Data_eff = correction_set_trig[self.config_inst.x.muon_sf.trig_data_eff.corrector]
+    self.muon_trig_MC_eff = correction_set_trig[self.config_inst.x.muon_sf.trig_mc_eff.corrector]
 
 # ### ELECTRON WEIGHT CALCULATOR ##
 @producer(
@@ -175,17 +224,30 @@ def muon_weight_setup(
         'hcand_*', 'event'
     },
     produces={
-         f"electron_weight_{shift}"
+        name
         for shift in ["nom", "up", "down"]
+        for name in (
+            f"electron_weight_{shift}",
+            f"electron_Data_eff_{shift}",
+            f"electron_MC_eff_{shift}",
+        )
     },
     mc_only=True,
 )
 def electron_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) -> ak.Array:
     
     shifts = ["sf"]
-    if do_syst: shifts=[*shifts,"sfup", "sfdown"] 
+    if do_syst: shifts=[*shifts,"sfup", "sfdown"]
+    shifts_eff = ["nom"]
+    if do_syst: shifts_eff=[*shifts_eff,"up", "down"] 
     sf_values = {}
-    for the_shift in shifts: sf_values[the_shift] = np.ones_like(events.event, dtype=np.float32)
+    Data_eff_values = {}
+    MC_eff_values = {}
+    for the_shift in shifts: 
+        sf_values[the_shift] = np.ones_like(events.event, dtype=np.float32)
+    for the_shift in shifts_eff: 
+        Data_eff_values[the_shift] = np.ones_like(events.event, dtype=np.float32)
+        MC_eff_values[the_shift] = np.ones_like(events.event, dtype=np.float32)
     channels = self.config_inst.channels.names()
     ch_objects = self.config_inst.x.ch_objects
     year_id = self.config_inst.x.electron_sf.ID.year
@@ -201,53 +263,73 @@ def electron_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) 
             if ch_objects[ch_str][lep] == 'Electron':
                 electron = hcand[lep]
                 # Create sf array template to make copies and dict for finnal results of all systematics
-                pt =  flat_np_view(electron.pt,axis=1) #take the first particle from the hcand pair
-                eta =  flat_np_view(electron.eta,axis=1)
-                phi =  flat_np_view(electron.phi,axis=1)
-                pt_20_mask = flat_np_view(electron.pt < 20)
-                pt_20_75_mask =flat_np_view( (electron.pt >= 20) & (electron.pt < 75))
-                pt_75_mask = flat_np_view(electron.pt >= 75)
-                pt_20    = flat_np_view(ak.where(pt_20_mask,pt,19))
-                pt_20_75 = flat_np_view(ak.where(pt_20_75_mask,pt,21))
-                pt_75    = flat_np_view(ak.where(pt_75_mask, pt, 76))
-                pt_trigg = ak.where(events.all_triggers_id == 111, pt, 26)
-                pt_trigg = flat_np_view(pt_trigg)
+                pt            = flat_np_view(electron.pt,axis=1) #take the first particle from the hcand pair
+                eta           = flat_np_view(electron.eta,axis=1)
+                phi           = flat_np_view(electron.phi,axis=1)
+                pt_20_mask    = flat_np_view(electron.pt < 20)
+                pt_20_75_mask = flat_np_view((electron.pt >= 20) & (electron.pt < 75))
+                pt_75_mask    = flat_np_view(electron.pt >= 75)
+                pt_20         = flat_np_view(ak.where(pt_20_mask,pt,19))
+                pt_20_75      = flat_np_view(ak.where(pt_20_75_mask,pt,21))
+                pt_75         = flat_np_view(ak.where(pt_75_mask, pt, 76))
+                pt_trigg      = ak.where(events.all_triggers_id == 111, pt, 26)
+                pt_trigg      = flat_np_view(pt_trigg)
+                O_e = (pt > 31) & (abs(eta)<2.4)
                 
                 #Prepare a tuple with the inputs of the correction evaluator
                 if '2023' in year_id :
-                    ele_sf_args_idiso = lambda syst : (year_id,syst,wp_id,eta,pt,phi)
+                    ele_sf_args_idiso       = lambda syst : (year_id,syst,wp_id,eta,pt,phi)
                     ele_sf_args_RecoBelow20 = lambda syst : (year_id,syst,wp_id_RecoBelow20,eta,pt_20,phi)
                     ele_sf_args_Reco20to75  = lambda syst : (year_id,syst,wp_id_Reco20to75,eta,pt_20_75,phi)
                     ele_sf_args_RecoAbove75 = lambda syst : (year_id,syst,wp_id_RecoAbove75,eta,pt_75,phi)   
                 else :
-                    ele_sf_args_idiso = lambda syst : (year_id,syst,wp_id,eta,pt)
+                    ele_sf_args_idiso       = lambda syst : (year_id,syst,wp_id,eta,pt)
                     ele_sf_args_RecoBelow20 = lambda syst : (year_id,syst,wp_id_RecoBelow20,eta,pt_20)
                     ele_sf_args_Reco20to75  = lambda syst : (year_id,syst,wp_id_Reco20to75,eta,pt_20_75)
                     ele_sf_args_RecoAbove75 = lambda syst : (year_id,syst,wp_id_RecoAbove75,eta,pt_75)
 
                 ele_sf_args_trigger = lambda syst : (year_trigger,syst,wp_trigger,eta,pt_trigg)
-                
-                #Loop over the shifts and calculate for each shift electron scale factor
+                ele_sf_args_trigger_eff = lambda syst : (year_trigger,syst,wp_trigger,eta,pt_trigg)
 
+                #Loop over the shifts and calculate for each shift electron scale factor
                 for the_shift in shifts:
-                    flat_sf        = ak.ones_like(pt)
-                    flat_sf        = flat_sf * self.electron_idiso.evaluate(*ele_sf_args_idiso(the_shift))
-                    RecoBelow20_sf = self.electron_idiso.evaluate(*ele_sf_args_RecoBelow20(the_shift))
-                    Reco20to75_sf  = self.electron_idiso.evaluate(*ele_sf_args_Reco20to75(the_shift))
-                    RecoAbove75_sf = self.electron_idiso.evaluate(*ele_sf_args_RecoAbove75(the_shift))
-                    flat_sf = ak.where(pt_20_mask,flat_sf*RecoBelow20_sf,flat_sf)
-                    flat_sf = ak.where(pt_20_75_mask,flat_sf*Reco20to75_sf,flat_sf)
-                    flat_sf = ak.where(pt_75_mask,flat_sf*RecoAbove75_sf,flat_sf)
-                    flat_sf        = flat_sf * self.electron_trig.evaluate(*ele_sf_args_trigger(the_shift))
-                    shaped_sf = ak.unflatten(flat_sf, ak.num(electron.pt, axis=1))
+                    #Extracting the SFs
+                    flat_sf              = ak.ones_like(pt)
+                    flat_sf              = flat_sf * self.electron_idiso.evaluate(*ele_sf_args_idiso(the_shift))
+                    RecoBelow20_sf       = self.electron_idiso.evaluate(*ele_sf_args_RecoBelow20(the_shift))
+                    Reco20to75_sf        = self.electron_idiso.evaluate(*ele_sf_args_Reco20to75(the_shift))
+                    RecoAbove75_sf       = self.electron_idiso.evaluate(*ele_sf_args_RecoAbove75(the_shift))
+                    flat_sf              = ak.where(pt_20_mask,flat_sf*RecoBelow20_sf,flat_sf)
+                    flat_sf              = ak.where(pt_20_75_mask,flat_sf*Reco20to75_sf,flat_sf)
+                    flat_sf              = ak.where(pt_75_mask,flat_sf*RecoAbove75_sf,flat_sf)
+                    #flat_sf              = flat_sf * self.electron_trig.evaluate(*ele_sf_args_trigger(the_shift))
+                    shaped_sf            = ak.unflatten(flat_sf, ak.num(electron.pt, axis=1))
                     sf_values[the_shift] = sf_values[the_shift] * ak.fill_none(ak.firsts(shaped_sf,axis=1), 1.)
                     sf_values[the_shift] =  ak.where(events.all_triggers_id == 111, sf_values[the_shift],1)
-
+                    #evaluating the trigger Data efficiency
+                for the_shift in shifts_eff:
+                    flat_eff              = ak.ones_like(pt)
+                    flat_eff              = flat_eff * self.electron_trig_Data_eff.evaluate(*ele_sf_args_trigger_eff(the_shift))
+                    shaped_eff            = ak.unflatten(flat_eff, ak.num(electron.pt, axis=1))                    
+                    Data_eff_values[the_shift] = Data_eff_values[the_shift] * ak.fill_none(ak.firsts(shaped_eff,axis=1), 0)
+                    Data_eff_values[the_shift] =  ak.where(O_e, Data_eff_values[the_shift],0)
+                    #evaluating the trigger MC efficiency
+                    flat_eff              = ak.ones_like(pt)
+                    flat_eff              = flat_eff * self.electron_trig_MC_eff.evaluate(*ele_sf_args_trigger_eff(the_shift))
+                    shaped_eff            = ak.unflatten(flat_eff, ak.num(electron.pt, axis=1))                    
+                    MC_eff_values[the_shift] = MC_eff_values[the_shift] * ak.fill_none(ak.firsts(shaped_eff,axis=1), 0)
+                    MC_eff_values[the_shift] =  ak.where(O_e, MC_eff_values[the_shift],0)
+    
     rename_systs = {"sf" : "nom",
                     "sfup"  : "up",
                     "sfdown": "down"
     }
-    for the_shift in shifts: events = set_ak_column_f32(events, f"electron_weight_{rename_systs[the_shift]}", sf_values[the_shift])
+    for the_shift in shifts: 
+        events = set_ak_column_f32(events, f"electron_weight_{rename_systs[the_shift]}", sf_values[the_shift])
+    for the_shift in shifts_eff: 
+        events = set_ak_column_f32(events, f"electron_Data_eff_{the_shift}", Data_eff_values[the_shift])
+    for the_shift in shifts_eff: 
+        events = set_ak_column_f32(events, f"electron_MC_eff_{the_shift}", MC_eff_values[the_shift])
     return events
 
 @electron_weight.requires
@@ -277,8 +359,89 @@ def electron_weight_setup(
     )
     
     self.electron_idiso   = correction_set_idiso[self.config_inst.x.electron_sf.ID.corrector]
-    self.electron_trig = correction_set_trig[self.config_inst.x.electron_sf.trig.corrector]
+    #self.electron_trig = correction_set_trig[self.config_inst.x.electron_sf.trig.corrector]
+    self.electron_trig_Data_eff = correction_set_trig[self.config_inst.x.electron_sf.Data_eff.corrector]
+    self.electron_trig_MC_eff = correction_set_trig[self.config_inst.x.electron_sf.MC_eff.corrector]
+
+################################
+#### Trigger SF evaluator ######
+################################
+@producer(
+    uses={
+        'event', 'triggerID*'},
+    produces={
+         f"Trigger_SF_{shift}"
+        for shift in ["nom", "up", "down"]
+    },
+    mc_only=True,
+)
+def trigger_sf(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+
+    # Nominal
+    muon_Data_eff_nom  = events.muon_Data_eff_nom
+    electron_Data_eff_nom = events.electron_Data_eff_nom
+    muon_MC_eff_nom  = events.muon_MC_eff_nom
+    electron_MC_eff_nom = events.electron_MC_eff_nom
+    # Up
+    muon_Data_eff_up  = events.muon_Data_eff_up
+    electron_Data_eff_up = events.electron_Data_eff_up
+    muon_MC_eff_up  = events.muon_MC_eff_up
+    electron_MC_eff_up = events.electron_MC_eff_up
+    # Down
+    muon_Data_eff_down  = events.muon_Data_eff_down
+    electron_Data_eff_down = events.electron_Data_eff_down
+    muon_MC_eff_down  = events.muon_MC_eff_down
+    electron_MC_eff_down = events.electron_MC_eff_down
     
+    # Define triggers passed masks
+    Pass_mu_trig = ak.where(events.triggerID_mu > 0, 1, 0)
+    Pass_e_trig  = ak.where(events.triggerID_e >  0, 1, 0)
+    
+    # SF evaluation
+    # nom 
+    eff_data  = Pass_mu_trig*muon_Data_eff_nom + Pass_e_trig*electron_Data_eff_nom - Pass_mu_trig*muon_Data_eff_nom*Pass_e_trig*electron_Data_eff_nom
+    eff_MC  = Pass_mu_trig*muon_MC_eff_nom + Pass_e_trig*electron_MC_eff_nom - Pass_mu_trig*muon_MC_eff_nom*Pass_e_trig*electron_MC_eff_nom
+    
+    SF_nom =  eff_data/eff_MC
+    
+    deff_data_delectron_Data_eff_nom = Pass_e_trig  - Pass_e_trig*Pass_mu_trig*muon_Data_eff_nom
+    deff_data_dmuon_Data_eff_nom     = Pass_mu_trig - Pass_e_trig*Pass_mu_trig*electron_Data_eff_nom
+    
+    delta_el_data = (electron_Data_eff_up - electron_Data_eff_nom)
+    delta_mu_data = (muon_Data_eff_up - muon_Data_eff_nom)
+    
+    deff_data = deff_data_delectron_Data_eff_nom*delta_el_data + deff_data_dmuon_Data_eff_nom*delta_mu_data
+    
+    deff_data_rel = deff_data/eff_data 
+    
+    deff_MC_delectron_MC_eff_nom = Pass_e_trig  - Pass_e_trig*Pass_mu_trig*muon_MC_eff_nom
+    deff_MC_dmuon_MC_eff_nom     = Pass_mu_trig - Pass_e_trig*Pass_mu_trig*electron_MC_eff_nom
+    
+    delta_el_MC = (electron_MC_eff_up - electron_MC_eff_nom)
+    delta_mu_MC = (muon_MC_eff_up - muon_MC_eff_nom)
+    
+    deff_MC = deff_MC_delectron_MC_eff_nom*delta_el_MC + deff_MC_dmuon_MC_eff_nom*delta_mu_MC
+    
+    deff_MC_rel = deff_MC/eff_MC 
+    
+    delta_SF = SF_nom*np.sqrt(deff_MC_rel**2 + deff_data_rel**2)
+
+        # # up
+    # eff_data_up  = Pass_mu_trig*muon_Data_eff_up + Pass_e_trig*electron_Data_eff_up - Pass_mu_trig*muon_Data_eff_up*Pass_e_trig*electron_Data_eff_up
+    # eff_MC_up  = Pass_mu_trig*muon_MC_eff_up + Pass_e_trig*electron_MC_eff_up - Pass_mu_trig*muon_MC_eff_up*Pass_e_trig*electron_MC_eff_up
+    # SF_up         =  eff_data_up/eff_MC_up
+    # # down 
+    # eff_data_down = Pass_mu_trig*muon_Data_eff_down + Pass_e_trig*electron_Data_eff_down - Pass_mu_trig*muon_Data_eff_down*Pass_e_trig*electron_Data_eff_down
+    # eff_MC_down   = Pass_mu_trig*muon_MC_eff_down + Pass_e_trig*electron_MC_eff_down - Pass_mu_trig*muon_MC_eff_down*Pass_e_trig*electron_MC_eff_down
+    # SF_down       =  eff_data_down/eff_MC_down
+
+    #Saving the columns 
+    events = set_ak_column_f32(events, f"Trigger_SF_nom", SF_nom)
+    events = set_ak_column_f32(events, f"Trigger_SF_up", SF_nom + delta_SF )
+    events = set_ak_column_f32(events, f"Trigger_SF_down", SF_nom - delta_SF)
+
+    return events
+
 
 ### TAU WEIGHT CALCULATOR ###
 
@@ -418,4 +581,3 @@ def tau_weight_setup(
     self.id_vs_jet_corrector    = correction_set[f"{tagger_name}VSjet"]
     self.id_vs_e_corrector      = correction_set[f"{tagger_name}VSe"]
     self.id_vs_mu_corrector     = correction_set[f"{tagger_name}VSmu"]
-

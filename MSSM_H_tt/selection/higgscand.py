@@ -67,6 +67,12 @@ def new_higgscand(
     if domatch: 
         n_pairs_postmatch = ak.zeros_like(events.event)
         events, matched_masks = self[hlt_path_matching](events, trigger_results, pair_objects, **kwargs)
+        # if matched_masks came back empty, initialize zero‐masks for each channel
+        if not matched_masks:
+            matched_masks = {
+                the_ch: ak.zeros_like(events.event)
+                for the_ch in channels
+            }
         # Define arrays in a dictionary for easy management
         hcands = {}
         for the_ch in channels:

@@ -26,8 +26,8 @@ def add_triggers_run3(config: od.Config) -> None:
                 TriggerLeg(
                     pdg_id=13,
                     trigger_bits=[2,4],
-                    min_pt=26.0,
-                    min_eta=2.4,
+                    min_pt  = 26.0,
+                    min_eta = 2.4,
                 ),
             ],
             tags={"single_trigger", "single_mu", "channel_mu_tau"},
@@ -51,6 +51,30 @@ def add_triggers_run3(config: od.Config) -> None:
         ],
         tags={"single_trigger", "single_e", "channel_e_tau"},
         ),
+        # # e-mu
+        # #
+        # # Muon leg: https://github.com/cms-sw/cmssw/blob/203834e3ae301f2564423dd1cc84bebf660519b9/PhysicsTools/NanoAOD/python/triggerObjects_cff.py#L120
+        # # Electron leg: https://github.com/cms-sw/cmssw/blob/203834e3ae301f2564423dd1cc84bebf660519b9/PhysicsTools/NanoAOD/python/triggerObjects_cff.py#L68
+        # Trigger(
+        #     name="HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ",
+        #     id=110,
+        #     legs=[
+        #         TriggerLeg(
+        #             pdg_id=13,
+        #             min_pt=24.0,
+        #             min_eta=2.1,
+        #             trigger_bits=[6],
+        #         ),
+        #         TriggerLeg(
+        #             pdg_id=11,
+        #             min_pt=13.0,
+        #             min_eta=2.1,
+        #             trigger_bits= [4,9],
+        #         ),
+        #     ],
+        #     tags={"cross_trigger", "cross_e_mu", "channel_e_mu"},
+        # ),
+
      ])
 
 def add_triggers_run3_2022_preEE(config: od.Config) -> None:
@@ -102,25 +126,25 @@ def add_triggers_run3_2022_preEE(config: od.Config) -> None:
         #
         # Muon leg: https://github.com/cms-sw/cmssw/blob/203834e3ae301f2564423dd1cc84bebf660519b9/PhysicsTools/NanoAOD/python/triggerObjects_cff.py#L120
         # Electron leg: https://github.com/cms-sw/cmssw/blob/203834e3ae301f2564423dd1cc84bebf660519b9/PhysicsTools/NanoAOD/python/triggerObjects_cff.py#L68
-        # Trigger(
-        #     name="HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ",
-        #     id=1113,
-        #     legs=[
-        #         TriggerLeg(
-        #             pdg_id=13,
-        #             min_pt=24.0,
-        #             min_eta=2.1,
-        #             trigger_bits=[6],
-        #         ),
-        #         TriggerLeg(
-        #             pdg_id=11,
-        #             min_pt=13.0,
-        #             min_eta=2.1,
-        #             trigger_bits= [4,9],
-        #         ),
-        #     ],
-        #     tags={"cross_trigger", "cross_e_mu", "channel_e_mu"},
-        # ),
+        Trigger(
+            name="HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ",
+            id=110,
+            legs=[
+                TriggerLeg(
+                    pdg_id=13,
+                    min_pt=24.0,
+                    min_eta=2.1,
+                    trigger_bits=[6],
+                ),
+                TriggerLeg(
+                    pdg_id=11,
+                    min_pt=13.0,
+                    min_eta=2.1,
+                    trigger_bits= [4,9],
+                ),
+            ],
+            tags={"cross_trigger", "cross_e_mu", "channel_e_mu"},
+        ),
 
         #
         # e tauh

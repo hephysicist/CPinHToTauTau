@@ -24,7 +24,8 @@ def main(self: WeightProducer, events: ak.Array, **kwargs) -> ak.Array:
     
     weight = ak.Array(np.ones(len(events), dtype=np.float32))
     for column in self.weight_columns:
-        if not ak.any(['tt' in proc for proc in processes]) and column == 'top_pt_weight':
+        if ((self.dataset_inst.has_tag("ttbar")^True) & (column == 'top_pt_weight')):
+
             print("===")
             print(weight)
             print(Route(column).apply(events),column)
@@ -99,7 +100,9 @@ def ff_weight_producer(self: WeightProducer) -> None:
         "tau_weight_nom",
         "electron_weight_nom",
         "tauspinner_weight",
-        "zpt_weight"
+        "zpt_weight",
+        "top_pt_weight",
+        "trigger_weight_mutau_nom",
     }
     self.uses |= self.weight_columns
     

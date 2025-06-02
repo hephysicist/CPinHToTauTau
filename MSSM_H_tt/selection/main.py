@@ -28,7 +28,7 @@ from MSSM_H_tt.selection.trigger import trigger_selection
 from MSSM_H_tt.selection.lepton_pair import pair_selection
 from MSSM_H_tt.selection.lepton_veto import single_lepton_veto, second_lepton_veto, OC_lepton_veto
 from MSSM_H_tt.selection.higgscand import new_higgscand, mask_nans
-
+from MSSM_H_tt.selection.met_nanoAOD_filters import met_nanoAOD_filters
 from MSSM_H_tt.production.aux_columns import channel_id
 from MSSM_H_tt.selection.jets import jet_veto_map
 from MSSM_H_tt.production.btag import btag_weight
@@ -65,6 +65,7 @@ coffea = maybe_import("coffea")
         jet_veto_map,
         btag_weight,
         jets_taggable,
+        met_nanoAOD_filters,
     },
     produces={
         # selectors / producers whose newly created columns should be kept
@@ -88,6 +89,7 @@ coffea = maybe_import("coffea")
         jet_veto_map,
         btag_weight,
         jets_taggable,
+        met_nanoAOD_filters,
         "category_ids",
         "OC_lepton_veto",
     },
@@ -211,7 +213,11 @@ def main(
     if self.has_dep(jet_veto_map):
         events, jet_veto_map_result = self[jet_veto_map](events, **kwargs)
         results += jet_veto_map_result
-
+    
+    if self.dataset_inst.is_data:
+        events, met_nanoAOD_filters_result = self[met_nanoAOD_filters](events, **kwargs)
+        results += met_nanoAOD_filters_result
+    
     # combined event selection after all steps
     event_sel = reduce(and_, results.steps.values())
     

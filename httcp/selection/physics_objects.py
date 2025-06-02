@@ -59,11 +59,12 @@ def muon_selection(
     events = set_ak_column(events, "Muon.ip_sig", events.Muon.sip3d)
 
     good_selections = {
-        "muon_pt_26"          : events.Muon.pt > 26,
+        "muon_pt_26"          : events.Muon.pt >= 21,
         "muon_eta_2p4"        : abs(events.Muon.eta) < 2.4,
         "mediumID"            : events.Muon.mediumId == 1,
         "muon_dxy_0p045"      : abs(events.Muon.dxy) < 0.045,
         "muon_dz_0p2"         : abs(events.Muon.dz) < 0.2,
+        "muon_iso_0p5"        : events.Muon.pfRelIso04_all < 0.3 
     }
     single_veto_selections = {
         "muon_pt_10"          : events.Muon.pt > 10,
@@ -177,7 +178,7 @@ def electron_selection(
         "electron_dxy_0p045"      : abs(events.Electron.dxy) < 0.045,
         "electron_dz_0p2"         : abs(events.Electron.dz) < 0.2,
         "electron_mva_iso_wp80"   : mva_iso_wp80 == 1,
-        "electron_pfRelIso03_all" : events.Electron.pfRelIso03_all < 0.3,
+        "electron_pfRelIso03_all" : events.Electron.pfRelIso03_all < 2.,
     }
     single_veto_selections = {
         "electron_pt_10"          : events.Electron.pt > 10,

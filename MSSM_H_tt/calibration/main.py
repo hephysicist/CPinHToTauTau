@@ -30,10 +30,11 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
     },
 )
 def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
-
+    
     events = self[deterministic_seeds](events, **kwargs)
     
     non_finite_mask = ~np.isfinite(events.PuppiMET.pt)
+    
     #Jets variables before applying energy corrections
     events = set_ak_column_f32(events, "Jet.pt_no_jec", events.Jet.pt)
     events = set_ak_column_f32(events, "Jet.phi_no_jec", events.Jet.phi)
@@ -53,7 +54,6 @@ def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
         print("Performing electron scaling and smearing correction...")
         events = self[electron_smearing_scaling](events, **kwargs)
         print("Electron scaling and smearing correction...SUCCEDED")
-    
     #events = self[met_phi](events, **kwargs)
     #events = self[jer](events, **kwargs)
     #events = self[jets](events, **kwargs)
@@ -62,5 +62,5 @@ def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
         print("Performing tau energy scale correction...")
         
         events = self[tau_energy_scale](events, **kwargs)
-
+   
     return events

@@ -46,10 +46,56 @@ def channel_id(
     return events
 
 @producer(
+    uses={"Jet.*"},
+    produces={"Jet.*"},
+    exposed=False,
+)
+def create_jetID_masks(
+        self: Producer,
+        events: ak.Array,
+        **kwargs
+) -> ak.Array:
+    """
+    For nanoaod v13 and v14 jetID is bugged, so there is a special procedure to apply Tight jet ID 
+    """
+    nano_version = self.config_inst.campaign.x.version
+    jets = events.Jet
+    if nano_version in [13,14]:
+        print(f'Applying custom tightJetID for nanoAOD v{nano_version}...')
+        tightID_eta_2p6 = ((jets.neHEF < 0.99)
+                        & (jets.neEmEF < 0.9)
+                        & ((jets.chMultiplicity + jets.neMultiplicity) > 1)
+                        & (jets.chHEF > 0.01)
+                        & (jets.chMultiplicity > 0)) # Tight criteria for |eta| < 2.6 
+        
+        tightID_eta_2p6_to_2p7 = ((jets.neHEF < 0.9) & (jets.neEmEF < 0.99))  # Tight criteria for 2.6 < |eta| <= 2.7
+        
+        tightID_eta_2p7_to_3p0 = (jets.neHEF < 0.99)  # Tight criteria for 2.7 < |eta| <= 3.0
+        
+        tightID_eta_geq_3p0 = ((jets.neMultiplicity >= 2) & (jets.neEmEF < 0.4))  # Tight criteria for |eta| >= 3.0
+
+        pass_tightID = ( ((abs(jets.eta) < 2.6)  &  tightID_eta_2p6)
+                        |((abs(jets.eta) >= 2.6) & (abs(jets.eta) < 2.7) & tightID_eta_2p6_to_2p7)
+                        |((abs(jets.eta) >= 2.7) & (abs(jets.eta) < 3.0) & tightID_eta_2p7_to_3p0)
+                        |((abs(jets.eta) >= 3.0) &  tightID_eta_geq_3p0)
+                        )
+
+        pass_tightID_lep_veto = ak.where((abs(jets.eta) < 2.7),
+                                         pass_tightID & (jets.muEF < 0.8) & (jets.chEmEF < 0.8),
+                                         pass_tightID)
+    else:
+        pass_tightID_lep_veto = (abs(jets.eta) < 2.7) & ((jets.jetId & 3) != 0)
+    
+    jets["pass_tightID"] = pass_tightID
+    jets["pass_tightID_lep_veto"] = pass_tightID_lep_veto
+    events = set_ak_column(events, "Jet", jets)
+    return events
+
+
+@producer(
     uses={ f"Jet.{var}" for var in 
         [
-            "pt", "eta", "phi", "mass",
-            "jetId", "btagDeepFlavB"
+            "pt", "eta", "phi", "mass", "btagDeepFlavB","pass_tightID_lep_veto"
         ]} | {"hcand_*"},
     produces={"is_b_vetoed"},
     exposed=False,
@@ -72,7 +118,7 @@ def jet_veto(
     jet_selections = {
         "jet_pt_20"               : sorted_jets.pt > 20.0,
         "jet_eta_2.5"             : abs(sorted_jets.eta) < 2.5,
-        "jet_id"                  : sorted_jets.jetId & 0b10 == 0b10, 
+        "jet_id"                  : sorted_jets.pass_tightID_lep_veto, 
         "btag_wp_medium"          : sorted_jets.btagDeepFlavB >= btag_wp
     }
     jet_obj_mask = ak.ones_like(jet_pt_sorted_idx, dtype=np.bool_)
@@ -96,8 +142,7 @@ def jet_veto(
 
 @producer(
     uses={ f"Jet.{var}" for var in 
-        [ "pt", "eta", "phi", "mass",
-          "jetId", "btagDeepFlavB"
+        [ "pt", "eta", "phi", "mass", "btagDeepFlavB","pass_tightID_lep_veto"
         ]} | {"hcand_*"},
     produces={
         "n_jets",
@@ -126,7 +171,7 @@ def jet_pt_def(
     jet_selections = {
         "jet_pt_20"               : sorted_jets.pt > 20.0,
         "jet_eta_4.7"             : abs(sorted_jets.eta) < 4.7,
-        "jet_id"                  : sorted_jets.jetId & 0b10 == 0b10, 
+        "jet_id"                  : sorted_jets.pass_tightID_lep_veto, 
     }
     jet_obj_mask = ak.ones_like(jet_pt_sorted_idx, dtype=np.bool_)
     for the_sel in jet_selections.values():
@@ -260,8 +305,7 @@ def jet_pt_def(
 
 @producer(
     uses={ f"Jet.{var}" for var in 
-        [ "pt", "eta", "phi", "mass",
-          "jetId", "btagDeepFlavB"
+        [ "pt", "eta", "phi", "mass", "btagDeepFlavB","pass_tightID_lep_veto"
         ]} | {"hcand_*"},
     produces={"n_jets_tag"},
     exposed=False,
@@ -280,7 +324,7 @@ def jets_taggable(
     jet_selections = {
         "jet_pt_20"               : sorted_jets.pt > 20.0,
         "jet_eta_2.5"             : abs(sorted_jets.eta) < 2.5,
-        "jet_id"                  : sorted_jets.jetId & 0b10 == 0b10, 
+        "jet_id"                  : sorted_jets.pass_tightID_lep_veto, 
     }
     jet_obj_mask = ak.ones_like(jet_pt_sorted_idx, dtype=np.bool_)
     for the_sel in jet_selections.values():
@@ -326,8 +370,7 @@ def jets_taggable(
 @producer(
     uses={ f"Jet.{var}" for var in 
         [
-            "pt", "eta", "phi", "mass",
-            "jetId", "btagDeepFlavB"
+            "pt", "eta", "phi", "mass", "btagDeepFlavB","pass_tightID_lep_veto"
         ]} | {"hcand_*"},
     produces={"N_b_jets"},
     exposed=False,
@@ -349,7 +392,7 @@ def number_b_jet(
     jet_selections = {
         "jet_pt_20"               : sorted_jets.pt > 20.0,
         "jet_eta_2.5"             : abs(sorted_jets.eta) < 2.5,
-        "jet_id"                  : sorted_jets.jetId & 0b10 == 0b10, 
+        "jet_id"                  : sorted_jets.pass_tightID_lep_veto, 
         "btag_wp_medium"          : sorted_jets.btagDeepFlavB >= btag_wp
     }
     jet_obj_mask = ak.ones_like(jet_pt_sorted_idx, dtype=np.bool_)

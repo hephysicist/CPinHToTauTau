@@ -696,6 +696,8 @@ def add_run3(ana: od.Analysis,
 
         "pu_sf"                         : (f"{jsonpog_dir}LUM/{cfg.x.year}_{tag}/puWeights.json.gz", "v1"),
         "muon_correction"               : f"{jsonpog_dir}MUO/{cfg.x.year}_{tag}/muon_Z.json.gz",
+        "cross_mutau_mu_leg"            : f"{j_dir}/{cfg.x.year}{campaign.x.tag}/CrossMuTauHlt_MuLeg_v1.json",
+        "HLT_mu_eff"                    : f"{j_dir}/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
         "electron_scaling_smearing"     : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
         "electron_idiso"                : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
         "electron_trigger"              : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
@@ -703,13 +705,9 @@ def add_run3(ana: od.Analysis,
         "zpt_weight"                    : f"{corr_dir}zpt_reweighting_LO_2022.root",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
-        "fake_factors"                  : (f"{corr_dir}fake_factors_mutau_2022_postEE_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
+        "fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_2022_postEE_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
+        #"fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_{cfg.x.year}_{campaign.x.tag}_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
         "met_recoil"                    : (f"{corr_dir}hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
-        "cross_mutau_mu_leg" : f"{j_dir}/{cfg.x.year}{campaign.x.tag}/CrossMuTauHlt_MuLeg_v1.json",
-        "HLT_mu_eff"      : f"{j_dir}/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
-        "jet_jerc"  : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
-        "jet_veto_map"  : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
-        #"fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_{cfg.x.year}_{campaign.x.tag}_mt{cfg.x.mt_cut_value}_exp_and_pol2.json", "v2"),
         #"met_phi_corr": (f"{jsonpog_dir}JME/{cfg.x.year}{tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
     })
     # --------------------------------------------------------------------------------------------- #
@@ -931,7 +929,7 @@ def add_run3(ana: od.Analysis,
     from httcp.config.variables import add_variables
     add_variables(cfg)
     
-    from httcp.data_driven.hist_hooks import add_hist_hooks
+    from data_driven.hist_hooks import add_hist_hooks
     add_hist_hooks(cfg)
 
 

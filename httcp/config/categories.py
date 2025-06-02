@@ -169,62 +169,66 @@ def add_categories(config: od.Config,
     #Add child categories to base categories
     child_category_map  = DotDict.wrap({
         
-        "dm0"     : {'selection': ["dm0"], 'label': f" \n tau PNet DM = 0",},
-        "dm1"     : {'selection': ["dm1"], 'label': f" \n tau PNet DM = 1",},
-        #"dm2"     : {'selection': ["dm2"], 'label': f" \n tau PNet DM = 2",},
-        #"dm10"    : {'selection': ["dm10"], 'label': f" \n tau PNet DM = 10",},
-        #"dm11"    : {'selection': ["dm11"], 'label': f" \n tau PNet DM = 11",},
+        "dm0"     : {'selection': ["pnet_dm0"], 'label': f" \n tau PNet DM = 0",},
+        "dm1"     : {'selection': ["pnet_dm1"], 'label': f" \n tau PNet DM = 1",},
+        #"dm2"     : {'selection': ["pnet_dm2"], 'label': f" \n tau PNet DM = 2",},
+        #"dm10"    : {'selection': ["pnet_dm10"], 'label': f" \n tau PNet DM = 10",},
+        #"dm11"    : {'selection': ["pnet_dm11"], 'label': f" \n tau PNet DM = 11",},
         
-        "tau2pi"     : {'selection': ["dm0","tau_ip_cut"], 'label': r"$\mu \pi$",},
-        "tau2rho"    : {'selection': ["dm1","pion_E_split_cut"], 'label': r"$\mu \rho$",},
+        "tau2pi"     : {'selection': ["pnet_dm0","tau_ip_cut"], 'label': r"$\mu \pi$",},
+        "tau2rho"    : {'selection': ["pnet_dm1", "hps_dm1", "pion_E_split_cut"], 'label': r"$\mu \rho$",},
 
-        # "nj0_dm0"    : {'selection' : ["njets_eq0", "dm0"],
-        #                     'label'     : f" \n $n_{{jets}}= 0$ \n tau PNet DM = 0",},
+        #"nj0"    : {'selection' : ["njets_eq0"], 'label'     : f" \n $n_{{jets}}= 0$",},
+        #"nj1"    : {'selection' : ["njets_eq1"], 'label'     : f" \n $n_{{jets}}= 1$",},
+        #"nj2"    : {'selection' : ["njets_eq2"], 'label'     : f" \n $n_{{jets}}\geq 2$",},
         
-        # "nj1_dm0"    : {'selection' : ["njets_eq1", "dm0"],
+        # "nj0_dm0"    : {'selection' : ["njets_eq0", "pnet_dm0"],
+        #                      'label'     : f" \n $n_{{jets}}= 0$ \n tau PNet DM = 0",},
+        
+        # "nj1_dm0"    : {'selection' : ["njets_eq1", "pnet_dm0"],
         #                     'label'     : f" \n $n_{{jets}}= 1$ \n tau PNet DM = 0",},
         
-        # "nj2_dm0"    : {'selection' : ["njets_geq2","dm0"],
+        # "nj2_dm0"    : {'selection' : ["njets_geq2","pnet_dm0"],
         #                     'label'     : f" \n $n_{{jets}}\geq 2$ \n tau PNet DM = 0",},
         
         # # DM1
-        # "nj0_dm1"    : {'selection' : ["njets_eq0", "dm1"],
+        # "nj0_dm1"    : {'selection' : ["njets_eq0", "pnet_dm1"],
         #                     'label'     : f" \n $n_{{jets}}= 0$ \n tau PNet DM = 1",},
         
-        # "nj1_dm1"    : {'selection' : ["njets_eq1", "dm1"],
+        # "nj1_dm1"    : {'selection' : ["njets_eq1", "pnet_dm1"],
         #                     'label'     : f" \n $n_{{jets}}= 1$ \n tau PNet DM = 1",},
         
-        # "nj2_dm1"    : {'selection' : ["njets_geq2","dm1"],
+        # "nj2_dm1"    : {'selection' : ["njets_geq2","pnet_dm1"],
         #                     'label'     : f" \n $n_{{jets}}\geq 2$ \n tau PNet DM = 1",},
         
         # # DM2
-        # "nj0_dm2"    : {'selection' : ["njets_eq0", "dm2"],
+        # "nj0_dm2"    : {'selection' : ["njets_eq0", "pnet_dm2"],
         #                     'label'     : f" \n $n_{{jets}}= 0$ \n tau PNet DM = 2",},
         
-        # "nj1_dm2"    : {'selection' : ["njets_eq1", "dm2"],
+        # "nj1_dm2"    : {'selection' : ["njets_eq1", "pnet_dm2"],
         #                     'label'     : f" \n $n_{{jets}}= 1$ \n tau PNet DM = 2",},
         
-        # "nj2_dm2"    : {'selection' : ["njets_geq2","dm2"],
+        # "nj2_dm2"    : {'selection' : ["njets_geq2","pnet_dm2"],
         #                     'label'     : f" \n $n_{{jets}}\geq 2$ \n tau PNet DM = 2",},
         
         # # DM10
-        # "nj0_dm10"    : {'selection' : ["njets_eq0", "dm10"],
+        # "nj0_dm10"    : {'selection' : ["njets_eq0", "pnet_dm10"],
         #                     'label'     : f" \n $n_{{jets}}= 0$ \n tau PNet DM = 10",},
         
-        # "nj1_dm10"    : {'selection' : ["njets_eq1", "dm10"],
+        # "nj1_dm10"    : {'selection' : ["njets_eq1", "pnet_dm10"],
         #                     'label'     : f" \n $n_{{jets}}= 1$ \n tau PNet DM = 10",},
         
-        # "nj2_dm10"    : {'selection' : ["njets_geq2","dm10"],
+        # "nj2_dm10"    : {'selection' : ["njets_geq2","pnet_dm10"],
         #                     'label'     : f" \n $n_{{jets}}\geq 2$ \n tau PNet DM = 10",},
         
         # # DM11
-        # "nj0_dm11"    : {'selection' : ["njets_eq0", "dm11"],
+        # "nj0_dm11"    : {'selection' : ["njets_eq0", "pnet_dm11"],
         #                     'label'     : f" \n $n_{{jets}}= 0$ \n tau PNet DM = 11",},
         
-        # "nj1_dm11"    : {'selection' : ["njets_eq1", "dm11"],
+        # "nj1_dm11"    : {'selection' : ["njets_eq1", "pnet_dm11"],
         #                     'label'     : f" \n $n_{{jets}}= 1$ \n tau PNet DM = 11",},
         
-        # "nj2_dm11"    : {'selection' : ["njets_geq2","dm11"],
+        # "nj2_dm11"    : {'selection' : ["njets_geq2","pnet_dm11"],
         #                     'label'     : f" \n $n_{{jets}}\geq 2$ \n tau PNet DM = 11",},
         })
     

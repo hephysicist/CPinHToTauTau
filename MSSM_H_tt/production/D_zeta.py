@@ -7,6 +7,7 @@ from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.columnar_util import set_ak_column
 from columnflow.util import maybe_import, DotDict
 from MSSM_H_tt.util import get_lep_p4, find_fields_with_nan, get_p2
+from columnflow.columnar_util import EMPTY_FLOAT
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -47,6 +48,8 @@ def D_zeta(
     p_zeta_miss = puppi_met_p2.dot(zeta)
     
     d_zeta = p_zeta_miss - 0.85*p_zeta_vis
+    
+    d_zeta = ak.flatten(d_zeta)
 
     events = set_ak_column(events, "D_zeta", d_zeta)
     return events

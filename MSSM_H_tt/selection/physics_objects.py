@@ -64,7 +64,7 @@ def muon_selection(
         "mediumID"            : events.Muon.mediumId == 1,
         "muon_dxy_0p045"      : abs(events.Muon.dxy) < 0.045,
         "muon_dz_0p2"         : abs(events.Muon.dz) < 0.2,
-        "muon_iso_0p15"       : events.Muon.pfRelIso04_all < 0.15
+        #"muon_iso_0p15"       : events.Muon.pfRelIso04_all < 0.15
     }
     mu_emu_selections = {
         "muon_pt_15"          : events.Muon.pt > 15,
@@ -72,7 +72,7 @@ def muon_selection(
         "mediumID"            : events.Muon.mediumId == 1,
         "muon_dxy_0p045"      : abs(events.Muon.dxy) < 0.045,
         "muon_dz_0p2"         : abs(events.Muon.dz) < 0.2,
-        "muon_iso_0p2"        : events.Muon.pfRelIso04_all < 0.2,
+#        "muon_iso_0p2"        : events.Muon.pfRelIso04_all < 0.2, remove the cut, need it to define ABCD regions
     }
     single_veto_selections = {
         "muon_pt_10"          : events.Muon.pt > 10,
@@ -110,10 +110,10 @@ def muon_selection(
     selection_steps = {"Starts with": good_muon_mask}
     for cut in good_selections.keys():
         good_muon_mask = good_muon_mask & ak.fill_none(good_selections[cut], False)
-        selection_steps[cut] = good_muon_mask
-        
+    
     for cut in mu_emu_selections.keys():
         mu_emu_mask = mu_emu_mask & ak.fill_none(mu_emu_selections[cut], False)
+        selection_steps[cut] = mu_emu_mask
         
     for cut in single_veto_selections.keys():
         single_veto_muon_mask = single_veto_muon_mask & ak.fill_none(single_veto_selections[cut], False)
@@ -211,7 +211,7 @@ def electron_selection(
         "electron_dxy_0p045"      : abs(events.Electron.dxy) < 0.045,
         "electron_dz_0p2"         : abs(events.Electron.dz) < 0.2,
         #"electron_pfRelIso03_all" : events.Electron.pfRelIso03_all < 0.15,
-        "electron_mva_iso_wp90": mva_iso_wp90 == 1,
+        "electron_mva_iso_wp90"   : mva_iso_wp90 == 1,
         "electron_missing_hits"   : number_of_missing_hits < 2,
         "electron_pass_conVeto"   : events.Electron.convVeto == 1,
     }
@@ -253,10 +253,11 @@ def electron_selection(
     selection_steps = {"Starts with": good_electron_mask}
     for cut in good_selections.keys():
         good_electron_mask = good_electron_mask & ak.fill_none(good_selections[cut], False)
-        selection_steps[cut] = good_electron_mask
+        
         
     for cut in ele_emu_selections.keys():
         ele_emu_mask = ele_emu_mask & ak.fill_none(ele_emu_selections[cut], False)
+        selection_steps[cut] = ele_emu_mask
         
     for cut in single_veto_selections.keys():
         single_veto_electron_mask = single_veto_electron_mask & ak.fill_none(single_veto_selections[cut], False)
