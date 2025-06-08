@@ -110,7 +110,7 @@ args=(
        # 2. ff_method_dr_closure_test: Calclulate fake contribution and apply it to the dr_num regions for the closure tests
        # 3. good_old_abcd: estimates QCD contribution by taking events from same sign region and transfer factors from inv. lep iso
          
-        #--hist-hooks ff_method #good_old_abcd #ff_method_dr_closure_test
+        --hist-hooks good_old_abcd #ff_method_dr_closure_test
         --general-settings "cms-label=pw,yscale=log"
         --process-settings "h_ggf_htt,unstack,scale=stack,color=#0000FF"
         "${@:2}"

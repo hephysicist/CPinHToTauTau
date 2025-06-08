@@ -18,12 +18,29 @@ def example(self):
     
 
     self.add_category(
-        "cat_mutau_sr",
-        config_category="cat_mutau_sr",
+        "cat_mutau_sr__tau2pi",
+        config_category="cat_mutau_sr__tau2pi",
         config_variable="phi_cp_mu_pi",
         config_data_datasets=["data_singlemu_C", "data_mu_C", "data_mu_D"],
         mc_stats=True,
     )
+
+    self.add_category(
+        "cat_mutau_sr",
+        config_category="cat_mutau_sr",
+        config_variable="phi_cp_incl",
+        config_data_datasets=["data_singlemu_C", "data_mu_C", "data_mu_D"],
+        mc_stats=True,
+    )
+
+    self.add_category(
+        "cat_mutau_sr__tau2rho",
+        config_category="cat_mutau_sr__tau2rho",
+        config_variable="phi_cp_mu_rho",
+        config_data_datasets=["data_singlemu_C", "data_mu_C", "data_mu_D"],
+        mc_stats=True,
+    )
+
 
     # TODO: think about defining a well motivated CR
     # self.add_category(
@@ -53,9 +70,13 @@ def example(self):
         #single top
         "st": ["st_twchannel_t_sl", "st_twchannel_tbar_sl", "st_twchannel_tbar_dl", "st_tchannel_tbar", "st_tchannel_t", "st_schannel_t_lep", "st_schannel_tbar_lep"], #single top inclusive
         #signal
-        "h_ggf_htt": ["h_ggf_htt_filtered"], #SM Higgs signal
+        #"h_ggf_htt": ["h_ggf_htt_filtered"], #SM Higgs signal SM 
+        "h_ggf_htt_cpo": ["h_ggf_htt_cpo_filtered"], # CP-odd 
+        "h_ggf_htt_mm": ["h_ggf_htt_mm_filtered"], # Maximal Mixing
+        "h_ggf_htt_sm": ["h_ggf_htt_sm_filtered"], #CP-even 
+        #data-driven backgrounds
         "qcd": [""], 
-        "jet_fakes": [""], #QCD data-driven
+        #"jet_fakes": [""], # needs FF method
     }
  
     find_datasets = functools.partial(get_datasets_from_process, self.config_inst, strategy="all")
@@ -65,7 +86,7 @@ def example(self):
         is_signal = False
         data_driven = False
 
-        if process_name == "h_ggf_htt": 
+        if "h_ggf_htt" in process_name: 
             is_signal = True
         if process_name == "qcd" or process_name == "jet_fakes": 
             data_driven = True
