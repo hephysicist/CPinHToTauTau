@@ -15,13 +15,21 @@ def example(self):
 
     #
     # categories
-    
+    all_datasets = self.config_inst.campaign.datasets.names()
+    data_emu    = []
+    mc_datasets = []
+
+    for sample in all_datasets:
+        if ("data_egamma" in sample) or ("data_mu_" in sample):
+            data_emu.append(sample)
+        else:
+            mc_datasets.append(sample)
 
     self.add_category(
         "cat_emu_sr",
         config_category="cat_emu_sr",
         config_variable="emu_mt_tot",
-        config_data_datasets=["data_egamma_E","data_egamma_F","data_egamma_G","data_mu_E","data_mu_F","data_mu_G"],
+        config_data_datasets=data_emu,
         mc_stats=True,
     )
 
@@ -38,7 +46,7 @@ def example(self):
     # processes and datasets
     # Setting for preEE
     process_vs_dataset_names = {
-        "data": ["data_egamma_E","data_egamma_F","data_egamma_G","data_mu_E","data_mu_F","data_mu_G"],       
+        "data": data_emu,       
     
         #Drell-Yan
         "dy_lep": ["dy_lep_madgraph"],
@@ -59,7 +67,7 @@ def example(self):
         #"jet_fakes": [""], #QCD data-driven
     }
  
-    find_datasets = functools.partial(get_datasets_from_process, self.config_inst, strategy="all")
+    #find_datasets = functools.partial(get_datasets_from_process, self.config_inst, strategy="all")
 
     for process_name, dataset_names in process_vs_dataset_names.items():
  

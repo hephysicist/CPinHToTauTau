@@ -694,8 +694,8 @@ def add_run3(ana: od.Analysis,
     
     jsonpog_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_latest/POG/"
     jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
-    corr_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/"
-    j_dir ="/afs/cern.ch/user/j/jmalvaso/public/hleprare/TriggerScaleFactors/"
+    #corr_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/"
+    corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
         2023 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"
@@ -709,8 +709,8 @@ def add_run3(ana: od.Analysis,
 
         "pu_sf"                         : (f"{jsonpog_dir}LUM/{cfg.x.year}_{tag}/puWeights.json.gz", "v1"),
         "muon_correction"               : f"{jsonpog_dir}MUO/{cfg.x.year}_{tag}/muon_Z.json.gz",
-        "cross_mutau_mu_leg" : f"{j_dir}/{cfg.x.year}{campaign.x.tag}/CrossMuTauHlt_MuLeg_v1.json",
-        "HLT_mu_eff"      : f"{j_dir}/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
+        "cross_mutau_mu_leg"            : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/CrossMuTauHlt_MuLeg_v1.json",
+        "HLT_mu_eff"                    : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
         "electron_scaling_smearing"     : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
         "electron_idiso"                : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
         "electron_trigger"              : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
