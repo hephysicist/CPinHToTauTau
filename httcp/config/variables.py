@@ -19,6 +19,7 @@ def keep_columns(cfg: od.Config) -> None:
             "TauProd.*",
             "GenPart.*",
             "GenZ.*",
+            "GenVtx.*",
             # general event info
             "run", "luminosityBlock", "event",
             "PV.npvs","Pileup.nTrueInt","Pileup.nPU","genWeight", "LHEWeight.originalXWGTUP", "HTXS_njets*", "LHE_Njets","weight","zpt_weight","muon_weight_nom","mc_weight","tau_weight_nom",

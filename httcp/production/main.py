@@ -25,7 +25,7 @@ from httcp.production.met_recoil import gen_boson, met_recoil
 from httcp.production.dilepton_features import hcand_fields,hcand_mt
 
 from httcp.production.phi_cp import phi_cp
-from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split
+from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split,gen_lep_fields
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
 
 np = maybe_import("numpy")
@@ -65,6 +65,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         number_b_jet,
         "Jet.*",
         pion_energy_split,
+        gen_lep_fields,
         },
     produces={
         attach_coffea_behavior,
@@ -93,6 +94,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         number_b_jet,
         "Jet.jec_no_jec_diff",
         pion_energy_split,
+        gen_lep_fields,
     },
     # whether weight producers should be added and called
     produce_weights=True,
@@ -126,7 +128,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         if ak.any(['dy' in proc for proc in processes]):
             print("Splitting Drell-Yan dataset...")
             events = self[split_dy](events,**kwargs)
-
+        events = self[gen_lep_fields](events, **kwargs)
         events = self[genZ](events, **kwargs)
         print("Z pt reweighting...")
         events = self[zpt_weight](events,**kwargs)

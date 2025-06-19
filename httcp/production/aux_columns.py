@@ -1,12 +1,12 @@
 """
 Produce channel_id column. This function is called in the main selector
 """
-
+import law
 from columnflow.production import Producer, producer
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.columnar_util import set_ak_column, EMPTY_FLOAT
 from columnflow.util import maybe_import, DotDict
-from httcp.util import get_lep_p4, find_fields_with_nan
+from httcp.util import get_lep_p4,get_vec_p3
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -15,6 +15,7 @@ import functools
 set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
 set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
 
+logger = law.logger.get_logger(__name__)
 
 @producer(
     produces={
@@ -590,3 +591,80 @@ def pion_energy_split(
     events = set_ak_column_f32(events, "pion_E_split", pion_E_split)
     return events
 
+
+@producer(
+    uses={ "hcand_*"
+    } | {"GenPart.*", "GenVtx.*"},
+    produces={"gen_lep.*"},
+    exposed=False,
+)
+def gen_lep_fields(
+        self: Producer,
+        events: ak.Array,
+        **kwargs
+) -> ak.Array:
+    ch_name = self.config_inst.channels.names()[0]
+    hcand = events[f'hcand_{ch_name}']
+    gentau = {}
+    #Get index of the gen muon/electron
+
+    #Get the the 3-vector of gen vertex
+    gen_pv = get_vec_p3(events.GenVtx)
+    for the_lep in ['lep0', 'lep1']:
+        #Get index of the gen object that corresponds to the object from the selected dilepton pair
+        gen_lep_idx = hcand[the_lep].genPartIdx
+        #Get the gen object itself
+        gen_lep = events.GenPart[gen_lep_idx]
+        #Get secondary vertex of tau->lep decay
+        gen_sv = get_vec_p3(gen_lep,'v')
+        gen_lep_vec = get_lep_p4(gen_lep).to_3D().to_pxpypz()
+        #Coffea unit method does not work, so I implemented my own method
+        unit = lambda v: ak.where(v.mag > 0, v/v.mag, v/1.)
+        gen_lep_dir = unit(gen_lep_vec)
+        #Estimate tau trajectory by substracting coordinates of primary vertex from secondary vertex
+        tau_trajectory = gen_pv - gen_sv
+        #Calculate component of tau 3-vector, that is parallel to the decay product direction
+        tau_proj = tau_trajectory.dot(gen_lep_dir)
+        #Calculate Impact parameter vector as the normal component of the tau trajectory to the decay product flight direction
+        gen_ip_vec = tau_trajectory - tau_proj * gen_lep_dir
+        #Check for nans
+        nan_mask = np.isnan(gen_ip_vec.mag)
+        if ak.any(nan_mask):
+            logger.warning(
+                f"Obtained nan values while calculating gen impact parameter variable! Imputing them with EMPTY_FLOAT"
+            )
+            gen_ip_vec = ak.where(nan_mask,
+                                EMPTY_FLOAT*ak.ones_like(gen_ip_vec),
+                                gen_ip_vec)
+        from IPython import embed; embed()
+        gentau[the_lep] = gen_lep
+        for the_comp in ['x','y','z']:
+            gentau[the_lep][f'gen_ip_{the_comp}'] = gen_ip_vec[the_comp]
+    events = set_ak_column(events, f"gen_lep",  ak.zip(gentau))
+    return events
+
+
+
+@producer(
+    uses={ "hcand_*","gentau*"},
+    produces={"gentau*"},
+    exposed=False,
+)
+def ip_correction(
+        self: Producer,
+        events: ak.Array,
+        **kwargs
+) -> ak.Array:
+    return events
+@ip_correction.setup
+def ip_correction_setup(
+    self: Producer,
+    reqs: dict,
+    inputs: dict,
+) -> None:
+    from coffea.lookup_tools import extractor
+    ext = extractor()
+    full_fname = self.config_inst.x.external_files.zpt_weight
+    ext.add_weight_sets(['ip_y_1p2to2p1_MC']) #Placeholder
+    ext.finalize()
+    self.evaluator = ext.make_evaluator()
