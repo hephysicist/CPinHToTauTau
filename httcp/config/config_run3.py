@@ -88,49 +88,49 @@ def add_run3(ana: od.Analysis,
     
     tag_dict = {
         "preEE"     : {
-            "short_tag"             = "",
-            "long_tag"              = "preEE",
-            "pog_tag"               = "Summer22",
-            "e_sf_tag"              = "2022Re-recoBCD",
-            "e_scale_corrector"     = "2022Re-recoBCD_ScaleJSON",
-            "e_smearing_corrector"  = "2022Re-recoBCD_SmearingJSON",
-            "jerc_postfix "         = "",
+            "short_tag"             : "",
+            "long_tag"              : "preEE",
+            "pog_tag"               : "Summer22",
+            "e_sf_tag"              : "2022Re-recoBCD",
+            "e_scale_corrector"     : "2022Re-recoBCD_ScaleJSON",
+            "e_smearing_corrector"  : "2022Re-recoBCD_SmearingJSON",
+            "jerc_postfix"         : "",
             },
         "postEE"    : {
-            "short_tag"             = "EE",
-            "long_tag"              = "postEE",
-            "pog_tag"               = "Summer22EE",
-            "e_sf_tag"              = "2022Re-recoE+PromptFG",
-            "e_scale_corrector"     = "2022Re-recoE+PromptFG_ScaleJSON",
-            "e_smearing_corrector"  = "2022Re-recoE+PromptFG_SmearingJSON",
-            "jerc_postfix"          = "EE",
+            "short_tag"             : "EE",
+            "long_tag"              : "postEE",
+            "pog_tag"               : "Summer22EE",
+            "e_sf_tag"              : "2022Re-recoE+PromptFG",
+            "e_scale_corrector"     : "2022Re-recoE+PromptFG_ScaleJSON",
+            "e_smearing_corrector"  : "2022Re-recoE+PromptFG_SmearingJSON",
+            "jerc_postfix"          : "EE",
             },
         "preBPix"   : {
-            "short_tag"             = "",
-            "long_tag"              = "preBPix",
-            "pog_tag"               = "Summer23",
-            "e_sf_tag"              = "2023PromptC",
-            "e_scale_corrector"     = "2022Re-recoE+PromptFG_ScaleJSON",
-            "e_smearing_corrector"  = "2022Re-recoE+PromptFG_SmearingJSON",
-            "jerc_postfix"          = "",
+            "short_tag"             : "",
+            "long_tag"              : "preBPix",
+            "pog_tag"               : "Summer23",
+            "e_sf_tag"              : "2023PromptC",
+            "e_scale_corrector"     : "2022Re-recoE+PromptFG_ScaleJSON",
+            "e_smearing_corrector"  : "2022Re-recoE+PromptFG_SmearingJSON",
+            "jerc_postfix"          : "",
             },
         "postBPix"  : {
-            "short_tag"             = "BPix",
-            "long_tag"              = "postBPix",
-            "pog_tag"               = "Summer23BPix",
-            "e_sf_tag"              = "2023PromptD",
-            "e_scale_corrector"     = "2022Re-recoE+PromptFG_ScaleJSON",
-            "e_smearing_corrector"  = "2022Re-recoE+PromptFG_SmearingJSON",
-            "jerc_postfix"          = "BPix",
+            "short_tag"             : "BPix",
+            "long_tag"              : "postBPix",
+            "pog_tag"               : "Summer23BPix",
+            "e_sf_tag"              : "2023PromptD",
+            "e_scale_corrector"     : "2022Re-recoE+PromptFG_ScaleJSON",
+            "e_smearing_corrector"  : "2022Re-recoE+PromptFG_SmearingJSON",
+            "jerc_postfix"          : "BPix",
             },
         ""  : { #Default values in case tag is empty
-            "short_tag"             = "",
-            "long_tag"              = "",
-            "pog_tag"               = "",
-            "e_sf_tag"              = "",
-            "e_scale_corrector"     = "",
-            "e_smearing_corrector"  = "",
-            "jerc_postfix"          = "",
+            "short_tag"             : "",
+            "long_tag"              : "",
+            "pog_tag"               : "",
+            "e_sf_tag"              : "",
+            "e_scale_corrector"     : "",
+            "e_smearing_corrector"  : "",
+            "jerc_postfix"          : "",
             },
     }
     
@@ -275,7 +275,9 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
         #higgs signal ggf
-        "h_ggf_htt_filtered",
+        "h_ggf_htt_sm_filtered",
+        "h_ggf_htt_cpo_filtered",
+        "h_ggf_htt_mm_filtered"
         ]
 
     dataset_names_2023preBPix = [
@@ -592,11 +594,11 @@ def add_run3(ana: od.Analysis,
     
     
     lumi_dict = {
-        "2022preEE"     : Number(7_980.4,  {"lumi_13p6TeV_correlated": 0.014j,})
-        "2022postEE"    : Number(26_671.7, {"lumi_13p6TeV_correlated": 0.014j,})
-        "2023preBPix"   : Number(17_794,   {"lumi_13p6TeV_correlated": 0.0j,})
-        "2023postBPix"  : Number(9_451,    {"lumi_13p6TeV_correlated": 0.0j,})
-        "2024"          : Number(109_080,  {"lumi_13p6TeV_correlated": 0.0j,})
+        "2022preEE"     : Number(7_980.4,  {"lumi_13p6TeV_correlated": 0.014j,}),
+        "2022postEE"    : Number(26_671.7, {"lumi_13p6TeV_correlated": 0.014j,}),
+        "2023preBPix"   : Number(17_794,   {"lumi_13p6TeV_correlated": 0.0j,}),
+        "2023postBPix"  : Number(9_451,    {"lumi_13p6TeV_correlated": 0.0j,}),
+        "2024"          : Number(109_080,  {"lumi_13p6TeV_correlated": 0.0j,}),
     }
     cfg.x.luminosity = lumi_dict[f"{year}{tag}"]
     
@@ -697,6 +699,7 @@ def add_run3(ana: od.Analysis,
     }  
     
     pog_tag = tags['pog_tag']
+    short_tag = tags['short_tag']
     cfg.x.external_files = DotDict.wrap({
         "lumi": {
             "golden": (golden_ls[year], "v1"),
@@ -718,7 +721,8 @@ def add_run3(ana: od.Analysis,
         #"fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_{year}_{campaign.x.tag}_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
         "met_recoil"                    : (f"{corr_dir}hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{tag}_v2.json.gz", "v2"),
         #"met_phi_corr": (f"{jsonpog_dir}JME/{cfg.x.year}{pog_tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
-        "ip_corr_ee"                    : f"{corr_dir}ip_corrections/Run3_2022/MuHlt_abseta_pt_wEff.json",
+        "ip_corr_ee"                    : f"{corr_dir}ip_corrections/Run3_{year}{short_tag}/ip_corrections_ee.root",
+        "ip_corr_mm"                    : f"{corr_dir}ip_corrections/Run3_{year}{short_tag}/ip_corrections_mm.root",
     })
     # --------------------------------------------------------------------------------------------- #
     # electron settings
