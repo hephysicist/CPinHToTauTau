@@ -178,8 +178,11 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
         #signal
+        "h_tt_80",
         "h_tt_100",
         "h_tt_125",
+        "h_tt_600",
+        "h_tt_800",
         "h_tt_1200",
         ]
 
