@@ -700,8 +700,8 @@ def add_run3(ana: od.Analysis,
     
     jsonpog_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_latest/POG/"
     jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
-    #corr_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/"   
     corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/"
+    
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
         2023 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"
