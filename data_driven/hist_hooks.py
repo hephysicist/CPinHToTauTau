@@ -12,7 +12,6 @@ import scinum as sn
 from columnflow.util import maybe_import, DotDict
 
 np = maybe_import("numpy")
-ak = maybe_import("awkward")
 hist = maybe_import("hist")
 
 
@@ -99,15 +98,10 @@ def add_hist_hooks(config: od.Config) -> None:
         data_num, mc_num = get_hists_from_reg(config, hists,sr.aux['abcd_regs']['dr_num'])
         data_den, mc_den = get_hists_from_reg(config, hists, sr.aux['abcd_regs']['dr_den']) 
         data_ar, mc_ar = get_hists_from_reg(config, hists,sr.aux['abcd_regs']['ar'])
-        num = data_num.values() - mc_num.values()
-        den = data_den.values() - mc_den.values() 
+        num = np.sum(data_num.values()) - np.sum(mc_num.values())
+        den = np.sum(data_den.values()) - np.sum(mc_den.values()) 
         
-        
-        mask = ((num > 0) & (den > 0))
-        
-        tf = num/den
-        tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
-       
+        tf = num/np.maximum(den,0.001)
         tf_err2 = ((np.sum(data_num.variances()) + np.sum(mc_num.variances()))/den**2 + 
                   tf**2/den**2 *(np.sum(data_den.variances()) + np.sum(mc_den.variances())))
         
