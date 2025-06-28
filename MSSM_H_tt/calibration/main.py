@@ -4,9 +4,11 @@ Calibration methods.
 import functools
 
 from columnflow.calibration import Calibrator, calibrator
+# from columnflow.calibration.cms.jets import jec
 from MSSM_H_tt.calibration.jets import jec
 from MSSM_H_tt.calibration.met import met_phi
 from MSSM_H_tt.calibration.tau import tau_energy_scale
+# from columnflow.calibration.cms.egamma import electrons
 from MSSM_H_tt.calibration.electron import electron_smearing_scaling
 from columnflow.production.cms.seeds import deterministic_seeds
 from columnflow.util import maybe_import
@@ -52,6 +54,7 @@ def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     
     if self.config_inst.x.year==2022: # scaling and smearing is not available for 2023
         print("Performing electron scaling and smearing correction...")
+        # events = self[electrons](events, **kwargs)
         events = self[electron_smearing_scaling](events, **kwargs)
         print("Electron scaling and smearing correction...SUCCEDED")
     #events = self[met_phi](events, **kwargs)

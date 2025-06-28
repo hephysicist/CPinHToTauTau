@@ -1,10 +1,9 @@
 #!/bin/bash
-source ./common_run3.sh #to access set_common_vars() function
+source ./common_run3_MSSM.sh #to access set_common_vars() function
 #The following function defines config, processes, version and datasets variables
 set_common_vars "$1"
 args=(
         --config $config
-
         --cf.CalibrateEvents-workflow $workflow
         --cf.CalibrateEvents-version $version
         --cf.SelectEvents-workflow $workflow

@@ -14,7 +14,9 @@ args=(
         --cf.MergeReducedEvents-workflow $workflow
         --variables $variables
         --file-types pdf,png
-	    --hist-hooks good_old_abcd
+        --hist-producer "cf_default"
+        --reducer "cf_default"
+        #--hist-hooks good_old_abcd
         --general-settings "cms-label=pw"
         --process-settings "h_ggf_htt,unstack,scale=stack"
         "${@:2}"

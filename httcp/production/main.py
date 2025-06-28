@@ -9,7 +9,7 @@ from columnflow.production.categories import category_ids
 from columnflow.production.normalization import normalization_weights
 from columnflow.production.cms.pileup import pu_weight
 from columnflow.production.cms.seeds import deterministic_seeds
-from columnflow.selection.util import create_collections_from_masks
+from columnflow.reduction.util import create_collections_from_masks
 from columnflow.util import maybe_import
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 from columnflow.columnar_util import optional_column as optional
@@ -91,7 +91,6 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         jet_pt_def,
         jets_taggable,
         number_b_jet,
-        "Jet.jec_no_jec_diff",
         pion_energy_split,
     },
     # whether weight producers should be added and called
@@ -103,8 +102,6 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     events = self[attach_coffea_behavior](events, **kwargs)
     print("Producing pion energy split...")
     events = self[pion_energy_split](events, **kwargs)
-    print("Producing Jet features...")
-    events = set_ak_column_f32(events, "Jet.jec_no_jec_diff", (events.Jet.pt - events.Jet.pt_no_jec))
     print("Producing jet variables for plotting...") 
     events = self[jet_pt_def](events, **kwargs)
     events = self[jets_taggable](events, **kwargs)   
