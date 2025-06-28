@@ -18,6 +18,8 @@ from columnflow.config_util import (
     add_category, add_shift_aliases,
     verify_config_processes,get_shifts_from_sources
 )
+from columnflow.calibration.cms.tau import TECConfig
+from columnflow.calibration.cms.egamma import EGammaCorrectionConfig
 
 ak = maybe_import("awkward")
 
@@ -405,6 +407,7 @@ def add_run3(ana: od.Analysis,
         "campaign": jerc_campaign,
         "version": {2016: "V7", 2017: "V5", 2018: "V5", 2022: "V2", 2023:"V1"}[year],
         "jet_type": jet_type,
+        "levels": ["L1L2L3Res"], #"L2Relative", "L2L3Residual", "L3Absolute", "L1L2L3Res" 
         "levels_DATA": ["L1L2L3Res"], #"L2Relative", "L2L3Residual", "L3Absolute", "L1L2L3Res" 
         "levels_MC": ["L1L2L3Res"], 
         "levels_for_type1_met": ["L1L2L3Res"], 
@@ -603,7 +606,7 @@ def add_run3(ana: od.Analysis,
     #                        'Medium' : 3,
     #                        'Tight'  : 4}
     #     })
-    #Check to compare the plots with IC: set working point for each channl to Medium vs Jet, Tight vs E, Tight vs Mu
+    #Check to compare the plots with IC: set working point for each channel to Medium vs Jet, Tight vs E, Tight vs Mu
     cfg.x.deep_tau = DotDict.wrap({
         "tagger": "DeepTau2018v2p5",
         "vs_e"          : {"mutau": "VVLoose",
@@ -680,8 +683,24 @@ def add_run3(ana: od.Analysis,
                 
         },
     )
+            
+    cfg.x.tec = TECConfig(
+            tagger=cfg.x.deep_tau.tagger,
+            corrector_kwargs={"wp": getattr(cfg.x.deep_tau.vs_jet, channel), "wp_VSe": getattr(cfg.x.deep_tau.vs_e, channel)},
+            )
     
+    cfg.x.eec = EGammaCorrectionConfig(
+                correction_set=f"EGMSmearAndSyst_ElePTsplit_{str(year)}{campaign.x.tag}",
+                value_type="scale",
+                uncertainty_type="escale",
+                compound=True,
+            )
     
+    cfg.x.eer = EGammaCorrectionConfig(
+                correction_set=f"EGMSmearAndSyst_ElePTsplit_{str(year)}{campaign.x.tag}",
+                value_type="smear",
+                uncertainty_type="esmear",
+    )
     ##########################
     ###### mT cut value ######
     ##########################
@@ -695,7 +714,7 @@ def add_run3(ana: od.Analysis,
     jsonpog_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_latest/POG/"
     jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
     #corr_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/"
-    corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/
+    corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/"
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
         2023 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"
@@ -712,9 +731,11 @@ def add_run3(ana: od.Analysis,
         "cross_mutau_mu_leg"            : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/CrossMuTauHlt_MuLeg_v1.json",
         "HLT_mu_eff"                    : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
         "electron_scaling_smearing"     : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
+        "electron_ss"                   : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
         "electron_idiso"                : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
         "electron_trigger"              : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
         "tau_correction"                : f"{jsonpog_tau_dir}TAU/{cfg.x.year}_{tau_tag}/tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}.json.gz",
+        "tau_sf"                        : f"{jsonpog_tau_dir}TAU/{cfg.x.year}_{tau_tag}/tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}.json.gz",
         "zpt_weight"                    : f"{corr_dir}zpt_reweighting_LO_2022.root",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
