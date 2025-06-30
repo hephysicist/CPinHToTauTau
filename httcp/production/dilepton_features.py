@@ -10,14 +10,25 @@ coffea = maybe_import("coffea")
 # helper
 set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
 
-def hcand_mt(lep: ak.Array, MET: ak.Array) -> ak.Array:
-    print("producing mT...")
-    delta_phi = lep.phi - MET.phi
-    delta_phi = ak.where(delta_phi > np.pi, delta_phi - 2*np.pi, delta_phi)
-    delta_phi = ak.where(delta_phi < -np.pi, delta_phi + 2*np.pi, delta_phi)
-    cos_dphi = np.cos(delta_phi)
-    mT_values = np.sqrt(2*lep.pt*MET.pt * (1 - cos_dphi))
-    return ak.fill_none(mT_values, EMPTY_FLOAT)
+def calc_mt(obj1: ak.Array, obj2: ak.Array)-> ak.Array:
+        d_phi = obj1.phi - obj2.phi
+        d_phi = ak.where(abs(d_phi) > np.pi,
+                             d_phi -2 * np.sign(d_phi) * np.pi,
+                             d_phi)
+        cos_dphi = np.cos(d_phi)
+        mt_values = np.sqrt(2*obj1.pt*obj2.pt * (1 - cos_dphi))
+        mt_values = ak.nan_to_num(mt_values,EMPTY_FLOAT)
+        return mt_values
+    
+def calc_pt(obj1: ak.Array, obj2: ak.Array)-> ak.Array:
+        d_phi = obj1.phi - obj2.phi
+        d_phi = ak.where(abs(d_phi) > np.pi,
+                             d_phi -2 * np.sign(d_phi) * np.pi,
+                             d_phi)
+        cos_dphi = np.cos(d_phi)
+        pt_values = np.sqrt(obj1.pt**2 + obj2.pt**2 + 2 * obj1.pt * obj2.pt * cos_dphi)
+        pt_values = ak.nan_to_num(pt_values, EMPTY_FLOAT)
+        return pt_values
 
 @producer(
     uses={
@@ -32,60 +43,37 @@ def hcand_fields(
         events: ak.Array,
         **kwargs
 ) -> ak.Array:
-    channels = self.config_inst.channels.names()
-    ch_objects = self.config_inst.x.ch_objects
-    for ch_str in channels:
-        hcand = events[f'hcand_{ch_str}']
-        p4 = {}
-        for the_lep in hcand.fields: p4[the_lep] = get_lep_p4(hcand[the_lep]) 
-        
-        pair = p4['lep0'] + p4['lep1']
-        dilep_mass = pair.mass
-        hcand['mass'] = ak.where(dilep_mass > 0, dilep_mass , EMPTY_FLOAT)
-        dilep_pt = pair.pt
-        hcand['pt'] = ak.where(dilep_pt > 0, dilep_pt , EMPTY_FLOAT)
-        delta_r = ak.flatten(p4['lep0'].metric_table(p4['lep1']), axis=2)
-        delta_eta = p4['lep0'].eta - p4['lep1'].eta
-        hcand['delta_r'] = ak.where(delta_r > 0, delta_r , EMPTY_FLOAT)
-        hcand['delta_eta'] = ak.where(abs(delta_eta) < 10, delta_eta , EMPTY_FLOAT)
-        hcand['rel_charge'] = hcand.lep0.charge * hcand.lep1.charge
-        # if ch_str !=' tautau':
-        #     mt = hcand_mt(p4['lep0'], events.PuppiMET)
-        #     hcand['mt'] = ak.where(mt >= 0, mt, EMPTY_FLOAT)
-        #     if ak.any(mt < 0):
-        #         n_less0 = ak.sum(ak.firsts(hcand['mt'],axis=1) < 0)
-        #         n_evt = ak.count(mt)
-        #         print(f'found {n_less0} events out of {n_evt} where mT < 0')
-        
-        events = set_ak_column(events, f'hcand_{ch_str}', hcand) 
-    return events
-
+    ch_str = self.config_inst.channels.names()[0]
+    hcand = events[f'hcand_{ch_str}']
+    lep0_p4 = get_lep_p4(hcand.lep0)
+    lep1_p4 = get_lep_p4(hcand.lep1)
+    pair_p4 = lep0_p4+lep1_p4
+    met = events.PuppiMET
     
-@producer(
-    uses={
-        'hcand_*', 'PuppiMET*'
-    },
-    produces={
-        'hcand_*'
-    },
-)
-def hcand_mt(self: Producer, 
-             events: ak.Array,
-             **kwargs
-             ) -> ak.Array:
-    print("producing mT...")
-    channels = self.config_inst.channels.names()
-    ch_objects = self.config_inst.x.ch_objects
-    for ch_str in channels:
-        hcand = events[f'hcand_{ch_str}']
-        lep = get_lep_p4(hcand.lep0)
-        MET = events.PuppiMET
-        delta_phi = lep.phi - MET.phi
-        delta_phi = ak.where(delta_phi > np.pi, delta_phi - 2*np.pi, delta_phi)
-        delta_phi = ak.where(delta_phi < -np.pi, delta_phi + 2*np.pi, delta_phi)
-        cos_dphi = np.cos(delta_phi)
-        mt_values = ak.fill_none(np.sqrt(2*lep.pt*MET.pt * (1 - cos_dphi)), EMPTY_FLOAT)
-        mt_values = ak.where(np.isnan(mt_values), EMPTY_FLOAT, mt_values)
-        #hcand['mt'] = mt_values 
-        events = set_ak_column_f32(events, f'hcand_{ch_str}.mt', mt_values) 
-    return events 
+    hcand['mass']   = ak.where(pair_p4.mass > 0, pair_p4.mass , EMPTY_FLOAT)
+    hcand['pt_vis'] = ak.where(pair_p4.pt > 0, pair_p4.pt , EMPTY_FLOAT)
+    hcand['pt_tt']  = calc_pt(pair_p4, met)
+    
+    delta_r = ak.flatten(lep0_p4.metric_table(lep1_p4), axis=2)
+    hcand['delta_r'] = ak.where(delta_r > 0, delta_r , EMPTY_FLOAT)
+    
+    delta_eta = lep0_p4.eta - lep1_p4.eta
+    hcand['delta_eta']  = ak.where(abs(delta_eta) < 10, delta_eta , EMPTY_FLOAT)
+    hcand['delta_phi']  = lep0_p4.deltaphi(lep1_p4)
+    
+    hcand['rel_charge'] = hcand.lep0.charge * hcand.lep1.charge
+    
+    hcand['mt_0']    = calc_mt(lep0_p4, met)
+    hcand['mt_1']    = calc_mt(lep1_p4, met)
+    hcand['mt_ll']   = calc_mt(pair_p4, met)
+    hcand['mt_vis']  = calc_mt(lep0_p4,lep1_p4) 
+    
+    
+    mt_tot_mask = (hcand['mt_0']>0) & (hcand['mt_1']>0) & (hcand['mt_vis']>0)
+    hcand['mt_tot'] = ak.where(mt_tot_mask,
+                        np.sqrt(hcand['mt_0']**2 + hcand['mt_1']**2 + hcand['mt_vis']**2),
+                        EMPTY_FLOAT)
+    hcand['delta_phi_0_met'] = lep0_p4.deltaphi(met)
+    hcand['delta_phi_1_met'] = lep1_p4.deltaphi(met)
+    events = set_ak_column(events, f'hcand_{ch_str}', hcand) 
+    return events

@@ -59,8 +59,8 @@ def mt_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.
     mt_cut_value = self.config_inst.x.mt_cut_value
     for ch_str in channels:
         if ch_str != 'tautau':
-            mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt <= mt_cut_value), axis=1),False)
-            mask = mask & ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt >= 0), axis=1),False)
+            mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 <= mt_cut_value), axis=1),False)
+            mask = mask & ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 >= 0), axis=1),False)
     #print(f"using mT cut {mt_cut_value}")
     return events, mask
 
@@ -71,8 +71,8 @@ def mt_inv_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array,
     mt_cut_value = self.config_inst.x.mt_cut_value
     for ch_str in channels:
         if ch_str != 'tautau':
-            mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt > mt_cut_value), axis=1),False)
-            mask = mask & ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt < 200), axis=1),False)
+            mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 > mt_cut_value), axis=1),False)
+            mask = mask & ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 < 200), axis=1),False)
     return events, mask
 
 @categorizer(uses={"is_b_vetoed"})
@@ -300,4 +300,15 @@ def tau_ip_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array,
 def pion_E_split_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     mask = ak.fill_none(events.pion_E_split > 0.2, False)
     return events, mask
+
+
+def _bdt_cat(self: Categorizer, events: ak.Array, cat_id, **kwargs) -> tuple[ak.Array, ak.Array]:
+    mask = (events.bdt_cat==cat_id)
+    return events, ak.fill_none(mask,False)
+
+for cat_id, the_name in enumerate(["gtau", "higgs", "fake"]):
+    tmp_func = lambda self, events, **kwargs: _bdt_cat(self, events, cat_id=cat_id, **kwargs)
+    globals()[f'bdt_cat_{the_name}'] = categorizer(copy_function(tmp_func,f'bdt_cat_{the_name}'),
+                                               uses={'event', 'bdt_cat'}, )
+
 

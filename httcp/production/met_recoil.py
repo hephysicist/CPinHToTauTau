@@ -138,7 +138,7 @@ def met_recoil(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         
         order      = met_recoil_dict[dataset_name]
         njet       = events.n_jets 
-        ptll       = flat_np_view(hcand.pt)
+        ptll       = flat_np_view(hcand.pt_vis)
         
         u_para_args = lambda : (order,
                                 njet,

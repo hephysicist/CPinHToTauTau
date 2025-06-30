@@ -25,18 +25,28 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
             f"Tau.{var}" for var in [
                 "pt","eta","phi","mass","dxy","dz", "charge", 
                 "rawDeepTau2018v2p5VSjet","idDeepTau2018v2p5VSjet", "idDeepTau2018v2p5VSe", "idDeepTau2018v2p5VSmu",
-                "rawIdx", "IPx", "IPy", "IPz", "ip_sig", "jetIdx"]
+                "rawIdx", "IPx", "IPy", "IPz", "ip_sig", "jetIdx","IP_cov*",
+                ]
     } | {
             f"Muon.{var}" for var in [
                 "pt","eta","phi","mass","dxy","dz", "charge",
-                "rawIdx","IPx", "IPy", "IPz","ip_sig", "jetIdx"
+                "rawIdx","IPx", "IPy", "IPz","ip_sig", "jetIdx","IP_cov*"
             ] 
     } | {
             f"Electron.{var}" for var in [
                 "pt","eta","phi","mass","dxy","dz", "charge", 
-                "pfRelIso03_all", "rawIdx", "IPx", "IPy", "IPz","ip_sig", "jetIdx"
+                "pfRelIso03_all", "rawIdx", "IPx", "IPy", "IPz","ip_sig", "jetIdx","IP_cov*"
             ] 
-        } | {optional("Tau.genPartFlav")} | {hlt_path_matching},
+    } | { 
+        optional("Tau.genPartFlav"),
+        optional("Tau.genPartIdx"),
+        optional("Muon.genPartIdx"),
+        optional("Muon.genPartFlav"),
+        optional("Electron.genPartIdx"),
+        optional("Electron.genPartFlav")
+    } | {
+        hlt_path_matching
+        },
     produces={
         'hcand_*'
     } | {hlt_path_matching},
