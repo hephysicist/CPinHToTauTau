@@ -42,13 +42,25 @@ def get_lep_p4(part): return ak.zip({f"{var}": part[var] for var in ['pt', 'eta'
                                     with_name="PtEtaPhiMLorentzVector",
                                     behavior=coffea.nanoevents.methods.vector.behavior)
 
+def to_pt_eta_phi_m(arr): return ak.zip({f"{var}": getattr(arr, var) for var in ['pt', 'eta', 'phi', 'mass']},
+                                    with_name="PtEtaPhiMLorentzVector",
+                                    behavior=coffea.nanoevents.methods.vector.behavior)
+
 # lambda function to get 4-vector of impact parameter from the particle objects
 # Zeroth component of IP vector is set to zero by definition that can be found here: https://www.mdpi.com/2218-1997/8/5/256
 def get_ip_p4(part): return ak.zip({f'{var}': part[f'IP{var}']for var in ['x', 'y', 'z']} | {'t': ak.zeros_like(part.IPx)},
                                    with_name="LorentzVector",
                                    behavior=coffea.nanoevents.methods.vector.behavior)# # lambda function to get 4-vector from the particle objects
 
-
+def get_vec_p3(part,vec_column=None): 
+    if vec_column is not None:
+        return ak.zip({f'{var}': part[f'{vec_column}{var}']for var in ['x', 'y', 'z']},
+                                   with_name="ThreeVector",
+                                   behavior=coffea.nanoevents.methods.vector.behavior)# # lambda function to get 4-vector from the particle objects
+    else:
+        return ak.zip({f'{var}': part[f'{var}']for var in ['x', 'y', 'z']},
+                                   with_name="ThreeVector",
+                                   behavior=coffea.nanoevents.methods.vector.behavior)# # lambda function to get 4-vector from the particle objects
 @deferred_column
 def IF_NANO_V12(self: ArrayFunction.DeferredColumn, func: ArrayFunction) -> Any | set[Any]:
     return self.get() if func.config_inst.campaign.x.version == 12 else None

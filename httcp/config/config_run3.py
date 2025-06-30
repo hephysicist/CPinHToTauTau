@@ -231,7 +231,9 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
         #SM Higgs signal
-        "h_ggf_htt_filtered",
+        "h_ggf_htt_cpo_filtered",
+        "h_ggf_htt_mm_filtered",
+        "h_ggf_htt_sm_filtered",
         ]
 
     dataset_names_2022postEE = [
@@ -693,6 +695,7 @@ def add_run3(ana: od.Analysis,
     jsonpog_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_latest/POG/"
     jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
     corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/"
+    ml_dir = "/eos/user/s/stzakhar/TauTheDifference/Training/models/"
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
         2023 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"
@@ -700,6 +703,7 @@ def add_run3(ana: od.Analysis,
     
     pog_tag = tags['pog_tag']
     short_tag = tags['short_tag']
+    ch_short = channel.replace('mu','m').replace('tau','t')
     cfg.x.external_files = DotDict.wrap({
         "lumi": {
             "golden": (golden_ls[year], "v1"),
@@ -718,11 +722,12 @@ def add_run3(ana: od.Analysis,
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
         "fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_2022_postEE_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
-        #"fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_{year}_{campaign.x.tag}_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
+        #"fake_factors"                 : (f"{corr_dir}fake_factors_{channel}_{year}_{campaign.x.tag}_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
         "met_recoil"                    : (f"{corr_dir}hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{tag}_v2.json.gz", "v2"),
         #"met_phi_corr": (f"{jsonpog_dir}JME/{cfg.x.year}{pog_tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
-        "ip_corr_ee"                    : f"{corr_dir}ip_corrections/Run3_{year}{short_tag}/ip_corrections_ee.root",
-        "ip_corr_mm"                    : f"{corr_dir}ip_corrections/Run3_{year}{short_tag}/ip_corrections_mm.root",
+        "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
+        "ml_model_even"                 : f"{ml_dir}{ch_short}/EVEN/model_{ch_short}_EVEN.json",
+        "ml_model_odd"                  : f"{ml_dir}{ch_short}/ODD/model_{ch_short}_ODD.json",
     })
     # --------------------------------------------------------------------------------------------- #
     # electron settings

@@ -26,20 +26,20 @@ def main(self: WeightProducer, events: ak.Array, **kwargs) -> ak.Array:
     for column in self.weight_columns:
         if ((self.dataset_inst.has_tag("ttbar")^True) & (column == 'top_pt_weight')):
 
-            print("===")
-            print(weight)
-            print(Route(column).apply(events),column)
-            print("Skipping top_pt_weight for:", processes)
-            print(weight)
-            print("===")
+            # print("===")
+            # print(weight)
+            # print(Route(column).apply(events),column)
+            # print("Skipping top_pt_weight for:", processes)
+            # print(weight)
+            # print("===")
             continue
         else :
-            print("======")
-            print(weight)
+            #print("======")
+            #print(weight)
             weight = weight * Route(column).apply(events)
-            print(column, Route(column).apply(events),column)
-            print(weight)
-            print("======")
+            #print(column, Route(column).apply(events),column)
+            #print(weight)
+            #print("======")
             
     process_id = events.process_id
     Z_ee_weight = 1
