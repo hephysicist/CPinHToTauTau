@@ -1,12 +1,12 @@
 import functools
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div
-from law.util import InsertableDict
-from columnflow.columnar_util import sorted_indices_from_mask, set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
+from columnflow.util import maybe_import, safe_div, InsertableDict
+from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
+from columnflow.selection.util import sorted_indices_from_mask
 from httcp.util import compute_eff
 import json
-import law
+
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
 coffea = maybe_import("coffea")
@@ -82,10 +82,9 @@ def zpt_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 @zpt_weight.setup
 def zpt_weight_setup(
     self: Producer,
-    task: law.Task,
     reqs: dict,
     inputs: dict,
-    reader_targets: law.util.InsertableDict,
+    reader_targets: InsertableDict,
 ) -> None:
     from coffea.lookup_tools import extractor
     ext = extractor()
@@ -142,20 +141,19 @@ def muon_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) -> a
     return events
 
 @muon_weight.requires
-def muon_weight_requires(self: Producer, task: law.Task, reqs: dict) -> None:
+def muon_weight_requires(self: Producer, reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
 
 @muon_weight.setup
 def muon_weight_setup(
     self: Producer,
-    task: law.Task,
     reqs: dict,
     inputs: dict,
-    reader_targets: law.util.InsertableDict,
+    reader_targets: InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -223,20 +221,19 @@ def electron_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) 
     return events
 
 @electron_weight.requires
-def electron_weight_requires(self: Producer, task: law.Task, reqs: dict) -> None:
+def electron_weight_requires(self: Producer, reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
 
 @electron_weight.setup
 def electron_weight_setup(
     self: Producer,
-    task: law.Task,
     reqs: dict,
     inputs: dict,
-    reader_targets: law.util.InsertableDict,
+    reader_targets: InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -362,20 +359,19 @@ def tau_weight(self: Producer, events: ak.Array, do_syst: bool, **kwargs) -> ak.
     return events
 
 @tau_weight.requires
-def tau_weight_requires(self: Producer, task: law.Task, reqs: dict) -> None:
+def tau_weight_requires(self: Producer, reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
 
 @tau_weight.setup
 def tau_weight_setup(
     self: Producer,
-    task: law.Task,
     reqs: dict,
     inputs: dict,
-    reader_targets: law.util.InsertableDict,
+    reader_targets: InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -464,20 +460,19 @@ def fake_factors(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     return events
 
 @fake_factors.requires
-def fake_factors_requires(self: Producer, task: law.Task, reqs: dict) -> None:
+def fake_factors_requires(self: Producer, reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
     
 @fake_factors.setup
 def fake_factors_setup(
     self: Producer,
-    task: law.Task,
     reqs: dict,
     inputs: dict,
-    reader_targets: law.util.InsertableDict,
+    reader_targets: InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -792,20 +787,19 @@ def trigger_weight_mutau(self: Producer, events: ak.Array, **kwargs) -> ak.Array
     return events
 
 @trigger_weight_mutau.requires
-def trigger_weight_mutau_requires(self: Producer, task: law.Task, reqs: dict) -> None:
+def trigger_weight_mutau_requires(self: Producer, reqs: dict) -> None:
     # Declare external files dependency if not already present
     if "external_files" in reqs:
         return
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
 
 @trigger_weight_mutau.setup
 def trigger_weight_mutau_setup(
     self: Producer,
-    task: law.Task,
     reqs: dict,
     inputs: dict,
-    reader_targets: law.util.InsertableDict,
+    reader_targets: InsertableDict,
 ) -> None:
     # Load and initialize correctionlib objects from external JSON/GZIP files
     bundle = reqs["external_files"]

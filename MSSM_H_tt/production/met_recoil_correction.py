@@ -1,12 +1,11 @@
 import functools
 
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div, DotDict
-from law.util import InsertableDict
-from columnflow.columnar_util import sorted_indices_from_mask, set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
+from columnflow.util import maybe_import, safe_div, InsertableDict
+from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.types import Any
-import law
+from columnflow.selection.util import sorted_indices_from_mask
+
 from httcp.util import get_lep_p4
 
 ak     = maybe_import("awkward")
@@ -162,34 +161,20 @@ def met_recoil(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = set_ak_column_f32(events, "PuppiMET", masked_met)
     return events
 
-# @met_recoil.requires
-# def met_recoil_requires(self: Producer, reqs: dict) -> None:
-#     if "external_files" in reqs:
-#         return
-    
-#     from columnflow.tasks.external import BundleExternalFiles
-#     reqs["external_files"] = BundleExternalFiles.req(self.task)
 @met_recoil.requires
-def met_recoil_requires(
-    self: Producer,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    **kwargs,
-) -> None:
+def met_recoil_requires(self: Producer, reqs: dict) -> None:
     if "external_files" in reqs:
         return
-
-    from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
     
+    from columnflow.tasks.external import BundleExternalFiles
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
+
 @met_recoil.setup
 def met_recoil_setup(
     self: Producer,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    inputs: dict[str, Any],
-    reader_targets: law.util.InsertableDict,
-    **kwargs,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib

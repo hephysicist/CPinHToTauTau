@@ -132,10 +132,6 @@ def add_run3(ana: od.Analysis,
         # signal
         "h_ggf_htt",
     ]
-    signal_masses = [60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 160, 180, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2300, 2600, 2900, 3200, 3500]
-    for mass in signal_masses:
-        process_names.append(f"h_ggf_htt_{mass}")
-
     for process_name in process_names:
         # add the process
         proc = cfg.add_process(procs.get(process_name))
@@ -182,6 +178,9 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
         #signal
+        "h_tt_100",
+        "h_tt_125",
+        "h_tt_1200",
         ]
 
     dataset_names_2022postEE = [
@@ -225,6 +224,9 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
         #signal
+        "h_tt_100",
+        "h_tt_125",
+        "h_tt_1200",
         ]
     
     dataset_names_2023preBPix = [
@@ -262,6 +264,9 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
         #signal
+        "h_tt_100",
+        "h_tt_125",
+        "h_tt_1200",
         ]
     
     dataset_names_2023postBPix = [
@@ -296,13 +301,11 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
         #signal
+        "h_tt_100",
+        "h_tt_125",
+        "h_tt_1200",
         ]
-    for mass in signal_masses:
-        dataset_names_2022preEE.append(f"h_ggf_htt_{mass}")
-        dataset_names_2022postEE.append(f"h_ggf_htt_{mass}")
-        dataset_names_2023preBPix.append(f"h_ggf_htt_{mass}")
-        dataset_names_2023postBPix.append(f"h_ggf_htt_{mass}")
-
+    
     dataset_era = {
         "Summer22": dataset_names_2022preEE,
         "Summer22EE" : dataset_names_2022postEE,
@@ -356,20 +359,6 @@ def add_run3(ana: od.Analysis,
         "st"   : ["st_tchannel_tbar","st_tchannel_t","st_schannel_tbar_lep","st_schannel_t_lep",
                "st_twchannel_t_fh","st_twchannel_t_sl","st_twchannel_t_dl",
                "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh","st_schannel_t_lep","st_schannel_tbar_lep"],
-    "h_ggf_htt_masses": ["h_gff_tt_60","h_gff_tt_65","h_gff_tt_70",
-                         "h_gff_tt_75","h_gff_tt_80","h_gff_tt_85",
-                         "h_gff_tt_90","h_gff_tt_95","h_gff_tt_100",
-                         "h_gff_tt_105","h_gff_tt_110","h_gff_tt_115",
-                         "h_gff_tt_120","h_gff_tt_125","h_gff_tt_130",
-                         "h_gff_tt_135","h_gff_tt_140","h_gff_tt_160",
-                         "h_gff_tt_180","h_gff_tt_200","h_gff_tt_250",
-                         "h_gff_tt_300","h_gff_tt_350","h_gff_tt_400",
-                         "h_gff_tt_450","h_gff_tt_500","h_gff_tt_600",
-                         "h_gff_tt_700","h_gff_tt_800","h_gff_tt_900",
-                         "h_gff_tt_1000","h_gff_tt_1100","h_gff_tt_1200",
-                         "h_gff_tt_1400","h_gff_tt_1600","h_gff_tt_1800",
-                         "h_gff_tt_2000","h_gff_tt_2300","h_gff_tt_2600",
-                         "h_gff_tt_2900","h_gff_tt_3200","h_gff_tt_3500"],
     }
 
     # dataset groups for conveniently looping over certain datasets

@@ -8,11 +8,9 @@ import itertools
 
 from columnflow.calibration import Calibrator, calibrator
 from columnflow.production.cms.seeds import deterministic_seeds
-from columnflow.util import maybe_import, DotDict
-from law.util import InsertableDict
+from columnflow.util import maybe_import, InsertableDict
 from columnflow.columnar_util import set_ak_column, flat_np_view
-from columnflow.types import Any
-import law
+
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -29,11 +27,7 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
     },
     mc_only=True,
 )
-def tau_energy_scale(
-    self: Calibrator, 
-    events: ak.Array, 
-    **kwargs,
-    ) -> ak.Array:
+def tau_energy_scale(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     # fail when running on data
     if self.dataset_inst.is_data:
         raise ValueError("attempt to apply tau energy corrections in data")
@@ -90,26 +84,19 @@ def tau_energy_scale(
     return events
 
 @tau_energy_scale.requires
-def tau_energy_scale_requires(
-    self: Calibrator,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    **kwargs,
-    ) -> None:
+def tau_energy_scale_requires(self: Calibrator, reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
     
 @tau_energy_scale.setup
 def tau_energy_scale_setup(
     self: Calibrator,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    inputs: dict[str, Any],
-    reader_targets: law.util.InsertableDict,
-    **kwargs,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib

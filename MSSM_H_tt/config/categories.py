@@ -135,9 +135,11 @@ def add_categories(config: od.Config,
     add_base_categories(config, channel, category_map, base_selection)
     #Add child categories to base categories
     child_category_map  = DotDict.wrap({
-        "nj0"    : {'selection' : ["Zero_b_jets","D_zeta_cut_low"], 'label': f" \n $n_{{jets}}= 0$",},
-        "nj1"    : {'selection' : ["One_b_jets"]       , 'label': f" \n $n_{{jets}}= 1$",},
-        "nj2"    : {'selection' : ["At_least_2_b_jets"], 'label': f" \n $n_{{jets}}\geq 2$",},       
+        # TODO: Define DZ categories here 
+
+        "nj0"    : {'selection' : ["Zero_b_jets"], 'label'     : f" \n $n_{{jets}}= 0$",},
+        "nj1"    : {'selection' : ["One_b_jets"], 'label'     : f" \n $n_{{jets}}= 1$",},
+        "nj2"    : {'selection' : ["At_least_2_b_jets"], 'label'     : f" \n $n_{{jets}}\geq 2$",},       
         })
     
     create_child_categories(config,
@@ -145,9 +147,10 @@ def add_categories(config: od.Config,
                         child_category_map=child_category_map)
 
     grand_child_category_map  = DotDict.wrap({
-        "dzl"    : {'selection' : ["D_zeta_cut_low"], 'label'  : f" \n $ -35 \leq D_{{\zeta}} < -10$",},
-        "dzm"    : {'selection' : ["D_zeta_cut_mid"], 'label'  : f" \n $ -10 \leq D_{{\zeta}} < 30 $",},
-        "dzh"    : {'selection' : ["D_zeta_cut_high"], 'label' : f" \n $D_{{\zeta}}\geq 30$",},       
+
+        "dzl"    : {'selection' : ["D_zeta_cut_low"], 'label'     : f" \n $ -35 \leq D_{{\zeta}} < -10$",},
+        "dzm"    : {'selection' : ["D_zeta_cut_mid"], 'label'     : f" \n $ -10 \leq D_{{\zeta}} < 30 $",},
+        "dzh"    : {'selection' : ["D_zeta_cut_high"], 'label'     : f" \n $D_{{\zeta}}\geq 30$",},       
         })
     
     create_child_categories(config,

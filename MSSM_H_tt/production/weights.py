@@ -1,16 +1,10 @@
 import functools
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div, load_correction_set, DotDict
-from law.util import InsertableDict 
+from columnflow.util import maybe_import, safe_div, InsertableDict
 from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.columnar_util import sorted_indices_from_mask
-from columnflow.types import Any
-
+from columnflow.selection.util import sorted_indices_from_mask
 import json
-
-import law
-
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
 coffea = maybe_import("coffea")
@@ -88,11 +82,9 @@ def zpt_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 @zpt_weight.setup
 def zpt_weight_setup(
     self: Producer,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    inputs: dict[str, Any],
-    reader_targets: law.util.InsertableDict,
-    **kwargs,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: InsertableDict,
 ) -> None:
     from coffea.lookup_tools import extractor
     ext = extractor()
@@ -190,26 +182,19 @@ def muon_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) -> a
     return events
 
 @muon_weight.requires
-def muon_weight_requires(
-    self: Producer,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    **kwargs,
-) -> None:
+def muon_weight_requires(self: Producer, reqs: dict) -> None:
     if "external_files" in reqs:
         return
-
+    
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
 
 @muon_weight.setup
 def muon_weight_setup(
     self: Producer,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    inputs: dict[str, Any],
-    reader_targets: law.util.InsertableDict,
-    **kwargs,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -348,26 +333,19 @@ def electron_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) 
     return events
 
 @electron_weight.requires
-def electron_weight_requires(
-    self: Producer,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    **kwargs,
-) -> None:
+def electron_weight_requires(self: Producer, reqs: dict) -> None:
     if "external_files" in reqs:
         return
-
-    from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
     
+    from columnflow.tasks.external import BundleExternalFiles
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
+
 @electron_weight.setup
 def electron_weight_setup(
     self: Producer,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    inputs: dict[str, Any],
-    reader_targets: law.util.InsertableDict,
-    **kwargs,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -578,26 +556,19 @@ https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/849c6a6efef907f403
     return events
 
 @tau_weight.requires
-def tau_weight_requires(
-    self: Producer,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    **kwargs,
-) -> None:
+def tau_weight_requires(self: Producer, reqs: dict) -> None:
     if "external_files" in reqs:
         return
-
+    
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(task)
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
 
 @tau_weight.setup
 def tau_weight_setup(
     self: Producer,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    inputs: dict[str, Any],
-    reader_targets: law.util.InsertableDict,
-    **kwargs,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib

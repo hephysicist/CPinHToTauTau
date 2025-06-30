@@ -25,16 +25,13 @@ def example(self):
         else:
             mc_datasets.append(sample)
 
-    for name in self.config_inst.categories.names():
-        if ("cat_emu_sr__nj2__dzl" in name):
-            print(name)
-            self.add_category(
-                        name,
-                        config_category=name,
-                        config_variable="emu_mt_tot",
-                        config_data_datasets=data_emu,
-                        mc_stats=True,
-                    )
+    self.add_category(
+        "cat_emu_sr",
+        config_category="cat_emu_sr",
+        config_variable="emu_mt_tot",
+        config_data_datasets=data_emu,
+        mc_stats=True,
+    )
 
     # TODO: think about defining a well motivated CR
     # self.add_category(
@@ -45,10 +42,12 @@ def example(self):
     #     mc_stats=True,
     # )
 
+    
     # processes and datasets
- 
+    # Setting for preEE
     process_vs_dataset_names = {
         "data": data_emu,       
+    
         #Drell-Yan
         "dy_lep": ["dy_lep_madgraph"],
         # "dy_z2ee": ["dy_lep_madgraph"],
@@ -120,4 +119,3 @@ def example_no_shapes(self):
     for category_name, process_name, parameter in self.iter_parameters():
         if parameter.type.is_shape or any(trafo.from_shape for trafo in parameter.transformations):
             self.remove_parameter(parameter.name, process=process_name, category=category_name)
-        
