@@ -502,16 +502,16 @@ def add_tau_prods(
                 # DM0
                 tau = ak.firsts(tau)
                 mask = mask | ak.fill_none(
-                    tau.decayMode == 0, False) & has_one_pion(matched_tau_prods)
+                    tau.decayMode == 0, False) & has_one_pion(matched_tau_prods)#TODO: release this mask, make n_pions >=1
                 # DM1
                 mask = mask | ak.fill_none(tau.decayMode == 1, False) & has_one_pion(
-                    matched_tau_prods) & has_photons(matched_tau_prods)
+                    matched_tau_prods) & has_photons(matched_tau_prods)#TODO: release this mask, make n_pions >=1
                 # DM10
                 mask = mask | ak.fill_none(
-                    tau.decayMode == 10, False) & has_three_pions(matched_tau_prods)
+                    tau.decayMode == 10, False) & has_three_pions(matched_tau_prods)#TODO: release this mask, make n_pions >=3
                 # DM11
                 mask = mask | ak.fill_none(tau.decayMode == 11, False) & has_three_pions(
-                    matched_tau_prods) & has_photons(matched_tau_prods)
+                    matched_tau_prods) & has_photons(matched_tau_prods)#TODO: release this mask, make n_pions >=3
                 events = set_ak_column(
                     events, f'tau_decay_prods_{ch_str}_{lep_str}',  matched_tau_prods)
             else:

@@ -316,6 +316,10 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
+        #higgs signal ggf
+        "h_ggf_htt_sm_filtered",
+        "h_ggf_htt_cpo_filtered",
+        "h_ggf_htt_mm_filtered",
         ]
 
     dataset_names_2023postBPix = [
@@ -380,7 +384,7 @@ def add_run3(ana: od.Analysis,
     cfg.x.default_producer = "main"
     cfg.x.default_weight_producer = "main"
     cfg.x.default_ml_model = None
-    cfg.x.default_inference_model = "example"
+    cfg.x.default_inference_model = "hcp_model"
     cfg.x.default_categories = ("incl",)
     cfg.x.default_variables = ("event")
 
@@ -392,9 +396,8 @@ def add_run3(ana: od.Analysis,
         "tt"   : ["tt_sl","tt_dl","tt_fh"],
         "st"   : ["st_tchannel_tbar","st_tchannel_t","st_schannel_tbar_lep","st_schannel_t_lep",
                "st_twchannel_t_fh","st_twchannel_t_sl","st_twchannel_t_dl",
-               "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh","st_schannel_t_lep","st_schannel_tbar_lep"],
+               "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh",],
     }
-
     # dataset groups for conveniently looping over certain datasets
     # (used in wrapper_factory and during plotting)
     cfg.x.dataset_groups = {}
