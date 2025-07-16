@@ -30,7 +30,7 @@ def get_single_part(array: ak.Array, idx: int) -> ak.Array:
     return ak.firsts(array[:,idx:idx+1])
 
 def apply_evt_mask(array: ak.Array, mask: ak.Array) -> ak.Array:
-    empty_array = ak.zeros_like(array)[...][..., :0]
+    empty_array = ak.zeros_like(array)[..., :0]
     return ak.where(mask, array, empty_array)
 
 
@@ -38,119 +38,52 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     tau     = events.hcand_mutau.lep1 
     tauprod = events.tau_decay_prods_mutau_lep1
     muon    = events.hcand_mutau.lep0
-    mask = ak.ones_like(tau.pt, dtype=np.bool_)
-    mask = mask & (muon.ip_sig >= 1)
-    mask = mask & (events.hcand_mutau.mass < 80)
-    # Create masks for different channels
-    if pair_decay_ch == "mu_pi":
-        mask = mask & (tau.ip_sig >= 1)
-        mask = mask & (tau.decayModePNet == 0) # Get only DM0 events
-        mask = mask & (ak.sum(pion_mask(tauprod), axis=1) == 1) #Make sure that event conteins only one pion
-
-    elif pair_decay_ch == "mu_rho":
-        mask = mask & (tau.decayModePNet == 1) # Get only DM1 events since tau -> rho+nu -> pi^+pi^0+nu
-        mask = mask & (ak.sum(pion_mask(tauprod), axis=1) == 1) # Require only one charged pion
-        mask = mask & (ak.sum(egamma_mask(tauprod), axis=1) >= 1) # Require one or more electron or photon
-        
-    elif pair_decay_ch == "mu_a1_1pr":
-        mask = mask & (tau.decayModePNet == 2) # Get only DM1 events since tau -> rho+nu -> pi^+pi^0+nu
-        mask = mask & (ak.sum(pion_mask(tauprod), axis=1) == 1) # Require only one charged pion
-        mask = mask & (ak.sum(egamma_mask(tauprod), axis=1) >= 1) # Require one or more electron or photon
     
-    sel_tau = apply_evt_mask(tau, ak.fill_none(ak.firsts(mask),False))
-    sel_tauprod = apply_evt_mask(tauprod, ak.fill_none(ak.firsts(mask),False))
-    sel_muon = apply_evt_mask(muon, ak.fill_none(ak.firsts(mask),False))
+    p1 = get_lep_p4(muon)
+    r1 = get_ip_p4(muon)
+    ch1 = muon.charge
+    ip2 = get_ip_p4(tau)
     
-    # Defining a preliminary set of parameters for the function to calculate the acoplanarity angle
-    # lower case variables are defined in laboratory frame
-    # Get p1 and r1 that correspond to kinematic 4-vector and impact parameter vector of the muon
-    p1 = get_lep_p4(sel_muon)
-    r1 = get_ip_p4(sel_muon)
-    ch1 = sel_muon.charge
-    ip2 = get_ip_p4(sel_tau)
-
     if pair_decay_ch == "mu_pi":
-        pion    = ak.mask(sel_tauprod, pion_mask(sel_tauprod))
-        p2 = get_lep_p4(pion) # for the tau -> rho decay, p1 - is 4-vector of the charged pion and r1 is 4-vector of the neutral pion
-        r2 = get_ip_p4(sel_tau) # Create 4-vectors of tau impact parameters
+        charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
+        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
+        ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
+        sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
+        best_pion = ak.drop_none(ak.firsts(ss_pions[sorted_idx],axis=1)[..., np.newaxis])
+        p2 = get_lep_p4(best_pion) # for the tau -> rho decay, p1 - is 4-vector of the charged pion and r1 is 4-vector of the neutral pion
+        r2 = get_ip_p4(tau) # Create 4-vectors of tau impact parameters
+        r2 = ak.drop_none(ak.mask(r2, r2.rho2 > 0))
+        final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]
+        p2 = ak.drop_none(ak.mask(p2, final_mask))
+        r2 = ak.drop_none(ak.mask(r2, final_mask))
         # For this channel there is no need to do the phase shift, so this arrray is filled with zeros
-        do_phase_shift = ak.zeros_like(r1.energy, dtype=np.bool_) > 0
+        do_phase_shift = ak.zeros_like(r1.energy, dtype=np.bool_) 
     elif pair_decay_ch == "mu_rho":
-        charged_pion = ak.mask(sel_tauprod, pion_mask(sel_tauprod))
-        em_particles = ak.mask(sel_tauprod, egamma_mask(sel_tauprod))
+        charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
+        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
+        ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
+        sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
+        best_pion = ak.drop_none(ak.firsts(ss_pions[sorted_idx],axis=1)[..., np.newaxis])
+        em_particles = ak.drop_none(ak.mask(tauprod,egamma_mask(tauprod)))
         # for the tau -> rho decay, p1 - is 4-vector of the charged pion and r1 is 4-vector of the neutral pion
-        p2 = get_lep_p4(charged_pion)
+        p2 = get_lep_p4(best_pion)
         # Create 4-vectors of tau impact parameters
-        r2 = get_lep_p4(em_particles).sum()[...,np.newaxis]
-        r2 = ak.mask(r2, r2.rho2 > 0)
+        r2 = get_lep_p4(em_particles).sum(1)[...,np.newaxis]
+        r2 = ak.drop_none(ak.mask(r2, r2.rho2 > 0)) #This is needed to remove empty events because .sum() returns 4-vector filled with zeros
+        final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]
+        
+        p2 = ak.drop_none(ak.mask(p2, final_mask))
+        r2 = ak.drop_none(ak.mask(r2, final_mask))
         do_phase_shift = ((p2.energy - r2.energy)/(p2.energy + r2.energy)) < 0
+    
+    p1 = ak.drop_none(ak.mask(p1, final_mask))
+    r1 = ak.drop_none(ak.mask(r1, final_mask))
+    ip2 = ak.drop_none(ak.mask(ip2, final_mask))
+    ch1 = ak.drop_none(ak.mask(ch1, final_mask))
     vecs_p4 = {}
     for var in ['p1', 'p2', 'r1', 'r2','ip2']:
-        vecs_p4[var] = eval(f'ak.firsts({var}, axis=1)')
-    return vecs_p4, do_phase_shift, ak.firsts(ch1, axis=1)
-
-
-# def get_single_ch_tt(self: Producer, events: ak.Array,  tau_decay_channel: str,  **kwargs):
-    
-#     # Produce mask for different channels and tau decay modes
-#     events  = ak.Array(events, behavior=coffea.nanoevents.methods.nanoaod.behavior)
-#     mask    = events.channel_id == self.config_inst.get_channel('tautau').id
-#     tau = []
-#     tauprod = []
-#     for tau_idx in range(2):
-#         tau.append(get_single_part(events.hcand, tau_idx)) 
-#         tauprod.append(get_single_part(events.hcandprod, tau_idx))
-    
-    
-#     # Create masks for different channels
-    
-#     if tau_decay_channel == "pi_pi":
-#         for tau_idx in range(2):
-#             mask = mask & ak.fill_none(tau[tau_idx].decayMode == 0, False)  # Get only DM0 events
-#             mask = mask & ak.fill_none(tau[tau_idx].ip_sig >= 1, False)
-#             mask = mask & ak.fill_none(ak.sum(pion_mask(tauprod[tau_idx]), axis=1) == 1, False) #Make sure that event conteins only one pion
-
-#     elif tau_decay_channel == "rho_rho":
-#         for tau_idx in range(2):
-#             mask = mask & ak.fill_none(tau[tau_idx].decayMode == 1, False) # Get only DM1 events since tau -> rho+nu -> pi^+pi^0+nu
-#             mask = mask & ak.fill_none(ak.sum(pion_mask(tauprod[tau_idx]), axis=1) == 1, False)# Require only one charged pion
-#             mask = mask & ak.fill_none(ak.sum(egamma_mask(tauprod[tau_idx]), axis=1) >= 1, False) # Require one or more electron or photon
-#     hcand     = apply_evt_mask(events.hcand,     mask)
-#     hcandprod = apply_evt_mask(events.hcandprod, mask)
-#     # Defining a preliminary set of parameters for the function to calculate the acoplanarity angle
-#     # lower case variables are defined in laboratory frame
-#     # Get p1 and r1 that correspond to kinematic 4-vector and impact parameter vector of the muon
-#     # Redefine taus and tauprods now from preselected events
-#     tau = []
-#     tauprod = []
-#     for tau_idx in range(2):
-#         tau.append(get_single_part(hcand, tau_idx)) 
-#         tauprod.append(get_single_part(hcandprod, tau_idx))
-    
-#     vecs_p4 = {}
-#     ch1 = tau[0].charge
-#     if tau_decay_channel == "pi_pi":
-#         for tau_idx in range(2):
-#             charged_pion = get_single_part(ak.mask(tauprod[tau_idx], pion_mask(tauprod[tau_idx])),0)
-#             vecs_p4[f"p{tau_idx+1}"] = get_lep_p4(charged_pion)
-#             vecs_p4[f"r{tau_idx+1}"] = get_ip_p4(tau[tau_idx])
-#         do_phase_shift = ak.zeros_like(vecs_p4["p1"].energy, dtype=np.bool_)
-#     elif tau_decay_channel == "rho_rho":
-#         y = []
-#         for tau_idx in range(2):
-#             charged_pion = get_single_part(ak.mask(tauprod[tau_idx], pion_mask(tauprod[tau_idx])),0)
-#             em_particles = ak.mask(tauprod[tau_idx], egamma_mask(tauprod[tau_idx]))
-#             # for the tau -> rho decay, p1 - is 4-vector of the charged pion and r1 is 4-vector of the neutral pion
-#             p = get_lep_p4(charged_pion)
-#             r = get_lep_p4(em_particles).sum()
-#             r = ak.mask(r, r.rho2 > 0)
-#             vecs_p4[f"r{tau_idx+1}"] = p
-#             vecs_p4[f"p{tau_idx+1}"] = r
-#             y.append((p.energy - r.energy)/(p.energy + r.energy))
-#         do_phase_shift = (y[0] * y[1]) < 0
-
-#     return events, vecs_p4, do_phase_shift, ch1
-
+        vecs_p4[var] = eval(var)
+    return vecs_p4, do_phase_shift, ch1
 
 def make_boost(vecs_p4):
     # Create a dictionary to store boosted variables (they are defined with upper case names)
@@ -220,45 +153,44 @@ channels = ['mu_pi','mu_rho']
         "hcand_*","tau_decay_prods_*"},
     produces={
         f"phi_cp_{the_ch}" for the_ch in channels
-    } | {
-        optional(f"phi_cp_{the_ch}_reg1") for the_ch in channels
-    } | {
-        optional(f"phi_cp_{the_ch}_reg2") for the_ch in channels
-    } | {"phi_cp_incl"} 
-    | {
-        optional(f"alpha_{the_ch}") for the_ch in channels
-    }
-
+    } 
+    # | {
+    #     optional(f"phi_cp_{the_ch}_reg1") for the_ch in channels
+    # } | {
+    #     optional(f"phi_cp_{the_ch}_reg2") for the_ch in channels
+    # } | {"phi_cp_incl"} 
+    # | {
+    #     optional(f"alpha_{the_ch}") for the_ch in channels
+    # }
 )
 def phi_cp(
         self: Producer,
         events: ak.Array,
         **kwargs
 ) -> ak.Array:
-
-    alpha = np.ones_like(events.event)*EMPTY_FLOAT
+   
     for the_ch in channels:
         print(f"Calculating phi_cp for {the_ch}")
         vecs_p4, do_phase_shift, ch1 = prepare_acop_vecs(events, pair_decay_ch=the_ch)
         zmf_vecs_p4 = make_boost(vecs_p4)
         phi_cp = get_acop_angle(zmf_vecs_p4, do_phase_shift, ch1)
-        
-        
         phi_cp = ak.fill_none(ak.firsts(phi_cp,axis=1), EMPTY_FLOAT)
-       
-        alpha_per_ch = produce_alpha(vecs_p4)
-        alpha_per_ch = ak.fill_none(alpha_per_ch, EMPTY_FLOAT)
+        print(f'Found {ak.sum(phi_cp==EMPTY_FLOAT)}/{len(phi_cp)} phi_cp values that are EMPTY_FLOAT')
+        events = set_ak_column_f32(events, f"phi_cp_{the_ch}",phi_cp)
+        #alpha = np.ones_like(events.event)*EMPTY_FLOAT
+        # alpha_per_ch = produce_alpha(vecs_p4)
+        # alpha_per_ch = ak.fill_none(alpha_per_ch, EMPTY_FLOAT)
         
-        reg1_mask = alpha_per_ch >= np.pi/4.
-        reg2_mask = (alpha_per_ch < np.pi/4.) & (alpha_per_ch >= 0.)
+        # reg1_mask = alpha_per_ch >= np.pi/4.
+        # reg2_mask = (alpha_per_ch < np.pi/4.) & (alpha_per_ch >= 0.)
         
-        empty_floats = ak.ones_like(phi_cp)*EMPTY_FLOAT
-        for the_reg in ['reg1', 'reg2']:
-            var = ak.where(eval(f'{the_reg}_mask'), phi_cp, empty_floats)
-            events = set_ak_column_f32(events, f"phi_cp_{the_ch}_{the_reg}",  var)
+        # empty_floats = ak.ones_like(phi_cp)*EMPTY_FLOAT
+        # for the_reg in ['reg1', 'reg2']:
+        #     var = ak.where(eval(f'{the_reg}_mask'), phi_cp, empty_floats)
+        #     events = set_ak_column_f32(events, f"phi_cp_{the_ch}_{the_reg}",  var)
       
 
-        events = set_ak_column_f32(events, f'alpha_{the_ch}', alpha_per_ch)
-        events = set_ak_column_f32(events, "phi_cp_incl", phi_cp)
-        events = set_ak_column_f32(events, f"phi_cp_{the_ch}",phi_cp)
+        # events = set_ak_column_f32(events, f'alpha_{the_ch}', alpha_per_ch)
+        # events = set_ak_column_f32(events, "phi_cp_incl", phi_cp)
+       
     return events

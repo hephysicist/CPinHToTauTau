@@ -59,8 +59,8 @@ def mt_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.
     mt_cut_value = self.config_inst.x.mt_cut_value
     for ch_str in channels:
         if ch_str != 'tautau':
-            mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt <= mt_cut_value), axis=1),False)
-            mask = mask & ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt >= 0), axis=1),False)
+            mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 <= mt_cut_value), axis=1),False)
+            mask = mask & ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 >= 0), axis=1),False)
     #print(f"using mT cut {mt_cut_value}")
     return events, mask
 
@@ -71,8 +71,8 @@ def mt_inv_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array,
     mt_cut_value = self.config_inst.x.mt_cut_value
     for ch_str in channels:
         if ch_str != 'tautau':
-            mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt > mt_cut_value), axis=1),False)
-            mask = mask & ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt < 200), axis=1),False)
+            mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 > mt_cut_value), axis=1),False)
+            mask = mask & ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 < 200), axis=1),False)
     return events, mask
 
 @categorizer(uses={"is_b_vetoed"})
@@ -295,9 +295,65 @@ def tau_ip_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array,
     mask = ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep1.ip_sig >= 1.25, axis=1),False)
     return events, mask
 
+@categorizer(uses={'event', 'hcand_*'})
+def muon_ip_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    channel = self.config_inst.channels.names()[0]
+    mask = ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep0.ip_sig >= 1., axis=1),False)
+    return events, mask
+
+
+def egamma_mask(tauprod): return ((np.abs(tauprod.pdgId) == 11) + (tauprod.pdgId == 22))
+
+def pion_mask(tauprod): return np.abs(tauprod.pdgId) == 211
+
+#Tau impact parameter cut used in definition of mupi category
+@categorizer(uses={'event', 'tau_decay_prods*'})
+def tau_has_em_prods(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    channel = self.config_inst.channels.names()[0]
+    tauprod = events[f'tau_decay_prods_{channel}_lep1']
+    mask = ak.fill_none(ak.any(egamma_mask(tauprod), axis=1),False)
+    return events, mask
+
+@categorizer(uses={'event', 'tau_decay_prods*'})
+def tau_has_pions(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    channel = self.config_inst.channels.names()[0]
+    tauprod = events[f'tau_decay_prods_{channel}_lep1']
+    mask = ak.fill_none(ak.sum(pion_mask(tauprod), axis=1) >= 1,False)
+    return events, mask
+
+
+
+
 #Cut  on energy split between charged and neutral pion used in definition of murho and mu a1 categories
 @categorizer(uses={'event', 'pion_E_split'})
 def pion_E_split_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     mask = ak.fill_none(events.pion_E_split > 0.2, False)
     return events, mask
+
+
+def _bdt_cat(self: Categorizer, events: ak.Array, cat_id, **kwargs) -> tuple[ak.Array, ak.Array]:
+    mask = (events.bdt_cat==cat_id)
+    return events, ak.fill_none(mask,False)
+
+for cat_id, the_name in enumerate(["gtau", "higgs", "fake"]):
+    tmp_func = lambda self, events, **kwargs: _bdt_cat(self, events, cat_id=cat_id, **kwargs)
+    globals()[f'bdt_cat_{the_name}'] = categorizer(copy_function(tmp_func,f'bdt_cat_{the_name}'),
+                                               uses={'event', 'bdt_cat'}, )
+    
+
+def _hig_cat(self: Categorizer, events: ak.Array, low_cut, up_cut, **kwargs) -> tuple[ak.Array, ak.Array]:
+    mask = (events.bdt_raw_score_higgs > low_cut) & (events.bdt_raw_score_higgs <= up_cut)
+    return events, ak.fill_none(mask,False)
+
+
+for cat_id,(low_cut, up_cut) in enumerate([(0.3,0.5),(0.5,0.7),(0.7,1)]):
+    tmp_func = lambda self, events, **kwargs: _hig_cat(self,
+                                                       events,
+                                                       low_cut=low_cut,
+                                                       up_cut=up_cut,
+                                                       **kwargs)
+    
+    globals()[f'hig_cat_{cat_id}'] = categorizer(copy_function(tmp_func,f'hig_cat_{cat_id}'),
+                                               uses={'event', 'bdt_raw_score_higgs'}, )
+
 

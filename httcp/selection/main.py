@@ -24,7 +24,7 @@ from columnflow.columnar_util import optional_column as optional
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 #from columnflow.production.cms.top_pt_weight import gen_parton_top
 
-from httcp.selection.physics_objects import jet_selection, muon_selection, electron_selection, tau_selection, gentau_selection
+from httcp.selection.physics_objects import jet_selection, muon_selection, electron_selection, tau_selection
 from httcp.selection.trigger import trigger_selection
 from httcp.selection.lepton_pair import pair_selection
 from httcp.selection.match_trigobj import match_trigobj
@@ -63,7 +63,6 @@ coffea = maybe_import("coffea")
         match_trigobj,
         increment_stats,
         new_higgscand,
-        gentau_selection,
         add_tau_prods,
         mask_nans,
         jet_veto_map,
@@ -90,7 +89,6 @@ coffea = maybe_import("coffea")
         match_trigobj,
         increment_stats,
         new_higgscand,
-        gentau_selection,
         add_tau_prods,
         mask_nans,
         jet_veto_map,

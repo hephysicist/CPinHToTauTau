@@ -75,6 +75,7 @@ def add_hist_hooks(config: od.Config) -> None:
     """
     Add histogram hooks to a configuration.
     """
+    flat_tf = True
     
     
     def qcd_estimation(task, hists, category_inst):
@@ -94,29 +95,41 @@ def add_hist_hooks(config: od.Config) -> None:
             data_hist = sum(data_hists[1:], data_hists[0].copy())
             
             return data_hist, mc_hist
-        
         sr = category_inst
         data_num, mc_num = get_hists_from_reg(config, hists,sr.aux['abcd_regs']['dr_num'])
         data_den, mc_den = get_hists_from_reg(config, hists, sr.aux['abcd_regs']['dr_den']) 
         data_ar, mc_ar = get_hists_from_reg(config, hists,sr.aux['abcd_regs']['ar'])
-        num = data_num.values() - mc_num.values()
-        den = data_den.values() - mc_den.values() 
         
-        
-        mask = ((num > 0) & (den > 0))
-        
-        tf = num/den
-        tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
-       
-        tf_err2 = ((np.sum(data_num.variances()) + np.sum(mc_num.variances()))/den**2 + 
-                  tf**2/den**2 *(np.sum(data_den.variances()) + np.sum(mc_den.variances())))
         
         from cmsdb.processes.qcd import qcd
         hists_sr = hists[sr.name].copy()
         h_donor_name = list(hists_sr.keys())[0]
         hists_sr[qcd] = hists_sr[h_donor_name].copy().reset()
-        hists_sr[qcd].view().value = np.maximum(data_ar.values() -  mc_ar.values(), 0.) * tf
-        #hists_sr[qcd].view().variance = data_ar.values()**2 * tf_err2 + data_ar.variances() * (tf**2)
+        
+        if not data_ar.empty():
+            if flat_tf:
+                num = ak.sum(data_num.values() - mc_num.values())
+                den = ak.sum(data_den.values() - mc_den.values())
+
+                if (num > 0) and (den > 0):
+                    tf = num/den
+                else:
+                    tf = 1. 
+            
+            else:
+                data_num.values() - mc_num.values()
+                data_den.values() - mc_den.values()
+            
+        
+                mask = ((num > 0) & (den > 0))
+            
+                tf = num/den
+                tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
+        
+                tf_err2 = ((np.sum(data_num.variances()) + np.sum(mc_num.variances()))/den**2 + 
+                    tf**2/den**2 *(np.sum(data_den.variances()) + np.sum(mc_den.variances())))
+            hists_sr[qcd].view().value = np.maximum(data_ar.values() -  mc_ar.values(), 0.) * tf
+            
         return hists_sr
     
     def ff_method(task, hists, category_inst):

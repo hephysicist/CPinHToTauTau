@@ -22,11 +22,13 @@ from httcp.production.weights import muon_weight, tau_weight, get_mc_weight, tau
 from httcp.production.sample_split import split_dy
 from httcp.production.generatorZ import genZ
 from httcp.production.met_recoil import gen_boson, met_recoil
-from httcp.production.dilepton_features import hcand_fields,hcand_mt
+from httcp.production.dilepton_features import hcand_fields
 
 from httcp.production.phi_cp import phi_cp
-from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split
+from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split,gen_lep_fields
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
+from httcp.production.ip_corrector import ip_correction
+from httcp.production.bdt_score import hcp_bdt_score
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -54,7 +56,6 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         get_mc_weight,
         #fake_factors,
         hcand_fields,
-        hcand_mt,
         tauspinner_weight,
         phi_cp,
         category_ids,
@@ -65,6 +66,9 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         number_b_jet,
         "Jet.*",
         pion_energy_split,
+        gen_lep_fields,
+        ip_correction,
+        hcp_bdt_score,
         },
     produces={
         attach_coffea_behavior,
@@ -82,7 +86,6 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         met_recoil,
         fake_factors,
         hcand_fields,
-        hcand_mt,
         tauspinner_weight,
         phi_cp,
         category_ids,
@@ -93,6 +96,9 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         number_b_jet,
         "Jet.jec_no_jec_diff",
         pion_energy_split,
+        gen_lep_fields,
+        ip_correction,
+        hcp_bdt_score,
     },
     # whether weight producers should be added and called
     produce_weights=True,
@@ -101,24 +107,34 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     
     # ensure coffea behaviors are loaded
     events = self[attach_coffea_behavior](events, **kwargs)
+    if self.dataset_inst.is_mc:
+        events = self[gen_lep_fields](events, **kwargs)
+    print("Performing IP correction...")
+    events = self[ip_correction](events, **kwargs) #Uses the output of the gen_lep_fields producer
+    
     print("Producing pion energy split...")
     events = self[pion_energy_split](events, **kwargs)
+    
     print("Producing Jet features...")
     events = set_ak_column_f32(events, "Jet.jec_no_jec_diff", (events.Jet.pt - events.Jet.pt_no_jec))
+    
     print("Producing jet variables for plotting...") 
     events = self[jet_pt_def](events, **kwargs)
     events = self[jets_taggable](events, **kwargs)   
+    
     print("Producing Number of b-jets for categorization")
     events = self[number_b_jet](events, **kwargs)
+    
     print("Producing Hcand features...")
     events = self[hcand_fields](events, **kwargs) 
     if self.dataset_inst.is_mc:
         events = self[gen_boson](events, **kwargs)
+        
     events = self[met_recoil](events,**kwargs)
-    events = self[hcand_mt](events, **kwargs) 
-    events = self[category_ids](events, **kwargs)
-
+   
     if self.dataset_inst.is_mc:
+        
+        print("Producing Gen weights...")    
         events = self[get_mc_weight](events, **kwargs)
         print("Producing Normalization weights...")
         events = self[normalization_weights](events, **kwargs)
@@ -126,23 +142,28 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         if ak.any(['dy' in proc for proc in processes]):
             print("Splitting Drell-Yan dataset...")
             events = self[split_dy](events,**kwargs)
-
-        events = self[genZ](events, **kwargs)
         print("Z pt reweighting...")
+        events = self[genZ](events, **kwargs)
         events = self[zpt_weight](events,**kwargs)
-       
+        
         print("Producing PU weights...")          
         events = self[pu_weight](events, **kwargs)
+        
         print("Producing MuTau Trigger SFs weights...")          
         events = self[trigger_weight_mutau](events, **kwargs)      
+        
         print("Producing Muon weights...")
         events = self[muon_weight](events,do_syst = True, **kwargs)
+        
         print("Producing Electron weights...")
         events = self[electron_weight](events,do_syst = True, **kwargs)
+        
         print("Producing Tau weights...")
         events = self[tau_weight](events,do_syst = True, **kwargs)
+        
         print("Producing Tauspinner weights...")
         events = self[tauspinner_weight](events, **kwargs)
+        
         print("Producing GenPartonTop...")
         events = self[gen_parton_top](events, **kwargs)
         top_pt_weight_dummy = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)
@@ -152,6 +173,14 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
             print("Producing Top pT weights...")
             events = self[top_pt_weight](events, **kwargs)
+    
+    
+    #Assume that the corrections are done, now we can evaluate bdt scores and produce parameters of interest
+    print("Producing bdt scores...")
+    events = self[hcp_bdt_score](events, **kwargs)
+    print("Producing category ids...")
+    events = self[category_ids](events, **kwargs)
+        
     print("Producing Fake Factor weights...")
     events = self[fake_factors](events, **kwargs)
     print("Producing phi_cp...")
@@ -172,7 +201,6 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         met_recoil,
         get_mc_weight,
         hcand_fields,
-        hcand_mt,
         tauspinner_weight,
         category_ids,
         gen_parton_top,
@@ -193,7 +221,6 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         gen_boson,
         met_recoil,
         hcand_fields,
-        hcand_mt,
         tauspinner_weight,
         category_ids,
         gen_parton_top,
@@ -211,8 +238,7 @@ def ff_method(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     events = self[hcand_fields](events, **kwargs)
     if self.dataset_inst.is_mc:
         events = self[gen_boson](events, **kwargs)
-    events = self[met_recoil](events,**kwargs)
-    events = self[hcand_mt](events, **kwargs)  
+    events = self[met_recoil](events,**kwargs)  
     events = self[category_ids](events, **kwargs)
     if self.dataset_inst.is_mc:
         events = self[get_mc_weight](events, **kwargs)

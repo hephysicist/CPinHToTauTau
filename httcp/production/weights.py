@@ -530,7 +530,7 @@ def trigger_weight_mutau(self: Producer, events: ak.Array, **kwargs) -> ak.Array
                 wp_vs_jet = self.config_inst.x.deep_tau.vs_jet.mutau
             hcand = events[f'hcand_{ch_str}']
             # Loop over lepton candidates in the collection
-            for lep in [field for field in hcand.fields if 'lep' in field]:
+            for lep in ['lep0','lep1']:
                 if ch_objects[ch_str][lep] == 'Tau':
                     # Extract tau candidate
                     tau    = hcand[lep]
