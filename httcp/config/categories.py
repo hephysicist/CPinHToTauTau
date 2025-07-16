@@ -17,6 +17,7 @@ def add_categories(config: od.Config,
     
     
     def add_base_categories(config, channel, category_map, base_selection=[]):
+        base_cats = []
         base_cat = config.get_category('_'.join(('cat',channel)))      
         for i, (cat_name, cat) in enumerate(category_map.items()):
             kwargs = {
@@ -32,8 +33,9 @@ def add_categories(config: od.Config,
                         kwargs['aux'][aux_spec] = {key: '_'.join((base_cat.name, val)) for (key,val) in aux_content.items()}
                     else:
                         kwargs['aux'][aux_spec] = aux_content
-
+            base_cats.append(kwargs['name'])
             add_category(config, **kwargs)
+        return base_cats
             
     
     def add_child_category(config, parent_cat, child_cat, child_name):
@@ -54,17 +56,24 @@ def add_categories(config: od.Config,
                     kwargs['aux'][aux_key] = reg_map_tagged
                 else:
                     kwargs['aux'][aux_key] = aux_content
+        if ('aux' in child_cat.keys()) and parent_cat.aux:
+            for (aux_key, aux_content) in child_cat['aux'].items():
+                kwargs['aux'][aux_key] = aux_content
+                
         add_category(config, **kwargs)
+        return kwargs['name']
     
     
     def create_child_categories(config, parent_categories, child_category_map):
+        out_cats = []
         for cat_name in parent_categories:
             #skip 0-level categories that are used to define channelss
             if cat_name in ['incl', 'cat_mutau', 'cat_etau']: continue
             parent_cat = config.get_category(cat_name)
             for child_name, child_cat in child_category_map.items():
-                add_child_category(config, parent_cat, child_cat, child_name)
-    
+                full_name = add_child_category(config, parent_cat, child_cat, child_name)
+                out_cats.append(full_name)
+        return out_cats
     """
     Adds all categories to a *config*.
     ids from 1 to 9 are reserved for channels
@@ -93,18 +102,9 @@ def add_categories(config: od.Config,
             selection=["cat_etau"],
             label=r"$e\tau$ inclusive")
 
-    
-    
-    # add_category(
-    #         config,
-    #         name="cat_mutau_jet_veto_check_sr",
-    #         id=4,
-    #         selection=["cat_mutau","jet_veto_maps_jets"],
-    #         label=r"$\mu\tau$ jet veto check",)
-    
     #Define initial category map with selections and call the function
     #Don't change this part: it is important for fake factor method    
-    base_selection = [f'cat_{channel}','tau_eta2p3']
+    base_selection = [f'cat_{channel}','tau_eta2p3','muon_ip_cut']
     
     category_map  = DotDict.wrap({
         "sr"            : { 'selection' : ['mt_cut', "deep_tau_wp", "lep_iso", "os_charge"],
@@ -165,13 +165,69 @@ def add_categories(config: od.Config,
         # "abcd_dr_den_no_mt"   : { 'selection' : ["deep_tau_wp", "lep_inv_iso", "ss_charge"]},
     })
     
-    add_base_categories(config, channel, category_map, base_selection)
+    base_cats = add_base_categories(config, channel, category_map, base_selection)
     #Add child categories to base categories
-    child_category_map  = DotDict.wrap({
+    bdt_cats_map  = DotDict.wrap({
         "bdt_hig"   : {'selection': ["bdt_cat_higgs"], 'label': f" \n bdt cat Higgs",},
         "bdt_gtau"  : {'selection': ["bdt_cat_gtau"], 'label': f" \n bdt cat genuine tau",},
         "bdt_fakes" : {'selection': ["bdt_cat_fake"], 'label': f" \n bdt cat fakes",},
-        #"dm0"     : {'selection': ["pnet_dm0"], 'label': f" \n tau PNet DM = 0",},
+        
+        })
+    
+    hig_cats_map  = DotDict.wrap({
+        "hig_cat_0"   : {'selection': ["bdt_cat_higgs","hig_cat_0"], 'label': f" \n  D_H in (0.3,0.5]",},
+        "hig_cat_1"   : {'selection': ["bdt_cat_higgs","hig_cat_1"], 'label': f" \n  D_H in (0.5,0.7]",},
+        "hig_cat_2"   : {'selection': ["bdt_cat_higgs","hig_cat_2"], 'label': f" \n  D_H in (0.7,1.0]",},
+        })
+    
+    tau_decays_map  = DotDict.wrap({
+        "tau2pi"     : {'selection': ["pnet_dm0","tau_ip_cut"], 
+                        'label': f" \n mu pi",
+                        'aux'       : {'fit_var': 'phi_cp_mu_pi'},
+                        },
+        "tau2rho"    : {'selection': ["pnet_dm1", "hps_dm1", "pion_E_split_cut", "tau_has_em_prods"],
+                        'label': f" \n mu rho",
+                        'aux'       : {'fit_var': 'phi_cp_mu_rho'},
+                        },
+        "tau2a1"     : {'selection': ["pnet_dm10", "hps_dm10"],
+                        'label': f" \n mu a1",
+                        'aux'       : {'fit_var': 'phi_cp_mu_a1_1pr'},},
+        })
+    
+    splitted_by_tau_dm = create_child_categories(config,
+                                                 parent_categories=base_cats,
+                                                 child_category_map=tau_decays_map)
+     
+    splitted_by_bdt = create_child_categories(config,
+                                              parent_categories=splitted_by_tau_dm,
+                                              child_category_map=hig_cats_map)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#"dm0"     : {'selection': ["pnet_dm0"], 'label': f" \n tau PNet DM = 0",},
         #"dm1"     : {'selection': ["pnet_dm1"], 'label': f" \n tau PNet DM = 1",},
         #"dm2"     : {'selection': ["pnet_dm2"], 'label': f" \n tau PNet DM = 2",},
         #"dm10"    : {'selection': ["pnet_dm10"], 'label': f" \n tau PNet DM = 10",},
@@ -180,9 +236,9 @@ def add_categories(config: od.Config,
         #"tau2rho"    : {'selection': ["pnet_dm1", "hps_dm1", "pion_E_split_cut"], 'label': r"$\mu \rho$",},
         #"tau2a1"     : {'selection': ["pnet_dm10", "hps_dm10"], 'label': r"$\mu a1$",},
 
-        #"nj0"    : {'selection' : ["njets_eq0"], 'label'     : f" \n $n_{{jets}}= 0$",},
-        #"nj1"    : {'selection' : ["njets_eq1"], 'label'     : f" \n $n_{{jets}}= 1$",},
-        #"nj2"    : {'selection' : ["njets_eq2"], 'label'     : f" \n $n_{{jets}}\geq 2$",},
+        # "nj0"    : {'selection' : ["njets_eq0"], 'label'     : f" \n $n_{{jets}}= 0$",},
+        # "nj1"    : {'selection' : ["njets_eq1"], 'label'     : f" \n $n_{{jets}}= 1$",},
+        # "nj2"    : {'selection' : ["njets_eq2"], 'label'     : f" \n $n_{{jets}}\geq 2$",},
         
         # "nj0_dm0"    : {'selection' : ["njets_eq0", "pnet_dm0"],
         #                      'label'     : f" \n $n_{{jets}}= 0$ \n tau PNet DM = 0",},
@@ -232,8 +288,3 @@ def add_categories(config: od.Config,
         
         # "nj2_dm11"    : {'selection' : ["njets_geq2","pnet_dm11"],
         #                     'label'     : f" \n $n_{{jets}}\geq 2$ \n tau PNet DM = 11",},
-        })
-    
-    create_child_categories(config,
-                        parent_categories=config.categories.names(),
-                        child_category_map=child_category_map)
