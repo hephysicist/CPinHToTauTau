@@ -6,7 +6,7 @@ Prepare h-Candidate from SelectionResult: selected lepton indices & channel_id [
 
 from typing import Optional
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.selection.util import create_collections_from_masks
+from columnflow.reduction.util import create_collections_from_masks
 from columnflow.util import maybe_import
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 

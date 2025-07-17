@@ -1,12 +1,15 @@
 #!/bin/bash
-source ./common_run3.sh #to access set_common_vars() function
+source ./common_run3_MSSM.sh #to access set_common_vars() function
 #The following function defines config, processes, version and datasets variables
 set_common_vars "$1"
 prod_version=bdt_check
 args=(
         --config $config
+<<<<<<< HEAD
         #-processes $processes
         #--datasets $datasets
+=======
+>>>>>>> parent of c558924 (Revert "Merge pull request #91 from jmalvaso/cf_v02_v03_transition_1")
         --cf.CalibrateEvents-workflow $workflow
         --cf.CalibrateEvents-version $version
         

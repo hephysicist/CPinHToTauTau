@@ -8,9 +8,8 @@ from collections import defaultdict
 
 from typing import Optional
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.selection.util import sorted_indices_from_mask
 from columnflow.util import maybe_import, DotDict
-from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
+from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column, sorted_indices_from_mask
 from columnflow.columnar_util import optional_column as optional
 
 from httcp.util import IF_NANO_V9, IF_NANO_V11

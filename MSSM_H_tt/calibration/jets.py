@@ -11,8 +11,11 @@ from columnflow.types import Any
 from columnflow.calibration import Calibrator, calibrator
 from MSSM_H_tt.calibration.util import ak_random, propagate_met
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.util import maybe_import, InsertableDict, DotDict
+from columnflow.util import maybe_import, DotDict
+from law.util import InsertableDict
 from columnflow.columnar_util import set_ak_column, layout_ak_array, optional_column as optional
+
+import law
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -423,16 +426,28 @@ def jec_init(self: Calibrator) -> None:
 
 
 @jec.requires
-def jec_requires(self: Calibrator, reqs: dict) -> None:
+def jec_requires(
+    self: Calibrator,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    **kwargs,
+    ) -> None:
     if "external_files" in reqs:
         return
 
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 
 @jec.setup
-def jec_setup(self: Calibrator, reqs: dict, inputs: dict, reader_targets: InsertableDict) -> None:
+def jec_setup(
+    self: Calibrator,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    inputs: dict[str, Any],
+    reader_targets: law.util.InsertableDict,
+    **kwargs,
+    ) -> None:
     """
     Load the correct jec files using the :py:func:`from_string` method of the
     :external+correctionlib:py:class:`correctionlib.highlevel.CorrectionSet`
@@ -531,387 +546,3 @@ def jec_setup(self: Calibrator, reqs: dict, inputs: dict, reader_targets: Insert
 # custom jec calibrator that only runs nominal correction
 jec_nominal = jec.derive("jec_nominal", cls_dict={"uncertainty_sources": []})
 
-# # define default functions for jec calibrator
-# def get_jer_file(self, external_files: DotDict) -> str:
-#     """
-#     Function to obtain external jer files.
-
-#     By default, this function extracts the location of the jec correction files from the current
-#     config instance *config_inst*:
-
-#     .. code-block:: python
-
-#         cfg.x.external_files = DotDict.wrap({
-#             "jet_jerc": "/afs/cern.ch/work/m/mrieger/public/mirrors/jsonpog-integration-9ea86c4c/POG/JME/2017_UL/jet_jerc.json.gz",
-#         })
-
-#     :param external_files: Dictionary containing the information about the file location
-#     :return: path or url to correction file(s)
-#     """ # noqa
-#     return external_files.jet_jerc
-
-
-# def get_jer_config(self) -> DotDict:
-#     """
-#     Load config relevant to the JER corrections.
-
-#     By default, this is extracted from the current *config_inst*:
-
-#     .. code-block:: python
-
-#         self.config_inst.x.jer
-
-#     :return: Dictionary containing configurations for JEC callibrations
-#     """
-#     return self.config_inst.x.jer
-
-
-# #
-# # jet energy resolution smearing
-# #
-
-# @calibrator(
-#     uses={
-#         "Jet.pt", "Jet.eta", "Jet.phi", "Jet.mass", "Jet.genJetIdx",
-#         optional("Rho.fixedGridRhoFastjetAll"),
-#         optional("fixedGridRhoFastjetAll"),
-#         "GenJet.pt", "GenJet.eta", "GenJet.phi",
-#         "PuppiMET.pt", "PuppiMET.phi",
-#         attach_coffea_behavior,
-#     },
-#     produces={
-#         "Jet.pt", "Jet.mass",
-#         "Jet.pt_unsmeared", "Jet.mass_unsmeared",
-#         "Jet.pt_jer_up", "Jet.pt_jer_down", "Jet.mass_jer_up", "Jet.mass_jer_down",
-#         "PuppiMET.pt", "PuppiMET.phi",
-#         "PuppiMET.pt_jer_up", "PuppiMET.pt_jer_down", "PuppiMET.phi_jer_up", "PuppiMET.phi_jer_down",
-#     },
-#     # toggle for propagation to PuppiMET
-#     propagate_met=True,
-#     # only run on mc
-#     mc_only=True,
-#     # function to determine the correction file
-#     get_jer_file=get_jer_file,
-#     # function to determine the jer configuration dict
-#     get_jer_config=get_jer_config,
-# )
-# def jer(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
-#     """
-#     Applies the jet energy resolution smearing in MC and calculates the associated uncertainty
-#     shifts using the :external+correctionlib:doc:`index`, following the recommendations given in
-#     https://twiki.cern.ch/twiki/bin/viewauth/CMS/JetResolution.
-
-#     Requires an external file in the config under ``jet_jerc``:
-
-#     .. code-block:: python
-
-#         cfg.x.external_files = DotDict.wrap({
-#             "jet_jerc": "/afs/cern.ch/work/m/mrieger/public/mirrors/jsonpog-integration-9ea86c4c/POG/JME/2017_UL/jet_jerc.json.gz",
-#         })
-
-#     *get_jer_file* can be adapted in a subclass in case it is stored differently in the external
-#     files.
-
-#     The jer configuration should be an auxiliary entry in the config, specifying the correction
-#     details under ``jer``:
-
-#     .. code-block:: python
-
-#         cfg.x.jer = {
-#             "campaign": "Summer19UL17",
-#             "version": "JRV2",
-#             "jet_type": "AK4PFchs",
-#         },
-
-#     *get_jer_config* can be adapted in a subclass in case it is stored differently in the config.
-
-#     Throws an error if running on data.
-
-#     :param events: awkward array containing events to process
-#     """ # noqa
-#     # fail when running on data
-#     if self.dataset_inst.is_data:
-#         raise ValueError("attempt to apply jet energy resolution smearing in data")
-
-#     # save the unsmeared properties in case they are needed later
-#     events = set_ak_column_f32(events, "Jet.pt_unsmeared", events.Jet.pt)
-#     events = set_ak_column_f32(events, "Jet.mass_unsmeared", events.Jet.mass)
-
-#     # use event numbers in chunk to seed random number generator
-#     # TODO: use deterministic seeds!
-#     rand_gen = np.random.Generator(np.random.SFC64(events.event.to_list()))
-
-#     # obtain rho, which might be located at different routes, depending on the nano version
-#     rho = (
-#         events.fixedGridRhoFastjetAll
-#         if "fixedGridRhoFastjetAll" in events.fields else
-#         events.Rho.fixedGridRhoFastjetAll
-#     )
-
-#     # variable naming convention
-#     variable_map = {
-#         "JetEta": events.Jet.eta,
-#         "JetPt": events.Jet.pt,
-#         "Rho": rho,
-#     }
-
-#     # pt resolution
-#     inputs = [variable_map[inp.name] for inp in self.evaluators["jer"].inputs]
-#     jer = ak_evaluate(self.evaluators["jer"], *inputs)
-
-#     # JER scale factors and systematic variations
-#     jersf = {}
-#     for syst in ("nom", "up", "down"):
-#         variable_map_syst = dict(variable_map, systematic=syst)
-#         inputs = [variable_map_syst[inp.name] for inp in self.evaluators["sf"].inputs]
-#         jersf[syst] = ak_evaluate(self.evaluators["sf"], *inputs)
-
-#     # array with all JER scale factor variations as an additional axis
-#     # (note: axis needs to be regular for broadcasting to work correctly)
-#     jersf = ak.concatenate(
-#         [jersf[syst][..., None] for syst in ("nom", "up", "down")],
-#         axis=-1,
-#     )
-
-#     # -- stochastic smearing
-
-#     # normally distributed random numbers according to JER
-#     jer_random_normal = ak_random(0, jer, rand_func=rand_gen.normal)
-
-#     # scale random numbers according to JER SF
-#     jersf2_m1 = jersf ** 2 - 1
-#     add_smear = np.sqrt(ak.where(jersf2_m1 < 0, 0, jersf2_m1))
-
-#     # broadcast over JER SF variations
-#     jer_random_normal, jersf_z = ak.broadcast_arrays(jer_random_normal, add_smear)
-
-#     # compute smearing factors (stochastic method)
-#     smear_factors_stochastic = 1.0 + jer_random_normal * add_smear
-
-#     # -- scaling method (using gen match)
-
-#     # mask negative gen jet indices (= no gen match)
-#     valid_gen_jet_idxs = ak.mask(events.Jet.genJetIdx, events.Jet.genJetIdx >= 0)
-
-#     # pad list of gen jets to prevent index error on match lookup
-#     padded_gen_jets = ak.pad_none(events.GenJet, ak.max(valid_gen_jet_idxs) + 1)
-
-#     # gen jets that match the reconstructed jets
-#     matched_gen_jets = padded_gen_jets[valid_gen_jet_idxs]
-
-#     # compute the relative (reco - gen) pt difference
-#     pt_relative_diff = (events.Jet.pt - matched_gen_jets.pt) / events.Jet.pt
-
-#     # test if matched gen jets are within 3 * resolution
-#     is_matched_pt = np.abs(pt_relative_diff) < 3 * jer
-#     is_matched_pt = ak.fill_none(is_matched_pt, False)  # masked values = no gen match
-
-#     # (no check for Delta-R matching criterion; we assume this was done during
-#     # nanoAOD production to get the `genJetIdx`)
-
-#     # broadcast over JER SF variations
-#     pt_relative_diff, jersf = ak.broadcast_arrays(pt_relative_diff, jersf)
-
-#     # compute smearing factors (scaling method)
-#     smear_factors_scaling = 1.0 + (jersf - 1.0) * pt_relative_diff
-
-#     # -- hybrid smearing: take smear factors from scaling if there was a match,
-#     # otherwise take the stochastic ones
-#     smear_factors = ak.where(
-#         is_matched_pt[:, :, None],
-#         smear_factors_scaling,
-#         smear_factors_stochastic,
-#     )
-
-#     # ensure array is not nullable (avoid ambiguity on Arrow/Parquet conversion)
-#     smear_factors = ak.fill_none(smear_factors, 0.0)
-
-#     # store pt and phi of the full jet system
-#     if self.propagate_met:
-#         jetsum = events.Jet.sum(axis=1)
-#         jetsum_pt_before = jetsum.pt
-#         jetsum_phi_before = jetsum.phi
-
-#     # apply the smearing factors to the pt and mass
-#     # (note: apply variations first since they refer to the original pt)
-#     events = set_ak_column_f32(events, "Jet.pt_jer_up", events.Jet.pt * smear_factors[:, :, 1])
-#     events = set_ak_column_f32(events, "Jet.mass_jer_up", events.Jet.mass * smear_factors[:, :, 1])
-#     events = set_ak_column_f32(events, "Jet.pt_jer_down", events.Jet.pt * smear_factors[:, :, 2])
-#     events = set_ak_column_f32(events, "Jet.mass_jer_down", events.Jet.mass * smear_factors[:, :, 2])
-#     events = set_ak_column_f32(events, "Jet.pt", events.Jet.pt * smear_factors[:, :, 0])
-#     events = set_ak_column_f32(events, "Jet.mass", events.Jet.mass * smear_factors[:, :, 0])
-
-#     # recover coffea behavior
-#     events = self[attach_coffea_behavior](events, collections=["Jet"], **kwargs)
-
-#     # met propagation
-#     if self.propagate_met:
-#         # save unsmeared quantities
-#         events = set_ak_column_f32(events, "PuppiMET.pt_unsmeared", events.PuppiMET.pt)
-#         events = set_ak_column_f32(events, "PuppiMET.phi_unsmeared", events.PuppiMET.phi)
-
-#         # get pt and phi of all jets after correcting
-#         jetsum = events.Jet.sum(axis=1)
-#         jetsum_pt_after = jetsum.pt
-#         jetsum_phi_after = jetsum.phi
-
-#         # propagate changes to PuppiMET
-#         met_pt, met_phi = propagate_met(
-#             jetsum_pt_before,
-#             jetsum_phi_before,
-#             jetsum_pt_after,
-#             jetsum_phi_after,
-#             events.PuppiMET.pt,
-#             events.PuppiMET.phi,
-#         )
-#         events = set_ak_column_f32(events, "PuppiMET.pt", met_pt)
-#         events = set_ak_column_f32(events, "PuppiMET.phi", met_phi)
-
-#         # syst variations on top of corrected PuppiMET
-#         met_pt_up, met_phi_up = propagate_met(
-#             jetsum_pt_after,
-#             jetsum_phi_after,
-#             events.Jet.pt_jer_up,
-#             events.Jet.phi,
-#             met_pt,
-#             met_phi,
-#         )
-#         met_pt_down, met_phi_down = propagate_met(
-#             jetsum_pt_after,
-#             jetsum_phi_after,
-#             events.Jet.pt_jer_down,
-#             events.Jet.phi,
-#             met_pt,
-#             met_phi,
-#         )
-#         events = set_ak_column_f32(events, "PuppiMET.pt_jer_up", met_pt_up)
-#         events = set_ak_column_f32(events, "PuppiMET.pt_jer_down", met_pt_down)
-#         events = set_ak_column_f32(events, "PuppiMET.phi_jer_up", met_phi_up)
-#         events = set_ak_column_f32(events, "PuppiMET.phi_jer_down", met_phi_down)
-
-#     return events
-
-
-# @jer.init
-# def jer_init(self: Calibrator) -> None:
-#     if not self.propagate_met:
-#         return
-
-#     self.uses |= {
-#         "PuppiMET.pt", "PuppiMET.phi",
-#     }
-#     self.produces |= {
-#         "PuppiMET.pt", "PuppiMET.phi", "PuppiMET.pt_jer_up", "PuppiMET.pt_jer_down", "PuppiMET.phi_jer_up",
-#         "PuppiMET.phi_jer_down", "PuppiMET.pt_unsmeared", "PuppiMET.phi_unsmeared",
-#     }
-
-
-# @jer.requires
-# def jer_requires(self: Calibrator, reqs: dict) -> None:
-#     if "external_files" in reqs:
-#         return
-
-#     from columnflow.tasks.external import BundleExternalFiles
-#     reqs["external_files"] = BundleExternalFiles.req(self.task)
-
-
-# @jer.setup
-# def jer_setup(self: Calibrator, reqs: dict, inputs: dict, reader_targets: InsertableDict) -> None:
-#     """
-#     Load the correct jer files using the :py:func:`from_string` method of the
-#     :external+correctionlib:py:class:`correctionlib.highlevel.CorrectionSet` function and apply the
-#     corrections as needed.
-
-#     The source files for the :external+correctionlib:py:class:`correctionlib.highlevel.CorrectionSet`
-#     instance are extracted with the :py:meth:`~.jer.get_jer_file`.
-
-#     Uses the member function :py:meth:`~.jer.get_jer_config` to construct the required keys, which
-#     are based on the following information about the JER:
-
-#     - campaign
-#     - version
-#     - jet_type
-
-#     A corresponding example snippet within the *config_inst* could like something like this:
-
-#     .. code-block:: python
-
-#         cfg.x.jer = DotDict.wrap({
-#             "campaign": f"Summer19UL{year2}{jerc_postfix}",
-#             "version": "JRV3",
-#             "jet_type": "AK4PFchs",
-#         })
-
-#     :param reqs: Requirement dictionary for this :py:class:`~columnflow.calibration.Calibrator`
-#         instance.
-#     :param inputs: Additional inputs, currently not used.
-#     :param reader_targets: TODO: add documentation.
-#     """
-#     bundle = reqs["external_files"]
-
-#     # import the correction sets from the external file
-#     import correctionlib
-#     correction_set = correctionlib.CorrectionSet.from_string(
-#         self.get_jer_file(bundle.files).load(formatter="gzip").decode("utf-8"),
-#     )
-    
-#     # compute JER keys from config information
-#     jer_cfg = self.get_jer_config()
-#     jer_keys = {
-#         "jer": f"{jer_cfg.campaign}_{jer_cfg.version}_MC_PtResolution_{jer_cfg.jet_type}",
-#         "sf": f"{jer_cfg.campaign}_{jer_cfg.version}_MC_ScaleFactor_{jer_cfg.jet_type}",
-#     }
-
-#     # store the evaluators
-#     self.evaluators = {
-#         name: get_evaluators(correction_set, [key])[0]
-#         for name, key in jer_keys.items()
-#     }
-
-
-# #
-# # single calibrator for doing both JEC and JER smearing
-# #
-
-# @calibrator(
-#     uses={jec, jer},
-#     produces={jec, jer},
-#     # toggle for propagation to PuppiMET
-#     propagate_met=None,
-#     # functions to determine configs and files
-#     get_jec_file=None,
-#     get_jec_config=None,
-#     get_jer_file=None,
-#     get_jer_config=None,
-# )
-# def jets(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
-#     """
-#     Instance of :py:class:`~columnflow.calibration.Calibrator` that does all relevant calibrations
-#     for jets, i.e. JEC and JER. For more information, see :py:func:`~.jec` and :py:func:`~.jer`.
-
-#     :param events: awkward array containing events to process
-#     """
-#     # apply jet energy corrections
-#     events = self[jec](events, **kwargs)
-
-#     # apply jer smearing on MC only
-#     if self.dataset_inst.is_mc:
-#         events = self[jer](events, **kwargs)
-
-#     return events
-
-
-# @jets.init
-# def jets_init(self: Calibrator) -> None:
-#     # forward argument to the producers
-#     if self.propagate_met is not None:
-#         self.deps_kwargs[jec]["propagate_met"] = self.propagate_met
-#         self.deps_kwargs[jer]["propagate_met"] = self.propagate_met
-#     if self.get_jec_file is not None:
-#         self.deps_kwargs[jec]["get_jec_file"] = self.get_jec_file
-#     if self.get_jec_config is not None:
-#         self.deps_kwargs[jec]["get_jec_config"] = self.get_jec_config
-#     if self.get_jer_file is not None:
-#         self.deps_kwargs[jer]["get_jer_file"] = self.get_jer_file
-#     if self.get_jer_config is not None:
-#         self.deps_kwargs[jer]["get_jer_config"] = self.get_jer_config

@@ -11,8 +11,10 @@ from columnflow.types import Any
 from columnflow.calibration import Calibrator, calibrator
 from httcp.calibration.util import ak_random, propagate_met
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.util import maybe_import, InsertableDict, DotDict
+from columnflow.util import maybe_import, DotDict
+from law.util import InsertableDict
 from columnflow.columnar_util import set_ak_column, layout_ak_array, optional_column as optional
+import law
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -428,16 +430,28 @@ def jec_init(self: Calibrator) -> None:
 
 
 @jec.requires
-def jec_requires(self: Calibrator, reqs: dict) -> None:
+def jec_requires(
+    self: Calibrator,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    **kwargs,
+    ) -> None:
     if "external_files" in reqs:
         return
 
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 
 @jec.setup
-def jec_setup(self: Calibrator, reqs: dict, inputs: dict, reader_targets: InsertableDict) -> None:
+def jec_setup(
+    self: Calibrator,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    inputs: dict[str, Any],
+    reader_targets: law.util.InsertableDict,
+    **kwargs,
+    ) -> None:
     """
     Load the correct jec files using the :py:func:`from_string` method of the
     :external+correctionlib:py:class:`correctionlib.highlevel.CorrectionSet`
