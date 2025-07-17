@@ -99,22 +99,8 @@ def add_hist_hooks(config: od.Config) -> None:
         sr = category_inst
         data_num, mc_num = get_hists_from_reg(config, hists, sr.aux['abcd_regs']['dr_num'])
         data_den, mc_den = get_hists_from_reg(config, hists, sr.aux['abcd_regs']['dr_den']) 
-<<<<<<< HEAD
         data_ar, mc_ar = get_hists_from_reg(config, hists,sr.aux['abcd_regs']['ar'])
         
-=======
-        data_ar, mc_ar   = get_hists_from_reg(config, hists, sr.aux['abcd_regs']['ar']    )
-        num = data_num.values() - mc_num.values()
-        den = data_den.values() - mc_den.values() 
-
-        mask = ((num > 0) & (den > 0))
-        
-        tf = num/den
-        tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
-       
-        tf_err2 = ((np.sum(data_num.variances()) + np.sum(mc_num.variances()))/den**2 + 
-                  tf**2/den**2 *(np.sum(data_den.variances()) + np.sum(mc_den.variances())))
->>>>>>> parent of c558924 (Revert "Merge pull request #91 from jmalvaso/cf_v02_v03_transition_1")
         
         from cmsdb.processes.qcd import qcd
         hists_sr = hists[sr.name].copy()

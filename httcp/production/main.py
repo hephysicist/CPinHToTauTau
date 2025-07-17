@@ -113,13 +113,10 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     
     print("Producing pion energy split...")
     events = self[pion_energy_split](events, **kwargs)
-<<<<<<< HEAD
     
     print("Producing Jet features...")
     events = set_ak_column_f32(events, "Jet.jec_no_jec_diff", (events.Jet.pt - events.Jet.pt_no_jec))
     
-=======
->>>>>>> parent of c558924 (Revert "Merge pull request #91 from jmalvaso/cf_v02_v03_transition_1")
     print("Producing jet variables for plotting...") 
     events = self[jet_pt_def](events, **kwargs)
     events = self[jets_taggable](events, **kwargs)   
