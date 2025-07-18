@@ -5,11 +5,6 @@ set_common_vars "$1"
 prod_version=bdt_check
 args=(
         --config $config
-<<<<<<< HEAD
-        #-processes $processes
-        #--datasets $datasets
-=======
->>>>>>> parent of c558924 (Revert "Merge pull request #91 from jmalvaso/cf_v02_v03_transition_1")
         --cf.CalibrateEvents-workflow $workflow
         --cf.CalibrateEvents-version $version
         
