@@ -3,7 +3,6 @@ Column production methods related to higher-level features.
 """
 import functools
 
-from typing import Optional
 from columnflow.production import Producer, producer
 from columnflow.production.categories import category_ids
 from columnflow.production.normalization import normalization_weights

@@ -5,7 +5,7 @@ from columnflow.config_util import add_category
 import order as od
 
 from columnflow.columnar_util import EMPTY_FLOAT
-from columnflow.util import DotDict
+from law.util import DotDict
 from columnflow.columnar_util import ColumnCollection
 
 from columnflow.util import maybe_import

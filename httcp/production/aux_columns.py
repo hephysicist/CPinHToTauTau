@@ -6,7 +6,8 @@ import law
 from columnflow.production import Producer, producer
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.columnar_util import set_ak_column, EMPTY_FLOAT
-from columnflow.util import maybe_import, DotDict
+from columnflow.util import maybe_import
+from law.util import DotDict
 from httcp.util import get_lep_p4, get_vec_p3, to_pt_eta_phi_m
 
 np = maybe_import("numpy")

@@ -4,11 +4,10 @@
 Exemplary selection methods.
 """
 
-from typing import Optional
 from operator import and_
 from functools import reduce
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.selection.stats import increment_stats
@@ -19,9 +18,9 @@ from columnflow.production.processes import process_ids
 from columnflow.production.cms.mc_weight import mc_weight
 from columnflow.production.util import attach_coffea_behavior
 
-from columnflow.util import maybe_import, DotDict
-from columnflow.columnar_util import optional_column as optional
-from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
+from columnflow.util import maybe_import
+from law.util import DotDict
+from columnflow.columnar_util import set_ak_column
 #from columnflow.production.cms.top_pt_weight import gen_parton_top
 
 from httcp.selection.physics_objects import jet_selection, muon_selection, electron_selection, tau_selection

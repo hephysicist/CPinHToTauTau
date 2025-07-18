@@ -3,7 +3,8 @@ import functools
 from columnflow.production import Producer, producer
 from columnflow.util import maybe_import, safe_div
 from law.util import InsertableDict
-from columnflow.columnar_util import sorted_indices_from_mask, set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
+from columnflow.columnar_util import (sorted_indices_from_mask, set_ak_column, has_ak_column, 
+                                      EMPTY_FLOAT, Route, flat_np_view, optional_column as optional)
 from columnflow.production.util import attach_coffea_behavior
 import law
 from httcp.util import get_lep_p4

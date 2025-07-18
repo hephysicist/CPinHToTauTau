@@ -7,11 +7,10 @@ import functools
 from typing import Optional
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.util import maybe_import
-from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
-from columnflow.util import DotDict
-
-from httcp.util import hlt_path_matching, hlt_path_fired
-
+from columnflow.columnar_util import set_ak_column
+from law.util import DotDict
+from httcp.util import hlt_path_matching
+from columnflow.columnar_util import optional_column as optional
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 coffea = maybe_import("coffea")

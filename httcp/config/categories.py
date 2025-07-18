@@ -5,9 +5,9 @@ Definition of categories.
 """
 
 import order as od
-
+import law
 from columnflow.config_util import add_category
-from columnflow.util import DotDict
+from law.util import DotDict
 from columnflow.util import maybe_import
 np = maybe_import("numpy")
 

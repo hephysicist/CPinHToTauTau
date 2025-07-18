@@ -6,7 +6,8 @@ Producers for the TauTheDifference BDT for signal vs. background separation of t
 import law
 import functools
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, dev_sandbox, DotDict, InsertableDict
+from columnflow.util import maybe_import, dev_sandbox
+from law.util import DotDict, InsertableDict
 from columnflow.columnar_util import EMPTY_FLOAT, set_ak_column, flat_np_view
 
 logger = law.logger.get_logger(__name__)
@@ -28,8 +29,8 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
     produces={
         f"bdt_raw_score_{the_output}"
         for the_output in ["gtau", "higgs", "fake"]
-    } | {"bdt_cat"}
-    # sandbox=dev_sandbox("bash::$HBT_BASE/sandboxes/venv_columnar_tf.sh"),
+    } | {"bdt_cat"},
+    sandbox=dev_sandbox("bash::$HTTCP_BASE/sandboxes/venv_columnar_xgb.sh"),
 )
 def hcp_bdt_score(
     self: Producer,
@@ -96,12 +97,12 @@ def hcp_bdt_score(
 
 
 @hcp_bdt_score.requires
-def hcp_bdt_score_requires(self: Producer, reqs: dict) -> None:
+def hcp_bdt_score_requires(self: Producer, task: law.Task, reqs: dict) -> None:
     if "external_files" in reqs:
         return
 
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 
 @hcp_bdt_score.setup
@@ -110,6 +111,7 @@ def hcp_bdt_score_setup(
     reqs: dict,
     inputs: dict,
     reader_targets: InsertableDict,
+    task: law.task
 ) -> None:
     """
     Sets up XGBoost model for signal vs. bkg classification in higgs cp analysis

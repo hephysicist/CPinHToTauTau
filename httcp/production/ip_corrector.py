@@ -1,6 +1,8 @@
 import functools
+import law
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div, InsertableDict
+from columnflow.util import maybe_import, safe_div
+from law.util import InsertableDict
 from columnflow.columnar_util import set_ak_column, EMPTY_FLOAT, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
 
@@ -76,12 +78,12 @@ def ip_correction(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     return events
 
 @ip_correction.requires
-def ip_correction_requires(self: Producer, reqs: dict) -> None:
+def ip_correction_requires(self: Producer, task: law.Task, reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 @ip_correction.setup
 def ip_correction_setup(
@@ -89,6 +91,7 @@ def ip_correction_setup(
     reqs: dict,
     inputs: dict,
     reader_targets: InsertableDict,
+    task: law.task
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib

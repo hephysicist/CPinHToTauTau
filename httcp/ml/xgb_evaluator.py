@@ -13,11 +13,10 @@ import order as od
 
 from columnflow.types import Any
 from columnflow.ml import MLModel
-from columnflow.util import maybe_import, dev_sandbox,InsertableDict
+from columnflow.util import maybe_import, dev_sandbox
+from law.util import InsertableDict
 from columnflow.columnar_util import Route, set_ak_column
 ak = maybe_import("awkward")
-xgb = maybe_import("xgboost")
-
 STOP_SIGNAL = "STOP"
 
 
@@ -140,16 +139,12 @@ def _xgb_evaluate(
     config: list[dict[str, Any]],
     /,
     *,
-    delay = 0.2,
+    delay = 1,
     silent: bool = False,
 ) -> None:
     _print = (lambda *args, **kwargs: None) if silent else print
-
-    _print("importing xgboost ...")
+    import xgboost as xgb
     import numpy as np
-    import xgboost as xgb  # type: ignore[import-not-found,import-untyped]
-    _print("done")
-
     @dataclass
     class Model:
         name: str
@@ -234,180 +229,3 @@ def _xgb_evaluate(
         # reduce models and sleep
         models = [model for i, model in enumerate(models) if i not in remove_models]
         time.sleep(delay)
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# class XGBEvaluator(MLModel):
-
-#     # mark the model as accepting only a single config
-#     single_config = True
-    
-#     def __init__(self) -> None:
-#         super().__init__()
-
-#         self._models: dict[str, XGBEvaluator.Model] = {}
-#         self._p: Process | None = None
-
-#         self.delay = 0.2
-#         self.silent = False
-    
-#     def __enter__(self) -> XGBEvaluator:
-#         self.start()
-#         return self
-
-#     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
-#         self.stop()
-
-#     def __del__(self) -> None:
-#         self.stop()
-        
-#     def __call__(self, *args, **kwargs) -> Any:
-#         return self.evaluate(*args, **kwargs)
-        
-#     @property
-#     def running(self) -> bool:
-#         return self._p is not None
-    
-#     def start(self) -> None:
-#         if self.running:
-#             raise ValueError("process already started")
-
-#         # build the subprocess config
-#         config = []
-#         for model in self._models.values():
-#             parent_pipe, child_pipe = Pipe()
-#             model.pipe = parent_pipe
-#             config.append({"name": model.name, "path": model.path, "pipe": child_pipe})
-
-#         # create and start the process
-#         self._p = Process(
-#             target=_tf_evaluate,
-#             args=(config,),
-#             kwargs={"delay": self.delay, "silent": self.silent},
-#         )
-#         self._p.start()
-
-#     def evaluate(self, name: str, *args, **kwargs) -> Any:
-#         if not self.running:
-#             raise ValueError("process not started")
-
-#         # get the model
-#         if name not in self._models:
-#             raise ValueError(f"model with name '{name}' does not exist")
-#         model = self._models[name]
-
-#         # evaluate and send back result
-#         model.pipe.send((args, kwargs))  # type: ignore[union-attr]
-#         return model.pipe.recv()  # type: ignore[union-attr]
-
-#     def stop(self, timeout: int | float = 5) -> None:
-#         # stop and remove model pipes
-#         for model in self._models.values():
-#             if model.pipe is not None:
-#                 model.pipe.send(STOP_SIGNAL)
-#                 model.pipe.close()
-#                 model.pipe = None
-
-#         # nothing to do when not running
-#         if not self.running:
-#             return
-
-#         # join to wait for normal termination
-#         if self._p.is_alive():
-#             self._p.join(timeout)
-
-#             # kill if still alive
-#             if self._p.is_alive():
-#                 self._p.kill()
-
-#         # reset
-#         self._p = None
-    
-    
-    
-
-#     # def setup(self):
-#     #     # dynamically add variables for the quantities produced by this model
-#     #     if f"{self.cls_name}.output" not in self.config_inst.variables:
-#     #         self.config_inst.add_variable(
-#     #             name=f"{self.cls_name}.output",
-#     #             null_value=-1,
-#     #             binning=(20, -1.0, 1.0),
-#     #             x_title=f"{self.cls_name} DNN output",
-#     #         )
-
-#     # def sandbox(self, task: law.Task) -> str:
-#     #     return dev_sandbox("bash::$HTTCP_BASE/sandboxes/example.sh")
-
-#     # def datasets(self, config_inst: od.Config) -> set[od.Dataset]:
-#     #     return {
-#     #         config_inst.get_dataset("st_tchannel_t_powheg"),
-#     #         config_inst.get_dataset("tt_sl_powheg"),
-#     #     }
-
-#     # def uses(self, config_inst: od.Config) -> set[Route | str]:
-#     #     return {
-#     #         "Jet.pt", "Muon.pt",
-#     #     }
-
-#     # def produces(self, config_inst: od.Config) -> set[Route | str]:
-#     #     return {
-#     #         f"{self.cls_name}.ouptut",
-#     #     }
-
-#     # def output(self, task: law.Task) -> law.FileSystemDirectoryTarget:
-#     #     return task.target(f"mlmodel_f{task.branch}of{self.folds}", dir=True)
-
-#     # def open_model(self, target: law.FileSystemDirectoryTarget) -> tf.keras.models.Model:
-#     #     return target.load(formatter="tf_keras_model")
-
-#     # def train(
-#     #     self,
-#     #     task: law.Task,
-#     #     input: dict[str, list[dict[str, law.FileSystemFileTarget]]],
-#     #     output: law.FileSystemDirectoryTarget,
-#     # ) -> None:
-#     #     # define a dummy NN
-#     #     x = tf.keras.Input(shape=(2,))
-#     #     a1 = tf.keras.layers.Dense(10, activation="elu")(x)
-#     #     y = tf.keras.layers.Dense(2, activation="softmax")(a1)
-#     #     model = tf.keras.Model(inputs=x, outputs=y)
-
-#     #     # the output is just a single directory target
-#     #     output.dump(model, formatter="tf_keras_model")
-
-#     # def evaluate(
-#     #     self,
-#     #     task: law.Task,
-#     #     events: ak.Array,
-#     #     models: list[Any],
-#     #     fold_indices: ak.Array,
-#     #     events_used_in_training: bool = False,
-#     # ) -> ak.Array:
-#     #     # fake evaluation
-#     #     events = set_ak_column(events, f"{self.cls_name}.output", 0.5)
-
-#     #     return events
-
-
-# # usable derivations
-# #example = ExampleModel.derive("example", cls_dict={"folds": 2})

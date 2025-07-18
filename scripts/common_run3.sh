@@ -92,7 +92,7 @@ case $1 in
         config="run3_2022_postEE_mutau_limited"	
         datasets='wj_incl_madgraph' 
         processes='wj' 
-        workflow='htcondor'
+        workflow='local'
     ;;
     "run3_2022postEE_etau")
         config="run3_2022_postEE_etau"
@@ -117,7 +117,7 @@ case $1 in
         processes='dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm,data'
 	    categories=$categories_mutau
 	    variables=$variables_mutau
-	    workflow='htcondor'
+	    workflow='local'
     ;;
 ##############################
 ####### 2023preBPix ############
