@@ -8,8 +8,8 @@ import itertools
 
 from columnflow.calibration import Calibrator, calibrator
 from columnflow.production.cms.seeds import deterministic_seeds
-from columnflow.util import maybe_import, DotDict
-from law.util import InsertableDict
+from columnflow.util import maybe_import
+from law.util import InsertableDict, DotDict
 from columnflow.columnar_util import set_ak_column, flat_np_view
 
 import law

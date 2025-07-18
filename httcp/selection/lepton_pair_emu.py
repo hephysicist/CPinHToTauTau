@@ -4,11 +4,8 @@
 Prepare h-Candidate from SelectionResult: selected lepton indices & channel_id [trigger matched] 
 """
 
-from typing import Optional
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.reduction.util import create_collections_from_masks
 from columnflow.util import maybe_import
-from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")

@@ -12,7 +12,8 @@ import order as od
 import os
 from scinum import Number
 
-from columnflow.util import DotDict, maybe_import, dev_sandbox
+from columnflow.util import maybe_import, dev_sandbox
+from law.util import DotDict
 from columnflow.config_util import (
     get_root_processes_from_campaign, 
     add_category, add_shift_aliases,
@@ -39,6 +40,7 @@ def add_run3(ana: od.Analysis,
                         id    = config_id)
 
     # gather campaign data
+    
     cfg.x.year = campaign.x.year
     cfg.x.tag = campaign.x.tag
     year = cfg.x.year
@@ -385,6 +387,7 @@ def add_run3(ana: od.Analysis,
     # default objects, such as calibrator, selector, producer, ml model, inference model, etc
     cfg.x.default_calibrator = "main"
     cfg.x.default_selector = "main"
+    cfg.x.default_reducer = "cf_default"
     cfg.x.default_producer = "main"
     cfg.x.default_weight_producer = "main"
     cfg.x.default_ml_model = None
@@ -602,7 +605,6 @@ def add_run3(ana: od.Analysis,
     # https://twiki.cern.ch/twiki/bin/view/CMS/PdmVRun3Analysis
     # difference pre-post VFP: https://cds.cern.ch/record/2854610/files/DP2023_006.pdf
     
-<<<<<<< HEAD
     
     lumi_dict = {
         "2022preEE"     : Number(7_980.4,  {"lumi_13p6TeV_correlated": 0.014j,}),
@@ -613,59 +615,6 @@ def add_run3(ana: od.Analysis,
     }
     cfg.x.luminosity = lumi_dict[f"{year}{tag}"]
     
-=======
-    if year == 2022 and campaign.x.tag =="preEE":
-        cfg.x.luminosity = Number(7_980.4, {
-            "lumi_13p6TeV_correlated": 0.014j,
-        })
-    elif year == 2022 and campaign.x.tag =="postEE":
-        cfg.x.luminosity = Number(26_671.7, {
-            "lumi_13p6TeV_correlated": 0.014j,
-        })
-    elif year == 2023 and campaign.x.tag =="preBPix":
-        cfg.x.luminosity = Number(17_794, {
-            "lumi_13p6TeV_correlated": 0.0j,
-        })
-    elif year == 2023 and campaign.x.tag =="postBPix":
-        cfg.x.luminosity = Number(9_451, {
-            "lumi_13p6TeV_correlated": 0.0j,
-        })
-    elif year == 2024:
-        cfg.x.luminosity = Number(0, {
-            "lumi_13p6TeV_correlated": 0.0j,
-        })
-    else:
-        assert False
- 
-    # names of muon correction sets and working points
-    # (used in the muon producer)   
-  
-    # cfg.x.deep_tau = DotDict.wrap({
-    #     "tagger": "DeepTau2018v2p5",
-    #     "vs_e"          : {"mutau": "VVLoose",
-    #                        "etau": "Tight",
-    #                        "tautau": "VVLoose"},        
-    #     "vs_mu"         : {"mutau": "Tight",
-    #                        "etau": "VLoose",
-    #                        "tautau": "VLoose"},
-    #     "vs_jet"        : {"mutau": "Medium",
-    #                        "etau": "Medium",
-    #                        "tautau": "Medium"},
-    #     "vs_e_jet_wps"  : {'VVVLoose'   : 1,
-    #                        'VVLoose'    : 2,
-    #                        'VLoose'     : 3,
-    #                        'Loose'      : 4,
-    #                        'Medium'     : 5,
-    #                        'Tight'      : 6,
-    #                        'VTight'     : 7,
-    #                        'VVTight'    : 8},
-    #     "vs_mu_wps"     : {'VLoose' : 1,
-    #                        'Loose'  : 2,
-    #                        'Medium' : 3,
-    #                        'Tight'  : 4}
-    #     })
-    #Check to compare the plots with IC: set working point for each channel to Medium vs Jet, Tight vs E, Tight vs Mu
->>>>>>> parent of c558924 (Revert "Merge pull request #91 from jmalvaso/cf_v02_v03_transition_1")
     cfg.x.deep_tau = DotDict.wrap({
         "tagger": "DeepTau2018v2p5",
         "vs_e"          : {"mutau": "VVLoose",
@@ -770,10 +719,9 @@ def add_run3(ana: od.Analysis,
     ##########################
     ##########################
     
-    jsonpog_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_latest/POG/"
-    jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
+    jsonpog_dir = "/eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_latest/POG/"
+    jsonpog_tau_dir = "//eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
     corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/"
-
     ml_dir = "/eos/user/s/stzakhar/TauTheDifference/Training/models/"
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
@@ -789,7 +737,6 @@ def add_run3(ana: od.Analysis,
             "normtag": ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json", "v1"), #/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags
         },
 
-<<<<<<< HEAD
         "pu_sf"                         : (f"{jsonpog_dir}LUM/{year}_{pog_tag}/puWeights.json.gz", "v1"),
         "muon_correction"               : f"{jsonpog_dir}MUO/{year}_{pog_tag}/muon_Z.json.gz",
         "cross_mutau_mu_leg"            : f"{corr_dir}hleprare/TriggerScaleFactors/{year}{tag}/CrossMuTauHlt_MuLeg_v1.json",
@@ -798,18 +745,6 @@ def add_run3(ana: od.Analysis,
         "electron_idiso"                : f"{jsonpog_dir}EGM/{year}_{pog_tag}/electron.json.gz",
         "electron_trigger"              : f"{jsonpog_dir}EGM/{year}_{pog_tag}/electronHlt.json.gz",
         "tau_correction"                : f"{jsonpog_tau_dir}TAU/{year}_{tag}/tau_DeepTau2018v2p5_{year}_{tag}.json.gz",
-=======
-        "pu_sf"                         : (f"{jsonpog_dir}LUM/{cfg.x.year}_{tag}/puWeights.json.gz", "v1"),
-        "muon_correction"               : f"{jsonpog_dir}MUO/{cfg.x.year}_{tag}/muon_Z.json.gz",
-        "cross_mutau_mu_leg"            : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/CrossMuTauHlt_MuLeg_v1.json",
-        "HLT_mu_eff"                    : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
-        "electron_scaling_smearing"     : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
-        "electron_ss"                   : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
-        "electron_idiso"                : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
-        "electron_trigger"              : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
-        "tau_correction"                : f"{jsonpog_tau_dir}TAU/{cfg.x.year}_{tau_tag}/tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}.json.gz",
-        "tau_sf"                        : f"{jsonpog_tau_dir}TAU/{cfg.x.year}_{tau_tag}/tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}.json.gz",
->>>>>>> parent of c558924 (Revert "Merge pull request #91 from jmalvaso/cf_v02_v03_transition_1")
         "zpt_weight"                    : f"{corr_dir}zpt_reweighting_LO_2022.root",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
@@ -821,7 +756,7 @@ def add_run3(ana: od.Analysis,
         "ml_model_even"                 : f"{ml_dir}{ch_short}/EVEN/model_{ch_short}_EVEN.json",
         "ml_model_odd"                  : f"{ml_dir}{ch_short}/ODD/model_{ch_short}_ODD.json",
     })
-    # --------------------------------------------------------------------------------------------- #
+    #--------------------------------------------------------------------------------------------- #
     # electron settings
     # names of electron correction sets and working points
     # (used in the electron_sf producer)

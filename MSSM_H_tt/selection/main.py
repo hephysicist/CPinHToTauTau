@@ -4,7 +4,6 @@
 Exemplary selection methods.
 """
 
-from typing import Optional
 from operator import and_
 from functools import reduce
 

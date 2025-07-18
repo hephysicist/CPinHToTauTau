@@ -1,7 +1,7 @@
 import functools
 from columnflow.production import Producer, producer
 from columnflow.util import maybe_import, safe_div
-from columnflow.columnar_util import set_ak_column,remove_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
+from columnflow.columnar_util import set_ak_column,remove_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view
 from columnflow.production.util import attach_coffea_behavior
 from law.util import InsertableDict
 

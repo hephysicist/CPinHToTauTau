@@ -3,7 +3,6 @@ Column production methods related to higher-level features.
 """
 import functools
 
-from typing import Optional
 from columnflow.production import Producer, producer
 from columnflow.production.categories import category_ids
 from columnflow.production.normalization import normalization_weights
@@ -12,13 +11,10 @@ from columnflow.production.cms.seeds import deterministic_seeds
 from columnflow.reduction.util import create_collections_from_masks
 from columnflow.util import maybe_import
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
-from columnflow.columnar_util import optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
-#from httcp.production.PhiCPNeutralPion import PhiCPNPMethod
-from httcp.production.ReArrangeHcandProds import reArrangeDecayProducts, reArrangeGenDecayProducts
-from httcp.production.PhiCP_Producer import ProduceDetPhiCP, ProduceGenPhiCP
 
-from httcp.production.weights import muon_weight, tau_weight, get_mc_weight, tauspinner_weight, zpt_weight, electron_weight,fake_factors, trigger_weight_mutau
+from httcp.production.weights import (muon_weight, tau_weight, get_mc_weight, tauspinner_weight, 
+                                      zpt_weight, electron_weight,fake_factors, trigger_weight_mutau)
 from httcp.production.sample_split import split_dy
 from httcp.production.generatorZ import genZ
 from httcp.production.met_recoil import gen_boson, met_recoil
@@ -113,13 +109,6 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     
     print("Producing pion energy split...")
     events = self[pion_energy_split](events, **kwargs)
-<<<<<<< HEAD
-    
-    print("Producing Jet features...")
-    events = set_ak_column_f32(events, "Jet.jec_no_jec_diff", (events.Jet.pt - events.Jet.pt_no_jec))
-    
-=======
->>>>>>> parent of c558924 (Revert "Merge pull request #91 from jmalvaso/cf_v02_v03_transition_1")
     print("Producing jet variables for plotting...") 
     events = self[jet_pt_def](events, **kwargs)
     events = self[jets_taggable](events, **kwargs)   
