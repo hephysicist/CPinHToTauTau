@@ -135,6 +135,30 @@ def add_common_features(cfg: od.config) -> None:
         x_title="Luminosity block",
         discrete_x=True,
     )
+    cfg.add_variable( #PV.npvs = total number of reconstructed primary vertices https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv14/2024Prompt/doc_EGamma1_Run2024D-PromptReco-v1.html#SV
+        name="npvs",
+        expression="PV.npvs",
+        binning=(20, 0, 100.0),
+        x_title="Reconstructed primary vertices",
+        null_value=EMPTY_FLOAT,
+        #discrete_x=True,
+    )
+    cfg.add_variable( #Pileup.nTrueInt
+        name="pu_nTrue_Int",
+        expression="Pileup.nTrueInt",
+        binning=(20, 0.0, 100.0),
+        x_title="True number of Pile Up per Event",
+        null_value=EMPTY_FLOAT,
+        #discrete_x=True,
+    )
+    cfg.add_variable( #Pileup.nPU
+        name="nPU",
+        expression="Pileup.nPU",
+        binning=(20, 0.0, 100.0),
+        x_title="Number of Pile Up per Event",
+        null_value=EMPTY_FLOAT,
+        #discrete_x=True,
+    )
 
 
 def add_lepton_features(cfg: od.Config) -> None:
@@ -775,6 +799,15 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 unit="",
                 x_title= rf"{lep_str} $\frac{{|IP|}}{{\sigma(IP)}}$",
             )
+            for coord in ['x','y','z']:
+                cfg.add_variable(
+                    name=f"{ch_str}_{lep}_IP{coord}",
+                    expression=f"hcand_{ch_str}.{lep}.IP{coord}",
+                    null_value=EMPTY_FLOAT,
+                    binning=(30, -0.002, 0.002),
+                    unit="",
+                    x_title= rf"{lep_str} $IP_{coord}$",
+                )
             if lep == 'lep0':
                 if ch_str == 'mutau':
                     cfg.add_variable(
