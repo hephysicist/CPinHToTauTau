@@ -840,7 +840,21 @@ def add_run3(ana: od.Analysis,
     
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
-
+ 
+    cfg.x.event_weights = DotDict({
+        "normalization_weight": [],
+        "mc_weight":[],
+        "tau_weight_nom": get_shifts("tau"),
+        "pu_weight": [],
+        "tauspinner_weight": [],
+        "zpt_weight":[],
+        "muon_weight_nom": get_shifts("mu"),
+        "electron_weight_nom": get_shifts("electron"),        
+        "trigger_weight_mutau_nom": [],
+    })
+    for dataset in cfg.datasets:
+        if dataset.has_tag("ttbar"):
+            dataset.x.event_weights = {"top_pt_weight": get_shifts("top_pt")} 
     # thisdir = os.path.dirname(os.path.abspath(__file__))
     
     # with open(os.path.join(thisdir, "jec_sources.yaml"), "r") as f:
