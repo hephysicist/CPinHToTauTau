@@ -12,12 +12,13 @@ from columnflow.histogramming import HistProducer, hist_producer
 from columnflow.histogramming.default import cf_default, create_hist_from_variables, fill_hist, translate_hist_intcat_to_strcat
 from columnflow.columnar_util import Route
 from columnflow.util import maybe_import, pattern_matcher
+from columnflow.columnar_util import EMPTY_FLOAT
 from columnflow.types import Any
 np = maybe_import('numpy')
 ak = maybe_import('awkward')
 hist = maybe_import('hist')
 
-@cf_default.hist_producer(keep_weights=None, skip_compatibility_check=True, drop_weights={'normalization_weight_inclusive'})
+@cf_default.hist_producer(keep_weights=None, skip_compatibility_check=True, drop_weights={"normalization_weight_inclusive"})
 def default(self: HistProducer, events: ak.Array, **kwargs) -> ak.Array:
     processes = self.dataset_inst.processes.names()
     weight = ak.Array(np.ones(len(events), dtype=np.float32))
@@ -26,14 +27,22 @@ def default(self: HistProducer, events: ak.Array, **kwargs) -> ak.Array:
     weight_dict = {}
     for cat in self.config_inst.categories.names():
         category = self.config_inst.get_category(cat)
+        category_ids = events.category_ids 
+        mask = ak.any(category_ids == category.id, axis = 1)
+        masked_weights = ak.mask(weight, mask)
+        masked_weights = ak.fill_none(masked_weights, 0.0) 
+    
+        masked_events = events
+
         if 'apply_ff' not in category.aux.keys():
-            weight_dict[category] = weight
+            weight_dict[cat] = masked_weights
         elif category.aux['apply_ff'] == 'wj':
             self.publish_message(f'applying FF weights: ff_weight_wj_nominal, category: {category.name}')
-            weight_dict[category] = weight * events.ff_weight_wj_nominal
+            weight_dict[cat] = masked_weights * masked_events.ff_weight_wj_nominal
         elif category.aux['apply_ff'] == 'qcd':
             self.publish_message(f'applying FF weights: ff_weight_qcd_nominal, category: {category.name}')
-            weight_dict[category] = weight * events.ff_weight_qcd_nominal
+            weight_dict[cat] = masked_weights * masked_events.ff_weight_qcd_nominal
+
     return (events, weight_dict)
 
 @default.init
@@ -66,12 +75,25 @@ def default_fill_hist(self: HistProducer, h: dict, data: dict[str, Any], task: l
     """
     Fill the histogram with the data.
     """
+    category_ids = data['category']
     data = {k: v for k, v in data.items() if k != 'category'}
     weight_dict = data['weight']
-    for category in self.config_inst.get_leaf_categories():
-        data['weight'] = weight_dict[category]
-        fill_hist(h[category], data, last_edge_inclusive=task.last_edge_inclusive)
+    for cat in self.config_inst.categories.names():
+        category = self.config_inst.get_category(cat)
+        mask = ak.any(category_ids == category.id, axis = 1)
+        variable_name = [key for key in data.keys() if key != 'weight' and key != 'category' and key!= 'process' and key != 'shift']
+        if len(variable_name) != 1:     
+            raise ValueError(f"Expected exactly one variable to fill histogram, found {len(variable_name)}: {variable_name}")
+        variable_name = variable_name[0]
 
+        masked_variable = ak.mask(data[variable_name],mask)
+        masked_variable = ak.fill_none(masked_variable, EMPTY_FLOAT)  
+    
+        data["weight"] = weight_dict[cat]
+        data[variable_name] = masked_variable  
+        print("fill data:", cat, data)   
+        fill_hist(h[category], data, last_edge_inclusive=task.last_edge_inclusive)
+    print("fill:", h)    
 @default.post_process_hist
 def default_post_process_hist(self: HistProducer, h_dict: dict, task: law.Task) -> dict:
     """
@@ -89,13 +111,6 @@ def default_post_process_hist(self: HistProducer, h_dict: dict, task: law.Task) 
             shift_map = {task.global_shift_inst.id: task.global_shift_inst.name}
             h = translate_hist_intcat_to_strcat(h, 'shift', shift_map)
         hist[category] = h
+    print("postprocess:", hist)    
     return hist
 
-@default.post_process_merged_hist
-def post_process_merged_hist_func(self: HistProducer, h_dict: dict, task: law.Task) -> None:
-    """
-    Post-process the his togram, converting integer to string axis for consistent lookup across configs where ids might
-    be different.
-    """
-    hist = {}
-    print(h_dict)
