@@ -32,6 +32,8 @@ def add_categories(config: od.Config,
                     if 'regs' in aux_spec:
                         kwargs['aux'][aux_spec] = {key: '_'.join((base_cat.name, val)) for (key,val) in aux_content.items()}
                     else:
+                        if aux_spec == 'fit_var' and isinstance(aux_content, str):
+                            aux_content = [aux_content]
                         kwargs['aux'][aux_spec] = aux_content
             base_cats.append(kwargs['name'])
             add_category(config, **kwargs)
@@ -55,9 +57,13 @@ def add_categories(config: od.Config,
                     reg_map_tagged = dict(zip(reg_map.keys(), map(add_tag, reg_map.values())))
                     kwargs['aux'][aux_key] = reg_map_tagged
                 else:
+                    if aux_key == 'fit_var' and isinstance(aux_content, str):
+                        aux_content = [aux_content]
                     kwargs['aux'][aux_key] = aux_content
         if ('aux' in child_cat.keys()) and parent_cat.aux:
             for (aux_key, aux_content) in child_cat['aux'].items():
+                if aux_key == 'fit_var' and isinstance(aux_content, str):
+                    aux_content = [aux_content]
                 kwargs['aux'][aux_key] = aux_content
                 
         add_category(config, **kwargs)
@@ -183,15 +189,16 @@ def add_categories(config: od.Config,
     tau_decays_map  = DotDict.wrap({
         "tau2pi"     : {'selection': ["pnet_dm0","tau_ip_cut"], 
                         'label': f" \n mu pi",
-                        'aux'       : {'fit_var': 'phi_cp_mu_pi'},
+                        'aux'       : {'fit_var': ["phi_cp_mu_pi"]},
                         },
         "tau2rho"    : {'selection': ["pnet_dm1", "hps_dm1", "pion_E_split_cut", "tau_has_em_prods"],
                         'label': f" \n mu rho",
-                        'aux'       : {'fit_var': 'phi_cp_mu_rho'},
+                        'aux'       : {'fit_var': ["phi_cp_mu_rho"]},
                         },
-        "tau2a1"     : {'selection': ["pnet_dm10", "hps_dm10"],
-                        'label': f" \n mu a1",
-                        'aux'       : {'fit_var': 'phi_cp_mu_a1_1pr'},},
+        "tau2a1_3pr"     : {'selection': ["pnet_dm10", "hps_dm10"],
+                        'label': f" \n mu a1 3pr",
+                        'aux'       : {'fit_var': ['phi_cp_mu_a1_3pr_dp', 'phi_cp_mu_a1_3pr_pv']},
+                        },
         })
     
     splitted_by_tau_dm = create_child_categories(config,
@@ -234,7 +241,7 @@ def add_categories(config: od.Config,
         #"dm11"    : {'selection': ["pnet_dm11"], 'label': f" \n tau PNet DM = 11",},
         #"tau2pi"     : {'selection': ["pnet_dm0","tau_ip_cut"], 'label': r"$\mu \pi$",},
         #"tau2rho"    : {'selection': ["pnet_dm1", "hps_dm1", "pion_E_split_cut"], 'label': r"$\mu \rho$",},
-        #"tau2a1"     : {'selection': ["pnet_dm10", "hps_dm10"], 'label': r"$\mu a1$",},
+        #"tau2a1_3p"     : {'selection': ["pnet_dm10", "hps_dm10"], 'label': r"$\mu a1$",},
 
         # "nj0"    : {'selection' : ["njets_eq0"], 'label'     : f" \n $n_{{jets}}= 0$",},
         # "nj1"    : {'selection' : ["njets_eq1"], 'label'     : f" \n $n_{{jets}}= 1$",},

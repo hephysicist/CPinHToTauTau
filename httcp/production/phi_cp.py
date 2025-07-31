@@ -42,8 +42,8 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     tauprod = events.tau_decay_prods_mutau_lep1
     muon    = events.hcand_mutau.lep0
     
-    p1 = get_lep_p4(muon)
-    r1 = get_ip_p4(muon)
+    p1 = p2 = get_lep_p4(muon)
+    r1 = r2 = get_ip_p4(muon)
     ch1 = muon.charge
     ip2 = get_ip_p4(tau)
     
@@ -82,82 +82,96 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         do_phase_shift = ((p2.energy - r2.energy)/(p2.energy + r2.energy)) < 0
 
     elif pair_decay_ch == "mu_a1_3pr_dp":
-        charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
-        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
-        # same sign pions : charge same as tau
-        ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
-        sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
-        best_pion = ak.drop_none(ak.firsts(ss_pions[sorted_idx],axis=1)[..., np.newaxis])
-        
-        # opposite sign pion : charge opposite to tau
-        os_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == -tau_ch))
-        
-        # get the fist 2 highest p1 pions if available
-        os_pi = get_lep_p4(os_pions) # 4-vector
+        charged_pion = ak.drop_none(ak.mask(tauprod, pion_mask(tauprod)))
 
-        ss_pi1 = get_lep_p4(best_pion[:, :1]) # 4-vector of the first pt leading ss pion
-        ss_pi2 = get_lep_p4(best_pion[:, 1:2]) # 4-vector of the second pt leading ss pion
+        #Create sum of charges of the pions = -1*charge of tau = same charge pion 
+        ss_ch, _ = ak.broadcast_arrays(ak.sum(charged_pion.charge, axis=1),
+                                        charged_pion.charge)
+        ss_pions = ak.drop_none(ak.mask(charged_pion, charged_pion.charge == ss_ch))
+        os_pion  = ak.drop_none(ak.mask(charged_pion, charged_pion.charge == -ss_ch))
+        
+        mask_3pr = ((ak.num(ss_pions,axis=1)==2) & (ak.num(os_pion,axis=1)==1))[..., np.newaxis]
+        os_pi  = ak.drop_none(ak.mask(get_lep_p4(os_pion),mask_3pr))
+        ss_pi1 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:,  :1]),mask_3pr))
+        ss_pi2 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, 1:2]),mask_3pr)) 
 
-        # calculate the invariant masses of the two combinations
         m1 = (os_pi + ss_pi1).mass
         m2 = (os_pi + ss_pi2).mass
         
-        # calculate the mass difference with respect to the rho mass
+        rho_mass = 0.77526
+        dm1 = np.abs(m1 - rho_mass)
+        dm2 = np.abs(m2 - rho_mass)
+        
+        sel_ss_pi = ak.where(dm1 < dm2,
+                            ss_pi1,
+                            ss_pi2)
+        
+        # Create 4-vectors of tau impact parameters
+        p2 = os_pi #charge of this pion is the same as the charge of tau
+        r2 = sel_ss_pi #charge of this pion is opposite to the charge of tau
+
+        final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]   
+        p2 = ak.drop_none(ak.mask(p2, final_mask))
+        r2 = ak.drop_none(ak.mask(r2, final_mask))
+
+        do_phase_shift = ((p2.energy - r2.energy)/(p2.energy + r2.energy)) < 0
+
+    elif pair_decay_ch == "mu_a1_3pr_pv":
+        charged_pion = ak.drop_none(ak.mask(tauprod, pion_mask(tauprod)))
+
+        # Create sum of charges of the pions = -1*charge of tau = same charge pion
+        ss_ch, _ = ak.broadcast_arrays(ak.sum(charged_pion.charge, axis=1), charged_pion.charge)
+        ss_pions = ak.drop_none(ak.mask(charged_pion, charged_pion.charge == ss_ch))
+        os_pion  = ak.drop_none(ak.mask(charged_pion, charged_pion.charge == -ss_ch))
+
+        # Select best 2 SS pions and 1 OS pion only for valid combinations
+        mask_3pr = ((ak.num(ss_pions,axis=1)==2) & (ak.num(os_pion,axis=1)==1))[..., np.newaxis]
+        os_pi  = ak.drop_none(ak.mask(get_lep_p4(os_pion),mask_3pr))
+        ss_pi1 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:,  :1]),mask_3pr))
+        ss_pi2 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, 1:2]),mask_3pr))
+
+        tau_p4 = get_lep_p4(tau_MTT)
+
+        # Drop events with empty inputs before boosting
+        valid_mask = ((ak.num(os_pi) == 1) & (ak.num(tau_p4) == 1) &
+                    (ak.num(ss_pi1) == 1) & (ak.num(ss_pi2) == 1))[..., np.newaxis]
+        os_pi   = ak.drop_none(ak.mask(os_pi,   valid_mask))
+        tau_p4  = ak.drop_none(ak.mask(tau_p4,  valid_mask))
+        ss_pi1  = ak.drop_none(ak.mask(ss_pi1,  valid_mask))
+        ss_pi2  = ak.drop_none(ak.mask(ss_pi2,  valid_mask))
+
+        vecs_p4 = {
+            'p1': os_pi,
+            'p2': tau_p4,
+            'ss1': ss_pi1,
+            'ss2': tau_p4
+            }
+
+        zmf_vars = make_boost(vecs_p4)
+
+        a1_pv = PolarimetricA1(zmf_vars['P2'],
+                           zmf_vars['P1'],
+                           zmf_vars['SS1'],
+                           zmf_vars['SS2'],
+                           ak.firsts(tau.charge))
+
+        r2 = a1_pv.PVC().boostCM_of_p4(-(vecs_p4['p1'] + vecs_p4['p2']))
+        p2 = tau_p4
+
+        # Select ss pion closer to rho mass (for do_phase_shift sign)
+        m1 = (os_pi + ss_pi1).mass
+        m2 = (os_pi + ss_pi2).mass
         rho_mass = 0.77526
         dm1 = np.abs(m1 - rho_mass)
         dm2 = np.abs(m2 - rho_mass)
 
         sel_ss_pi = ak.where(dm1 < dm2, ss_pi1, ss_pi2)
-        
-        # tau DP 4 vectors
-        p2 = os_pi
-        r2 = sel_ss_pi
-        do_phase_shift = ((p2.energy - r2.energy)/(p2.energy + r2.energy)) < 0
 
-    elif pair_decay_ch == "mu_a1_3pr_dp":
-        charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
-        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
-        ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
-        sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
-        best_pion = ak.drop_none(ak.firsts(ss_pions[sorted_idx],axis=1)[..., np.newaxis])
+        do_phase_shift = ((sel_ss_pi.energy - os_pi.energy) / (sel_ss_pi.energy + os_pi.energy)) < 0
 
-        # opposite sign pion : charge opposite to tau
-        os_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == -tau_ch))
-
-        lf_vars = {}
-        lf_vars['os_pi'] = get_lep_p4(os_pions)
-        lf_vars['ss_pi1'] = get_lep_p4(best_pion[:, :1]) # 4-vector of the first pt leading ss pion
-        lf_vars['ss_pi2'] = get_lep_p4(best_pion[:, 1:2]) # 4-vector of the second pt leading ss pion
-        lf_vars['tau'] = tau_MTT
-
-        tau_p4 = get_lep_p4(tau_MTT)
-        boostvec_ = p1 + tau_p4
-        
-        zmf_vars = {
-            key : vec.boostCM_of_p4(boostvec_) for (key, vec) in lf_vars.items()
-        }
-        a1_pv = PolarimetricA1(zmf_vars['tau'],
-                               zmf_vars['os_pi'],
-                               zmf_vars['ss_pi1'],
-                               zmf_vars['ss_pi2'],
-                               ak.firsts(tau.charge))
-
-        r2 = a1_pv.PVC().boostCM_of_p4(-boostvec_) #it will be boosted back later
-        p2 = tau_p4 # 4-vector of the tau
-
-        # Select ss pion closer to rho mass (for do_phase_shift sign)
-        m1 = (lf_vars['os_pi'] + lf_vars['ss_pi1']).mass
-        m2 = (lf_vars['os_pi'] + lf_vars['ss_pi2']).mass
-        rho_mass = 0.77526
-        dm1 = np.abs(m1 - rho_mass)
-        dm2 = np.abs(m2 - rho_mass)
-        lf_vars['sel_ss_pi'] = ak.where(dm1 < dm2,  
-                                        lf_vars['ss_pi1'],
-                                        lf_vars['ss_pi2'])
-
-        do_phase_shift = ((lf_vars['sel_ss_pi'].energy - lf_vars['os_pi'].energy)/  
-                          (lf_vars['sel_ss_pi'].energy + lf_vars['os_pi'].energy)) < 0
-
+        final_mask = ((ak.num(p2, axis=1) == 1) & (ak.num(r2, axis=1) == 1))[..., np.newaxis]
+        p2 = ak.drop_none(ak.mask(p2, final_mask))
+        r2 = ak.drop_none(ak.mask(r2, final_mask))
         
         
     p1 = ak.drop_none(ak.mask(p1, final_mask))
