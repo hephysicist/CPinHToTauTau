@@ -517,7 +517,7 @@ def phi_cp_variables(cfg: od.Config) -> None:
     binning=(n_bins_phi_cp, 0, 2*np.pi),
     x_title=rf"$\varphi_{{CP}} (rad)",
     )
-    for the_ch in ['mu_pi', 'mu_rho', 'mu_a1_1pr', "rho_rho","pi_pi"]:
+    for the_ch in ['mu_pi', 'mu_rho', 'mu_a1_1pr', "mu_a1_3pr"]:
         spitted_str = the_ch.split('_')
         if 'a1' in the_ch: 
             title_str = "\\" + spitted_str[0] + fr" a_1, {spitted_str[2]}"
@@ -606,6 +606,14 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 binning=(40, 0.0, 200.0),
                 unit="GeV",
                 x_title=r"$m_{vis}$",
+            )
+        cfg.add_variable(
+                name=f"{ch_str}_fastMTT_mass",
+                expression=f"hcand_{ch_str}.fastMTT.mass",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0.0, 200.0),
+                unit="GeV",
+                x_title=r"$m_{FastMTT}$",
             )
         cfg.add_variable(
                 name=f"{ch_str}_mvis_fine",

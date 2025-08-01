@@ -321,15 +321,22 @@ def tau_has_pions(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Arr
     mask = ak.fill_none(ak.sum(pion_mask(tauprod), axis=1) >= 1,False)
     return events, mask
 
-
-
+#For a1_3pr decays additional cut on the quality of sv is required
+@categorizer(uses={'event', 'hcand_*','Tau.hasRefitSV', 'Tau.rawIdx'})
+def has_refit_sv(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    channel = self.config_inst.channels.names()[0]
+    sel_tau_raw_idx = events[f'hcand_{channel}'].lep1.rawIdx
+    tau_idx, sel_tau_idx = ak.broadcast_arrays(events.Tau.rawIdx, ak.firsts(sel_tau_raw_idx))
+    tau_mask = (tau_idx == sel_tau_idx)
+    hasRefitSV = events.Tau.hasRefitSV[tau_mask]
+    mask = ak.fill_none(ak.firsts((hasRefitSV == True), axis=1),False)
+    return events, mask
 
 #Cut  on energy split between charged and neutral pion used in definition of murho and mu a1 categories
 @categorizer(uses={'event', 'pion_E_split'})
 def pion_E_split_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     mask = ak.fill_none(events.pion_E_split > 0.2, False)
     return events, mask
-
 
 def _bdt_cat(self: Categorizer, events: ak.Array, cat_id, **kwargs) -> tuple[ak.Array, ak.Array]:
     mask = (events.bdt_cat==cat_id)
@@ -340,13 +347,11 @@ for cat_id, the_name in enumerate(["gtau", "higgs", "fake"]):
     globals()[f'bdt_cat_{the_name}'] = categorizer(copy_function(tmp_func,f'bdt_cat_{the_name}'),
                                                uses={'event', 'bdt_cat'}, )
     
-
 def _hig_cat(self: Categorizer, events: ak.Array, low_cut, up_cut, **kwargs) -> tuple[ak.Array, ak.Array]:
     mask = (events.bdt_raw_score_higgs > low_cut) & (events.bdt_raw_score_higgs <= up_cut)
     return events, ak.fill_none(mask,False)
 
-
-for cat_id,(low_cut, up_cut) in enumerate([(0.3,0.5),(0.5,0.7),(0.7,1)]):
+for cat_id,(low_cut, up_cut) in enumerate([(0.33,0.5),(0.5,0.7),(0.7,1)]):
     tmp_func = lambda self, events, **kwargs: _hig_cat(self,
                                                        events,
                                                        low_cut=low_cut,
