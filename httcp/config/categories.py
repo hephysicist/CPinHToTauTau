@@ -32,6 +32,8 @@ def add_categories(config: od.Config,
                     if 'regs' in aux_spec:
                         kwargs['aux'][aux_spec] = {key: '_'.join((base_cat.name, val)) for (key,val) in aux_content.items()}
                     else:
+                        if aux_spec == 'fit_var' and isinstance(aux_content, str):
+                            aux_content = [aux_content]
                         kwargs['aux'][aux_spec] = aux_content
             base_cats.append(kwargs['name'])
             add_category(config, **kwargs)
@@ -55,9 +57,13 @@ def add_categories(config: od.Config,
                     reg_map_tagged = dict(zip(reg_map.keys(), map(add_tag, reg_map.values())))
                     kwargs['aux'][aux_key] = reg_map_tagged
                 else:
+                    if aux_key == 'fit_var' and isinstance(aux_content, str):
+                        aux_content = [aux_content]
                     kwargs['aux'][aux_key] = aux_content
         if ('aux' in child_cat.keys()) and parent_cat.aux:
             for (aux_key, aux_content) in child_cat['aux'].items():
+                if aux_key == 'fit_var' and isinstance(aux_content, str):
+                    aux_content = [aux_content]
                 kwargs['aux'][aux_key] = aux_content
                 
         add_category(config, **kwargs)
@@ -201,9 +207,8 @@ def add_categories(config: od.Config,
         
         "tau2a1_3pr": {'selection': ["pnet_dm10","has_refit_sv"],
                         'label': f"\n mu a1 3pr",
-                        'aux'       : {'fit_var': 'phi_cp_mu_a1_3pr'},
+                        'aux'       : {'fit_var': 'phi_cp_mu_a1_3pr'},#TODO add variables 'phi_cp_mu_a1_3pr_dp', 'phi_cp_mu_a1_3pr_pv'
                         },
-        
         })
     
     splitted_by_bdt = create_child_categories(config,
