@@ -209,65 +209,70 @@ def add_hist_hooks(config: od.Config) -> None:
     def flatten_dy(task, hists, category_inst):
         if not hists:
             return hists
-        sr = category_inst
         for the_reg, h_single_reg in hists.items():
-            dy_procs = [p for p in h_single_reg.keys() if p.is_mc and 'dy' in p.name]
-            for p in dy_procs:
-                dy_hist = h_single_reg[p].copy()
-                if not dy_hist.empty():
-                    mean_val = np.average(dy_hist.view().value, axis=1)
-                    variance =np.average(dy_hist.view().variance, axis=1)/dy_hist.shape[-1]
-                    #print(f"Perform dy flattening for {the_reg}")
-                    #print(f"Before: {hists[the_reg][p].view().value}")
-                    hists[the_reg][p].view().value = mean_val
-                    hists[the_reg][p].view().variance = variance
-                    #print(f"After: {hists[the_reg][p].view().value}")
-                else:
-                    print(f"DY histogram is empty for {the_reg}")
+            if ('fake' in the_reg) or ('gtau' in the_reg):
+                pass
+            else:
+                dy_procs = [p for p in h_single_reg.keys() if p.is_mc and 'dy' in p.name]
+                for p in dy_procs:
+                    dy_hist = h_single_reg[p].copy()
+                    if not dy_hist.empty():
+                        mean_val = np.average(dy_hist.view().value, axis=1)
+                        variance =np.average(dy_hist.view().variance, axis=1)/dy_hist.shape[-1]
+                        #print(f"Perform dy flattening for {the_reg}")
+                        #print(f"Before: {hists[the_reg][p].view().value}")
+                        hists[the_reg][p].view().value = mean_val
+                        hists[the_reg][p].view().variance = variance
+                        #print(f"After: {hists[the_reg][p].view().value}")
+                    else:
+                        print(f"DY histogram is empty for {the_reg}")
         return hists
     
     def symmetrize_signal(task, hists, category_inst):
         if not hists:
             return hists
         for the_reg, h_single_reg in hists.items():
-            signal_procs = [p for p in h_single_reg.keys() if p.is_mc and p.has_tag("signal")]
-            for p in signal_procs:
-                the_hist = h_single_reg[p].copy()
-                if not the_hist.empty():
-                    n_bins = the_hist.shape[-1]
-                    def get_val(idx, err=None):
-                        the_field = 'variance' if err else 'value'
-                        return getattr(hists[the_reg][p].view(), the_field)[:,idx]
-                    def set_val(hists, idx, val, var):
-                        hists[the_reg][p].view().value[:,idx]= val
-                        hists[the_reg][p].view().variance[:,idx]= var
-                        return hists 
-                    if ('cpo' in p.name) or ('sm' in p.name):
-                        for idx in range(n_bins//2):
-                            idxs = [idx,n_bins-idx-1]
-                            val = np.average([get_val(idy) for idy in idxs])
-                            var = np.average([get_val(idy,err=True) for idy in idxs])/2.
-                            hists = set_val(hists, idxs[0], val, var)
-                            hists = set_val(hists, idxs[1], val, var)
-                    elif ('mm' in p.name):
-                        for idx in range(n_bins//4):
-                            #left part of the distribution 
-                            idxs = [idx,(n_bins//2)-idx-1]
-                            val = np.average([get_val(idy) for idy in idxs])
-                            var = np.average([get_val(idy,err=True) for idy in idxs])/2.
-                            hists = set_val(hists, idxs[0], val, var)
-                            hists = set_val(hists, idxs[1], val, var)
-                            #right part of the distribution
-                            idxs = [idy+(n_bins//2) for idy in idxs]
-                            val = np.average([get_val(idy) for idy in idxs])
-                            var = np.average([get_val(idy,err=True) for idy in idxs])/2.
-                            hists = set_val(hists, idxs[0], val, var)
-                            hists = set_val(hists, idxs[1], val, var)
+            if ('fake' in the_reg) or ('gtau' in the_reg):
+                pass
+            else:
+                signal_procs = [p for p in h_single_reg.keys() if p.is_mc and p.has_tag("signal")]
+                for p in signal_procs:
+                    the_hist = h_single_reg[p].copy()
+                    if not the_hist.empty():
+                        n_bins = the_hist.shape[-1]
+                        def get_val(idx, err=None):
+                            the_field = 'variance' if err else 'value'
+                            return getattr(hists[the_reg][p].view(), the_field)[:,idx]
+                        def set_val(hists, idx, val, var):
+                            hists[the_reg][p].view().value[:,idx]= val
+                            hists[the_reg][p].view().variance[:,idx]= var
+                            return hists 
+                        if ('cpo' in p.name) or ('sm' in p.name):
+                            for idx in range(n_bins//2):
+                                idxs = [idx,n_bins-idx-1]
+                                val = np.average([get_val(idy) for idy in idxs])
+                                var = np.average([get_val(idy,err=True) for idy in idxs])/2.
+                                hists = set_val(hists, idxs[0], val, var)
+                                hists = set_val(hists, idxs[1], val, var)
+                        elif ('mm' in p.name):
+                            for idx in range(n_bins//4):
+                                #left part of the distribution 
+                                idxs = [idx,(n_bins//2)-idx-1]
+                                val = np.average([get_val(idy) for idy in idxs])
+                                var = np.average([get_val(idy,err=True) for idy in idxs])/2.
+                                hists = set_val(hists, idxs[0], val, var)
+                                hists = set_val(hists, idxs[1], val, var)
+                                #right part of the distribution
+                                idxs = [idy+(n_bins//2) for idy in idxs]
+                                val = np.average([get_val(idy) for idy in idxs])
+                                var = np.average([get_val(idy,err=True) for idy in idxs])/2.
+                                hists = set_val(hists, idxs[0], val, var)
+                                hists = set_val(hists, idxs[1], val, var)
+                        else:
+                            raise NotImplementedError(f"Signal does not have any of this tags [sm, mm, cpo]. I don't know how to symmetrize it.")
+                        norm_after = np.sum(hists[the_reg][p].view().value,axis=1)
                     else:
-                        raise NotImplementedError(f"Signal does not have any of this tags [sm, mm, cpo]. I don't know how to symmetrize it.")
-                    norm_after = np.sum(hists[the_reg][p].view().value,axis=1)
-                else:
-                    print(f"signal histogram is empty for {the_reg}")
+                        print(f"signal histogram is empty for {the_reg}")
         return hists
     
     
@@ -279,12 +284,23 @@ def add_hist_hooks(config: od.Config) -> None:
         hists[data_proc[0]].view().variance[:,1:] = 0
         return hists
     
-
+    def add_qcd_and_wj(task, hists, category_inst):
+        fake_hists = []
+        for (proc, h) in hists.items():
+            is_fake_proc = ('qcd' in proc.name) or ('wj' in proc.name )
+            if is_fake_proc: fake_hists.append(h)
+        fake_hist = sum(fake_hists[1:], fake_hists[0].copy())
+        from cmsdb.processes.qcd import qcd
+        hists[qcd] = fake_hist
+        return hists
+    
+    
     config.x.hist_hooks = {
-        "good_old_abcd"  : qcd_estimation,
-        "ff_method" : ff_method,
-        "ff_method_dr_closure_test": ff_method_dr_closure_test,
-        "flatten_dy" : flatten_dy,
-        "symmetrize_signal" : symmetrize_signal,
-        "blind_sr" : blind_sr
+        "good_old_abcd"             : qcd_estimation,
+        "add_qcd_and_wj"            : add_qcd_and_wj,
+        "ff_method"                 : ff_method,
+        "ff_method_dr_closure_test" : ff_method_dr_closure_test,
+        "flatten_dy"                : flatten_dy,
+        "symmetrize_signal"         : symmetrize_signal,
+        "blind_sr"                  : blind_sr,
     }
