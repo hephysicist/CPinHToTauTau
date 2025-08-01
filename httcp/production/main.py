@@ -29,6 +29,7 @@ from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet,
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
 from httcp.production.ip_corrector import ip_correction
 from httcp.production.bdt_score import hcp_bdt_score
+from httcp.production.fast_mtt import fast_mtt
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -69,6 +70,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_lep_fields,
         ip_correction,
         hcp_bdt_score,
+        fast_mtt,
         },
     produces={
         attach_coffea_behavior,
@@ -99,6 +101,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_lep_fields,
         ip_correction,
         hcp_bdt_score,
+        fast_mtt,
     },
     # whether weight producers should be added and called
     produce_weights=True,
@@ -131,6 +134,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = self[gen_boson](events, **kwargs)
         
     events = self[met_recoil](events,**kwargs)
+    events = self[fast_mtt](events,**kwargs)
    
     if self.dataset_inst.is_mc:
         
