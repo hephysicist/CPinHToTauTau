@@ -42,6 +42,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     tauprod = events.tau_decay_prods_mutau_lep1
     muon    = events.hcand_mutau.lep0
     
+
     p1 = p2 = get_lep_p4(muon)
     r1 = r2 = get_ip_p4(muon)
     ch1 = muon.charge
@@ -56,12 +57,6 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         p2 = get_lep_p4(best_pion) # for the tau -> rho decay, p1 - is 4-vector of the charged pion and r1 is 4-vector of the neutral pion
         r2 = get_ip_p4(tau) # Create 4-vectors of tau impact parameters
         r2 = ak.drop_none(ak.mask(r2, r2.rho2 > 0))
-        final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]
-        
-        p2 = ak.drop_none(ak.mask(p2, final_mask))
-        r2 = ak.drop_none(ak.mask(r2, final_mask))
-        # For this channel there is no need to do the phase shift, so this arrray is filled with zeros
-        do_phase_shift = ak.zeros_like(r1.energy, dtype=np.bool_) 
 
     elif pair_decay_ch == "mu_rho":
         charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
@@ -75,20 +70,27 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         # Create 4-vectors of tau impact parameters
         r2 = get_lep_p4(em_particles).sum(1)[...,np.newaxis]
         r2 = ak.drop_none(ak.mask(r2, r2.rho2 > 0)) #This is needed to remove empty events because .sum() returns 4-vector filled with zeros
-        final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]
-        
-        p2 = ak.drop_none(ak.mask(p2, final_mask))
-        r2 = ak.drop_none(ak.mask(r2, final_mask))
-        do_phase_shift = ((p2.energy - r2.energy)/(p2.energy + r2.energy)) < 0
-
-    elif pair_decay_ch == "mu_a1_3pr_dp":
+    
+    elif pair_decay_ch == "mu_a1_1pr": 
+        charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
+        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
+        ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
+        sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
+        best_pion = ak.drop_none(ak.firsts(ss_pions[sorted_idx],axis=1)[..., np.newaxis])
+        em_particles = ak.drop_none(ak.mask(tauprod,egamma_mask(tauprod)))
+        # for the tau -> rho decay, p1 - is 4-vector of the charged pion and r1 is 4-vector of the neutral pion
+        p2 = get_lep_p4(best_pion)
+        # Create 4-vectors of tau impact parameters
+        r2 = get_lep_p4(em_particles).sum(1)[...,np.newaxis]
+        r2 = ak.drop_none(ak.mask(r2, r2.rho2 > 0)) #This is needed to remove empty events because .sum() returns 4-vector filled with zeros
+       
+    elif pair_decay_ch == "mu_a1_3pr":
         charged_pion = ak.drop_none(ak.mask(tauprod, pion_mask(tauprod)))
-
         #Create sum of charges of the pions = -1*charge of tau = same charge pion 
         ss_ch, _ = ak.broadcast_arrays(ak.sum(charged_pion.charge, axis=1),
-                                        charged_pion.charge)
+                                         charged_pion.charge)
         ss_pions = ak.drop_none(ak.mask(charged_pion, charged_pion.charge == ss_ch))
-        os_pion  = ak.drop_none(ak.mask(charged_pion, charged_pion.charge == -ss_ch))
+        os_pion  = ak.drop_none(ak.mask(charged_pion, charged_pion.charge == -1*ss_ch))
         
         mask_3pr = ((ak.num(ss_pions,axis=1)==2) & (ak.num(os_pion,axis=1)==1))[..., np.newaxis]
         os_pi  = ak.drop_none(ak.mask(get_lep_p4(os_pion),mask_3pr))
@@ -103,18 +105,10 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         dm2 = np.abs(m2 - rho_mass)
         
         sel_ss_pi = ak.where(dm1 < dm2,
-                            ss_pi1,
-                            ss_pi2)
-        
-        # Create 4-vectors of tau impact parameters
+                             ss_pi1,
+                             ss_pi2)
         p2 = os_pi #charge of this pion is the same as the charge of tau
         r2 = sel_ss_pi #charge of this pion is opposite to the charge of tau
-
-        final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]   
-        p2 = ak.drop_none(ak.mask(p2, final_mask))
-        r2 = ak.drop_none(ak.mask(r2, final_mask))
-
-        do_phase_shift = ((p2.energy - r2.energy)/(p2.energy + r2.energy)) < 0
 
     elif pair_decay_ch == "mu_a1_3pr_pv":
         charged_pion = ak.drop_none(ak.mask(tauprod, pion_mask(tauprod)))
@@ -158,28 +152,21 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         r2 = a1_pv.PVC().boostCM_of_p4(-(vecs_p4['p1'] + vecs_p4['p2']))
         p2 = tau_p4
 
-        # Select ss pion closer to rho mass (for do_phase_shift sign)
-        m1 = (os_pi + ss_pi1).mass
-        m2 = (os_pi + ss_pi2).mass
-        rho_mass = 0.77526
-        dm1 = np.abs(m1 - rho_mass)
-        dm2 = np.abs(m2 - rho_mass)
-
-        sel_ss_pi = ak.where(dm1 < dm2, ss_pi1, ss_pi2)
-
-        do_phase_shift = ((sel_ss_pi.energy - os_pi.energy) / (sel_ss_pi.energy + os_pi.energy)) < 0
-
-        final_mask = ((ak.num(p2, axis=1) == 1) & (ak.num(r2, axis=1) == 1))[..., np.newaxis]
-        p2 = ak.drop_none(ak.mask(p2, final_mask))
-        r2 = ak.drop_none(ak.mask(r2, final_mask))
-        
-        
+    final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]   
     p1 = ak.drop_none(ak.mask(p1, final_mask))
+    p2 = ak.drop_none(ak.mask(p2, final_mask))
     r1 = ak.drop_none(ak.mask(r1, final_mask))
+    r2 = ak.drop_none(ak.mask(r2, final_mask))
     ip2 = ak.drop_none(ak.mask(ip2, final_mask))
     ch1 = ak.drop_none(ak.mask(ch1, final_mask))
+    
+    if pair_decay_ch == "mu_pi":
+        do_phase_shift = ak.zeros_like(r1.energy, dtype=np.bool_) 
+    else:
+        do_phase_shift = ((p2.energy - r2.energy)/(p2.energy + r2.energy)) < 0
+    
     vecs_p4 = {}
-    for var in ['p1', 'p2', 'r1', 'r2','ip2']:
+    for var in ['p1', 'p2', 'r1', 'r2', 'ip2']:
         vecs_p4[var] = eval(var)
     return vecs_p4, do_phase_shift, ch1
 
@@ -243,8 +230,8 @@ def produce_alpha(vecs_p4) -> ak.Array:
     return alpha
 
 
-channels = ['mu_pi','mu_rho','mu_a1_3pr_dp','mu_a1_3pr_pv']
 
+channels = ['mu_pi','mu_rho','mu_a1_1pr','mu_a1_3pr','mu_a1_3pr_pv']
 
 @producer(
     uses={

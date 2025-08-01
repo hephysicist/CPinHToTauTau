@@ -152,6 +152,8 @@ def add_run3(ana: od.Analysis,
         # "dy_lep_m10to50",
         #W + jets
         "wj",
+        #diboson + single top
+        "vvt",
         #diboson
         "vv", #diboson inclusive
         "ww",
@@ -177,11 +179,16 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
+        #ggF signal
         "h_ggf_htt",
         "h_ggf_htt_cpo",
         "h_ggf_htt_mm",
         "h_ggf_htt_sm",
-
+        #VBF signal
+        'h_vbf_htt',
+        'h_vbf_htt_mm',
+        'h_vbf_htt_sm',
+        'h_vbf_htt_cpo',
     ]
         
     for process_name in process_names:
@@ -234,6 +241,11 @@ def add_run3(ana: od.Analysis,
         "h_ggf_htt_cpo_filtered",
         "h_ggf_htt_mm_filtered",
         "h_ggf_htt_sm_filtered",
+        #higgs signal vbf
+        "h_vbf_htt_filtered",
+        "h_vbf_htt_cpo_filtered",
+        "h_vbf_htt_mm_filtered",
+        "h_vbf_htt_sm_filtered",
         ]
 
     dataset_names_2022postEE = [
@@ -277,11 +289,13 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
         #higgs signal ggf
-        "h_ggf_htt_filtered",
         "h_ggf_htt_cpo_filtered",
         "h_ggf_htt_mm_filtered",
         "h_ggf_htt_sm_filtered",
-
+        #higgs signal vbf
+        "h_vbf_htt_cpo_filtered",
+        "h_vbf_htt_mm_filtered",
+        "h_vbf_htt_sm_filtered",
         ]
 
     dataset_names_2023preBPix = [
@@ -322,6 +336,10 @@ def add_run3(ana: od.Analysis,
         "h_ggf_htt_sm_filtered",
         "h_ggf_htt_cpo_filtered",
         "h_ggf_htt_mm_filtered",
+        #higgs signal vbf
+        "h_vbf_htt_cpo_filtered",
+        "h_vbf_htt_mm_filtered",
+        "h_vbf_htt_sm_filtered",
         ]
 
     dataset_names_2023postBPix = [
@@ -355,6 +373,14 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
+        #higgs signal ggf
+        "h_ggf_htt_sm_filtered",
+        "h_ggf_htt_cpo_filtered",
+        "h_ggf_htt_mm_filtered",
+        #higgs signal vbf
+        "h_vbf_htt_cpo_filtered",
+        "h_vbf_htt_mm_filtered",
+        "h_vbf_htt_sm_filtered",
         ]
 
     #Simultaneously select the dataset list depending on the year,campaign tag, and iterate over the constituents
