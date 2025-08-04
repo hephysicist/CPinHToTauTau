@@ -8,5 +8,5 @@
     branch = desy_dev
 [submodule "modules/ClassicsSVfit"]
 	path = modules/ClassicsSVfit
-	url = git@github.com:mathilde-t/ClassicSVfit.git
+	url = https://github.com/mathilde-t/ClassicSVfit.git
 	branch = fastMTT_DPG

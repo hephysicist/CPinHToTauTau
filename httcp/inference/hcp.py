@@ -15,27 +15,44 @@ class hcp_model(HCPModelBase):
     Default statistical model for Higgs CP analysis
     """
     name = 'hcp_model'
-    add_qcd = True
+    add_qcd = False
+    add_fakes = True
+
+       
+    processes: list = []
+    config_categories: list = []
+    systematics: list = []
     
     def init_proc_map(self) -> None:
         # mapping of process names in the datacard ("combine name") to configs and process names in a dict
-        
         name_map = dict([
-            #("ZEE",'dy_z2ee'),
-            #("ZMM",'dy_z2mumu'),
-            #("ZTT",'dy_z2tautau'),
-            ('ZLL','dy_lep'),
-            ("W","wj"),
-            ("VV",'vv'),
+            ("ZL",'dy_z2mumu'),
+            ("ZTT",'dy_z2tautau'),
+            #Diboson + single top
+            ("VVT",'vvt'), #use hist_hooks to calculate his process
+            #ttbar
             ("TT","tt"),
-            ('ST','st'),
-            ('ggH_htt_sm', 'h_ggf_htt_sm'),
-            ('ggH_htt_mm', 'h_ggf_htt_mm'),
-            ('ggH_htt_cpo', 'h_ggf_htt_cpo'),
+            #VBF Signal
+            ('qqH_sm_htt125', 'h_vbf_htt_sm'),
+            ('qqH_ps_htt125', 'h_vbf_htt_cpo'),
+            ('qqH_mm_htt125', 'h_vbf_htt_mm'),
+            #ggF Signal
+            ('ggH_sm_prod_sm_htt125', 'h_ggf_htt_sm'),
+            ('ggH_ps_prod_ps_htt125', 'h_ggf_htt_cpo'),
+            ('ggH_mm_prod_mm_htt125', 'h_ggf_htt_mm'),
+            
+            #('ggH_htt_sm', 'h_ggf_htt_sm'),
+            #('ggH_htt_mm', 'h_ggf_htt_mm'),
+            #('ggH_htt_cpo', 'h_ggf_htt_cpo'),
+            #('VBF_htt_sm', 'h_vbf_htt_sm'),
+            #('VBF_htt_mm', 'h_vbf_htt_mm'),
+            #('VBF_htt_cpo', 'h_vbf_htt_cpo'),
         ])
         if self.add_qcd:
             name_map["QCD"] = "qcd"
-        
+        if self.add_fakes:
+            name_map["JetFakes"] = "qcd"
+            
         self.proc_map = {}
         config_inst = self.config[0]
         for combine_name, proc_name in name_map.items():
@@ -47,17 +64,31 @@ class hcp_model(HCPModelBase):
         data_datasets = []
         for the_dataset in self.config[0].datasets.names():
             if f"data_{lep_name}_" in the_dataset: data_datasets.append(the_dataset)
-        for cat in ["tau2pi", "tau2rho"]:
-            for bdt_reg in ["hig_cat_0","hig_cat_1","hig_cat_2"]:
-                the_cat = self.config[0].get_category(f"cat_{ch}_sr__{cat}__{bdt_reg}")
+        for cat in ["tau2pi", "tau2rho", "tau2a1", "tau2a1_3pr"]:
+            for bdt_reg in ["cat0","cat1","cat2"]:
+                the_cat = self.config[0].get_category(f"cat_{ch}_sr__hig__{bdt_reg}__{cat}")
                 self.add_category(
-                    f"cat_{self.campaign_key}_{ch}_sr_{cat}_{bdt_reg}",
-                    config_category=f"cat_{ch}_sr__{cat}__{bdt_reg}",
+                    f"{self.campaign_key}_{bdt_reg}_{cat}",
+                    config_category=f"cat_{ch}_sr__hig__{bdt_reg}__{cat}",
                     config_variable=the_cat.x.fit_var,
                     config_data_datasets=data_datasets,
                     mc_stats = True,
                     empty_bin_value=0.0
                 )
+        #Adding background categories
+        for cat_name in ['gtau','fake']:
+            the_cat = self.config[0].get_category(f"cat_mutau_sr__{cat_name}")
+            if cat_name == 'gtau': dc_name = 'tautau'
+            else : dc_name = cat_name
+            self.add_category(
+                    dc_name,
+                    config_category=f"cat_mutau_sr__{cat_name}",
+                    config_variable=the_cat.x.fit_var,
+                    config_data_datasets=data_datasets,
+                    mc_stats = True,
+                    empty_bin_value=0.0
+                )
+            
     # def init_categories(self) -> None:
     #     ch= self.config[0].channels.names()[0]
     #     lep_name = ch.replace('tau','')
@@ -82,7 +113,7 @@ class hcp_model(HCPModelBase):
             dataset_names = []
             if not is_data_driven:
                 proc_inst = config_inst.get_process(proc_name)
-                is_signal = ("h_ggf_htt" in proc_inst.name)
+                is_signal = ("h_ggf_htt" in proc_inst.name) or ("h_vbf_htt" in proc_inst.name)
                 dataset_names = [
                     dataset.name
                     for dataset in get_datasets_from_process(config_inst, proc_name, strategy="all")
@@ -90,6 +121,7 @@ class hcp_model(HCPModelBase):
                 if not dataset_names:
                     print(f"skipping process {proc_name} in inference model {self.cls_name}, no matching datasets ")
                     print(f"found in config {config_inst.name}")
+                        
             self.add_process(
                 name=combine_name,
                 config_process=proc_name, 
@@ -99,6 +131,50 @@ class hcp_model(HCPModelBase):
                 
             )
 
+
+
+    # def add_shape_parameters(self):
+    #     """
+    #     Function that adds all rate parameters to the inference model
+    #     """
+    #     processes_per_shape = {
+    #         "tau": ["all"],
+    #     }
+    #     source_per_shape = {shape: shape for shape in processes_per_shape.keys()}
+    #     for shape in processes_per_shape.keys():
+    #         if "pdf_shape" in shape:
+    #             source_per_shape[shape] = "pdf"
+        
+    #     for shape_uncertainty, shape_processes in processes_per_shape.items():
+    #         #from IPython import embed; embed()
+    #         # If "all" is included, takes all processes except for the ones specified (starting with !)
+    #         if "all" in shape_processes:
+    #             _remove_processes = {proc[:1] for proc in shape_processes if proc.startswith("!")}
+    #             shape_processes = set(self.proc_map.keys()) - _remove_processes
+
+    #         param_kwargs = {
+    #             "type": ParameterType.shape,
+    #             "process": shape_processes,
+    #         }
+            
+    #         param_kwargs["config_data"] = {
+    #             config_inst.name: self.parameter_config_spec(
+    #                 shift_source=shape_uncertainty,
+    #             )
+    #             for config_inst in self.config
+    #             if config_inst.has_shift(f"{shape_uncertainty}_up")
+    #         }
+
+    #         self.add_parameter(
+    #             shape_uncertainty,
+    #             **param_kwargs,
+    #         )
+          
+    #         if "pdf" in shape_uncertainty:
+    #             self.add_parameter_to_group(shape_uncertainty, "theory")
+    #         else:
+    #             self.add_parameter_to_group(shape_uncertainty, "experiment")
+                
     def init_parameters(self) -> None:
         # general groups
         #self.add_parameter_group("experiment")
@@ -116,6 +192,9 @@ class hcp_model(HCPModelBase):
                     process=[f"*", "!QCD*"],
                     group="experiment",
                 )
+        #self.add_shape_parameters()
+        
+    
                     
 
 @hcp_model.inference_model
