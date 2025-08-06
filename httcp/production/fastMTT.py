@@ -133,13 +133,13 @@ def fastMTT(
     for lep_str in ['lep0', 'lep1']:
         lep = getattr(hcand, lep_str)
 
-        constraint_key = 'x1' if lep_str == 'lep0' else 'x2'
-        constraint = MTT_cpp_rest[constraint_key]
+        modifier_key = 'x1' if lep_str == 'lep0' else 'x2'
+        modifier = MTT_cpp_rest[modifier_key]
 
         lep_dict = {}
 
         for hcand_feature in hcand_features:
-            lep_dict[hcand_feature] = getattr(lep, hcand_feature) / constraint
+            lep_dict[hcand_feature] = getattr(lep, hcand_feature) / modifier
 
         # Prepare the reconstructed tau leptons into new hcand columns | part 1/2
         leptons_corrected[lep_str] = ak.zip(lep_dict)
