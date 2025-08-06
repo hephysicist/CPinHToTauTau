@@ -125,6 +125,11 @@ def fastMTT(
         fast_mtt_unflattened[the_var] = ak.unflatten(the_arr, ak.num(hcand.mass,axis=1)) 
     MTT_cpp_rest = ak.zip(fast_mtt_unflattened) # -> mass, x1, x1_BW, x1_cons, x2, x2_BW, x2_cons
 
+    ''' ATTENTION : x1_BW and x2_BW denote Boson Mass Window, not Breit Wigner ! 
+    
+        (Breit Wigner can be used in apply_fastMTT.py and 
+        ~/CPinHToTauTau/modules/ClassicsSVfit/python/FastMTT.py l.37)'''
+
 
     # Extract reconstructed MTT Higgs mass and decay products properties
     hcand_features = ['pt', 'eta', 'phi'] #no 'px', 'py', 'pz', in lep so far (put can be used in apply_fastMTT.py)
