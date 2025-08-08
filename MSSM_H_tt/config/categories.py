@@ -124,12 +124,42 @@ def add_categories(config: od.Config,
                                                'dr_num': 'abcd_dr_num',
                                                'dr_den':  'abcd_dr_den',
                                                },
-                                           },},
+                                           #fake factor categories
+                                           'ff_regs': {
+                                               "ar_qcd"      : "ar_qcd",
+                                               "dr_num_qcd"  : "dr_num_qcd",
+                                               "dr_den_qcd"  : "dr_den_qcd",
+                                               "ar_yields"   : "ar_yields",
+                                               #categories for closure tests
+                                               "dr_den_qcd_w_ff": "dr_den_qcd_w_ff",
+                                           },},},
+        #categories for jet fakes estimation via classic Fake Factor method    
+        "ar_qcd"         : {'selection' : ["lep_iso"    , "ss_charge"],
+                            'aux'       : {'apply_ff': ''}}, #qcd
+        "dr_num_qcd"     : {'selection' : ["lep_inv_iso", "os_charge"],},
+        "dr_den_qcd"     : {'selection' : ["lep_inv_iso", "ss_charge"],},
+        "dr_den_qcd_w_ff": {'selection' : ["lep_inv_iso", "os_charge"],
+                            'aux'       : {'apply_ff': ''}},
+        "ar_yields"      : {'selection' : ["lep_iso", "os_charge"],},
         #categories for QCD estimation via classic ABCD method 
         "abcd_ar"       : { 'selection' : ["lep_iso", "ss_charge"], 'label' : "same sign region"},
         "abcd_dr_num"   : { 'selection' : ["lep_inv_iso", "os_charge"]},
         "abcd_dr_den"   : { 'selection' : ["lep_inv_iso", "ss_charge"]},
-
+        
+        "sr_no_mt"      : { 'selection' : ["lep_iso", "os_charge"],
+                            'label'     : "signal region no mt",
+                            'aux'       : {
+                                           #qcd estimation categories
+                                           'abcd_regs' : {
+                                               'ar'    :  'abcd_ar_no_mt',
+                                               'dr_num':  'abcd_dr_num_no_mt',
+                                               'dr_den':  'abcd_dr_den_no_mt',
+                                               },
+                                           },},
+        #categories for QCD estimation via classic ABCD method 
+        "abcd_ar_no_mt"       : { 'selection' : ["lep_iso", "ss_charge"], 'label' : "ss region no mt"},
+        "abcd_dr_num_no_mt"   : { 'selection' : ["lep_inv_iso", "os_charge"]},
+        "abcd_dr_den_no_mt"   : { 'selection' : ["lep_inv_iso", "ss_charge"]},
     })
     
     add_base_categories(config, channel, category_map, base_selection)
@@ -138,8 +168,7 @@ def add_categories(config: od.Config,
         # TODO: Define DZ categories here 
 
         "nj0"    : {'selection' : ["Zero_b_jets"], 'label'     : f" \n $n_{{jets}}= 0$",},
-        "nj1"    : {'selection' : ["One_b_jets"], 'label'     : f" \n $n_{{jets}}= 1$",},
-        "nj2"    : {'selection' : ["At_least_2_b_jets"], 'label'     : f" \n $n_{{jets}}\geq 2$",},       
+        "nj1"    : {'selection' : ["At_least_1_b_jets"], 'label'     : f" \n $n_{{jets}}\geq 1$",},
         })
     
     create_child_categories(config,

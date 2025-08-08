@@ -16,7 +16,7 @@ args=(
         --file-types pdf,png
 	    --hist-hooks good_old_abcd
         --general-settings "cms-label=pw"
-        --process-settings "h_ggf_htt,unstack,scale=stack"
+        --process-settings "h_ggf_htt_80,unstack,scale=stack,color=#FF0000:h_ggf_htt_100,unstack,scale=stack,color=#0000FF:h_ggf_htt_120,unstack,scale=stack"
         "${@:2}"
     )
 echo law run cf.PlotVariables1D "${args[@]}"

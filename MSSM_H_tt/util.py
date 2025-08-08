@@ -464,7 +464,7 @@ def hlt_path_matching(self: Producer, events: ak.Array, triggers: ak.Array, pair
             # For real data, apply the appropriate trigger selection if the 'emu' object is present.
             if 'emu' in pair_objects:
                 # For SingleMuon or Muon_Run datasets, select events where the muon trigger (HLT_IsoMu24) fired.
-                if ('SingleMuon' in dataset_name_tag) or ('Muon_Run' in dataset_name_tag):
+                if ('SingleMuon' in dataset_name_tag) or ('Muon' in dataset_name_tag):
                     matched_masks['emu'] = (triggerID_mu > 0)
                 # For EGamma (MuonEG) datasets, select events where:
                 # - The electron trigger (HLT_Ele30_WPTight_gsf) fired.

@@ -604,6 +604,14 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 unit="GeV",
                 x_title="$m_{T}^{TOT}$",
             )
+            cfg.add_variable(
+                name=f"{ch_str}_mt_tot_fit",
+                expression=f"hcand_{ch_str}.mt_tot",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0.0, 3000.0),
+                unit="GeV",
+                x_title="$m_{T}^{TOT} fit$",
+            )
         cfg.add_variable(
             name=f"{ch_str}_delta_r",
             expression=f"hcand_{ch_str}.delta_r",
