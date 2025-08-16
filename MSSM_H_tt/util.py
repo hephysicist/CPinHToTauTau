@@ -46,6 +46,20 @@ def get_p2(part): return ak.zip({f"{var}": part[var] for var in ['pt', 'phi']},
                                     with_name="PolarTwoVector",
                                     behavior=coffea.nanoevents.methods.vector.behavior)
 
+def to_pt_eta_phi_m(arr): return ak.zip({f"{var}": getattr(arr, var) for var in ['pt', 'eta', 'phi', 'mass']},
+                                    with_name="PtEtaPhiMLorentzVector",
+                                    behavior=coffea.nanoevents.methods.vector.behavior)
+
+def get_vec_p3(part,vec_column=None): 
+    if vec_column is not None:
+        return ak.zip({f'{var}': part[f'{vec_column}{var}']for var in ['x', 'y', 'z']},
+                                   with_name="ThreeVector",
+                                   behavior=coffea.nanoevents.methods.vector.behavior)# # lambda function to get 4-vector from the particle objects
+    else:
+        return ak.zip({f'{var}': part[f'{var}']for var in ['x', 'y', 'z']},
+                                   with_name="ThreeVector",
+                                   behavior=coffea.nanoevents.methods.vector.behavior)# # lambda function to get 4-vector from the particle objects
+
 # lambda function to get 4-vector of impact parameter from the particle objects
 # Zeroth component of IP vector is set to zero by definition that can be found here: https://www.mdpi.com/2218-1997/8/5/256
 def get_ip_p4(part): return ak.zip({f'{var}': part[f'IP{var}']for var in ['x', 'y', 'z']} | {'t': ak.zeros_like(part.IPx)},
@@ -542,3 +556,4 @@ def find_fields_with_nan(awk_array):
             fields_with_nan.append(field)
     
     return fields_with_nan
+

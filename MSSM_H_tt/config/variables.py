@@ -717,7 +717,21 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 binning=(32*bin_split_factor, -3.2, 3.2),
                 x_title=rf"{lep_str} $\phi$",
             )
-
+def add_mssm_bdt_output(cfg: od.Config) -> None:    
+    for the_var in ['sig','tt','dy','wj']:
+        cfg.add_variable(
+                name=f"bdt_raw_score_{the_var}",
+                expression=f"bdt_raw_score_{the_var}",
+                binning=(30, 0., 1.),
+                x_title=f"raw BDT score for {the_var}",
+            )
+    cfg.add_variable(
+                name=f"bdt_cat",
+                expression=f"bdt_cat",
+                binning=(4,-0.5,3.5),
+                discrete_x=True,
+                x_title=f"BDT class",
+            )
 
 def add_variables(cfg: od.Config) -> None:
     """
@@ -727,7 +741,7 @@ def add_variables(cfg: od.Config) -> None:
     add_lepton_features(cfg)
     add_jet_features(cfg)
     add_highlevel_features(cfg)
-    #phi_cp_variables(cfg)
     add_weight_features(cfg)
     add_cutflow_features(cfg)
     add_dilepton_features(cfg)
+    add_mssm_bdt_output(cfg)

@@ -2,7 +2,7 @@
 # coding: utf-8
 
 """
-Configuration of the higgs_cp analysis.
+Configuration of the MSSM analysis.
 """
 
 import functools
@@ -129,8 +129,6 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
-        # signal
-        "h_ggf_htt",
     ]
     signal_masses = [60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 160, 180, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2300, 2600, 2900, 3200, 3500]
     for mass in signal_masses:
@@ -349,7 +347,6 @@ def add_run3(ana: od.Analysis,
     # process groups for conveniently looping over certain processs
     # (used in wrapper_factory and during plotting)
     cfg.x.process_groups = {
-        "signal": ["h_tt_100","h_tt_125","h_tt_1200"],
         "data" : ["data_mu", "data_tau","data_e"],
         "vv"   : ["ww", "wz", "zz"],
         "tt"   : ["tt_sl","tt_dl","tt_fh"],
@@ -816,6 +813,25 @@ def add_run3(ana: od.Analysis,
         #"met_phi_corr"            : (f"{jsonpog_dir}JME/{cfg.x.year}{tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
     })
     
+    from pathlib import Path
+    #Insert here the mass you want to use 
+    cfg.x.bdt_mass = {
+            "mass": 100,
+        }
+    bdt_eos_path = "/eos/user/j/jmalvaso/SWAN_projects/XGBoost_MSSM/"
+
+    for mass in signal_masses:
+        even_path = f"{bdt_eos_path}M{mass}/bst_model_M{mass}_even.json"
+        odd_path  = f"{bdt_eos_path}M{mass}/bst_model_M{mass}_odd.json"
+
+        if not Path(even_path).is_file():
+            raise FileNotFoundError(f"Missing model (even) for mass {mass}: {even_path}")
+        if not Path(odd_path).is_file():
+            raise FileNotFoundError(f"Missing model (odd) for mass {mass}: {odd_path}")
+
+        cfg.x.external_files[f"ml_model_even_{mass}"] = even_path
+        cfg.x.external_files[f"ml_model_odd_{mass}"]  = odd_path
+
     # --------------------------------------------------------------------------------------------- #
     # electron settings
     # names of electron correction sets and working points
@@ -993,7 +1009,7 @@ def add_run3(ana: od.Analysis,
     cfg.x.fake_factor_method = DotDict.wrap({
     "axes": {'delta_r' : {
                 'var_route': [f'hcand_{channel}','delta_r'],
-                'ax_str'  : 'Variable([0.3,2.0,2.5,3,3.5,4,6], name="delta_r", label="Delta R", underflow=False, overflow=False)',
+                'ax_str'  : 'Variable([0.3,3,3.5,4,6], name="delta_r", label="Delta R", underflow=False, overflow=False)',
                 },
              'N_jets'  : {
                 'var_route' : ['n_jets'],
