@@ -399,15 +399,15 @@ def tauspinner_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     A simple function that sets tauspinner_weight according to the cp_hypothesis
     
     """
-    if  "h_ggf_htt" in self.dataset_inst.name: 
+    if  ("h_ggf_htt" in self.dataset_inst.name) or ("h_vbf_htt" in self.dataset_inst.name): 
         proc = self.dataset_inst.processes.get_first().name
-        if proc == "h_ggf_htt_cpo":
+        if '_cpo' in proc:
             the_weight = events.TauSpinner.weight_cp_0p5 
-        elif proc == "h_ggf_htt_sm":
+        elif '_sm' in proc:
             the_weight = events.TauSpinner.weight_cp_0
-        elif proc == "h_ggf_htt_mm":
+        elif '_mm' in proc:
             the_weight = events.TauSpinner.weight_cp_0p25
-        elif proc == "h_ggf_htt":
+        elif (proc == "h_ggf_htt") or (proc == "h_vbf_htt"):
             the_weight = events.TauSpinner.weight_cp_0
         else: 
             raise NotImplementedError(f'TauSpinner weight for {proc} is not implemented!')

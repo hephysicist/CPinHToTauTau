@@ -24,11 +24,13 @@ from httcp.production.generatorZ import genZ
 from httcp.production.met_recoil import gen_boson, met_recoil
 from httcp.production.dilepton_features import hcand_fields
 
+from httcp.production.apply_fastMTT import apply_fastMTT
 from httcp.production.phi_cp import phi_cp
 from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split,gen_lep_fields
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
 from httcp.production.ip_corrector import ip_correction
 from httcp.production.bdt_score import hcp_bdt_score
+from httcp.production.fast_mtt import fast_mtt
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -57,6 +59,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         #fake_factors,
         hcand_fields,
         tauspinner_weight,
+        apply_fastMTT,
         phi_cp,
         category_ids,
         gen_parton_top,
@@ -69,6 +72,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_lep_fields,
         ip_correction,
         hcp_bdt_score,
+        fast_mtt,
         },
     produces={
         attach_coffea_behavior,
@@ -87,6 +91,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         fake_factors,
         hcand_fields,
         tauspinner_weight,
+        apply_fastMTT,
         phi_cp,
         category_ids,
         gen_parton_top,
@@ -99,6 +104,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_lep_fields,
         ip_correction,
         hcp_bdt_score,
+        fast_mtt,
     },
     # whether weight producers should be added and called
     produce_weights=True,
@@ -131,6 +137,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = self[gen_boson](events, **kwargs)
         
     events = self[met_recoil](events,**kwargs)
+    events = self[fast_mtt](events,**kwargs)
    
     if self.dataset_inst.is_mc:
         
@@ -173,6 +180,9 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
             print("Producing Top pT weights...")
             events = self[top_pt_weight](events, **kwargs)
+            
+        print("Producing fastMTT...")
+        events = self[apply_fastMTT](events, **kwargs)
     
     
     #Assume that the corrections are done, now we can evaluate bdt scores and produce parameters of interest

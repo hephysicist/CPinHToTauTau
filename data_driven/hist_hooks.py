@@ -304,3 +304,4 @@ def add_hist_hooks(config: od.Config) -> None:
         "symmetrize_signal"         : symmetrize_signal,
         "blind_sr"                  : blind_sr,
     }
+
