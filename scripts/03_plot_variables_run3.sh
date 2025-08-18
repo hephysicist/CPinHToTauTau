@@ -2,96 +2,21 @@
 source ./common_run3.sh #to access set_common_vars() function
 #The following function defines config, processes, version and datasets variables
 set_common_vars "$1"
+prod_version=ic_sync_a1
 args=(
         --config $config
-        --processes $processes
+        --processes 'dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,data' #with signals 
+        #--processes 'dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,h_ggf_htt_mm_prod_sm,h_ggf_htt_cpo_prod_sm,data'
+        #--processes 'dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,h_vbf_htt_sm,zh_htt_sm,data' #with signals 
         --datasets $datasets
         
-        --categories  'cat_mutau_sr__tau2rho,cat_mutau_sr__tau2rho__hig_cat_0,cat_mutau_sr__tau2rho__hig_cat_1,cat_mutau_sr__tau2rho__hig_cat_2'
+        --categories 
+        cat_mutau_sr
+        #'cat_mutau_sr__hig__cat0__tau2rho,cat_mutau_sr__hig__cat1__tau2rho,cat_mutau_sr__hig__cat2__tau2rho,'`
+        #'cat_mutau_sr__hig__cat0__tau2a1_3pr,cat_mutau_sr__hig__cat1__tau2a1_3pr,cat_mutau_sr__hig__cat2__tau2a1_3pr'
+        #'cat_mutau_sr__hig__cat0__tau2a1,cat_mutau_sr__hig__cat1__tau2a1,cat_mutau_sr__hig__cat2__tau2a1'
+        #'cat_mutau_sr__hig__cat0__tau2pi,cat_mutau_sr__hig__cat1__tau2pi,cat_mutau_sr__hig__cat2__tau2pi'
         
-        #'cat_mutau_sr__tau2rho,cat_mutau_sr__tau2rho__hig_cat_0,cat_mutau_sr__tau2rho__hig_cat_1,cat_mutau_sr__tau2rho__hig_cat_2'
-        
-        #################################
-        ### SIGNAL REGION  CATEGORIES ###
-        #################################
-
-        #'cat_mutau_sr' 
-        #`',cat_mutau_sr__nj0_dm0,cat_mutau_sr__nj1_dm0,cat_mutau_sr__nj2_dm0,'`
-        # #DM1
-        # `'cat_mutau_sr__nj0_dm1,cat_mutau_sr__nj1_dm1,cat_mutau_sr__nj2_dm1,'`
-        # #DM2
-        # `'cat_mutau_sr__nj0_dm2,cat_mutau_sr__nj1_dm2,cat_mutau_sr__nj2_dm2,'`
-        # #DM10
-        # `'cat_mutau_sr__nj0_dm10,cat_mutau_sr__nj1_dm10,cat_mutau_sr__nj2_dm10,'`
-        # #DM11
-        # `'cat_mutau_sr__nj0_dm11,cat_mutau_sr__nj1_dm11,cat_mutau_sr__nj2_dm11,'
-
-
-        #########################
-        ### DR DEN CATEGORIES ###
-        #########################
-
-        #'cat_mutau_dr_den_qcd,cat_mutau_dr_den_wj,'
-        # #dm1
-        # `'cat_mutau_dr_den_qcd__nj0_dm0,cat_mutau_dr_den_wj__nj0_dm0,'`
-        # `'cat_mutau_dr_den_qcd__nj1_dm0,cat_mutau_dr_den_wj__nj1_dm0,'`
-        # `'cat_mutau_dr_den_qcd__nj2_dm0,cat_mutau_dr_den_wj__nj2_dm0,'`
-        # #dm1
-        # `'cat_mutau_dr_den_qcd__nj0_dm1,cat_mutau_dr_den_wj__nj0_dm1,'`
-        # `'cat_mutau_dr_den_qcd__nj1_dm1,cat_mutau_dr_den_wj__nj1_dm1,'`
-        # `'cat_mutau_dr_den_qcd__nj2_dm1,cat_mutau_dr_den_wj__nj2_dm1,'`
-        #  #dm2
-        # `'cat_mutau_dr_den_qcd__nj0_dm2,cat_mutau_dr_den_wj__nj0_dm2,'`
-        # `'cat_mutau_dr_den_qcd__nj1_dm2,cat_mutau_dr_den_wj__nj1_dm2,'`
-        # `'cat_mutau_dr_den_qcd__nj2_dm2,cat_mutau_dr_den_wj__nj2_dm2,'`
-        #  #dm10
-        # `'cat_mutau_dr_den_qcd__nj0_dm10,cat_mutau_dr_den_wj__nj0_dm10,'`
-        # `'cat_mutau_dr_den_qcd__nj1_dm10,cat_mutau_dr_den_wj__nj1_dm10,'`
-        # `'cat_mutau_dr_den_qcd__nj2_dm10,cat_mutau_dr_den_wj__nj2_dm10,'`
-        #  #dm11
-        # `'cat_mutau_dr_den_qcd__nj0_dm11,cat_mutau_dr_den_wj__nj0_dm11,'`
-        # `'cat_mutau_dr_den_qcd__nj1_dm11,cat_mutau_dr_den_wj__nj1_dm11,'`
-        # `'cat_mutau_dr_den_qcd__nj2_dm11,cat_mutau_dr_den_wj__nj2_dm11,'`
-
-        # nj_inclusive cats
-        # `'cat_mutau_dr_den_qcd__dm0,cat_mutau_dr_den_wj__dm0,'`
-        # `'cat_mutau_dr_den_qcd__dm1,cat_mutau_dr_den_wj__dm1,'`
-        # `'cat_mutau_dr_den_qcd__dm2,cat_mutau_dr_den_wj__dm2,'`
-        # `'cat_mutau_dr_den_qcd__dm10,cat_mutau_dr_den_wj__dm10,'`
-        # `'cat_mutau_dr_den_qcd__dm11,cat_mutau_dr_den_wj__dm11,'
-
-
-        #########################
-        ### DR NUM CATEGORIES ###
-        #########################
-        
-        #'cat_mutau_dr_num_qcd,cat_mutau_dr_num_wj,'
-        # `'cat_mutau_dr_num_qcd__nj0_dm0,cat_mutau_dr_num_wj__nj0_dm0,'`
-        # `'cat_mutau_dr_num_qcd__nj1_dm0,cat_mutau_dr_num_wj__nj1_dm0,'`
-        # `'cat_mutau_dr_num_qcd__nj2_dm0,cat_mutau_dr_num_wj__nj2_dm0,'`
-        # #dm1
-        # `'cat_mutau_dr_num_qcd__nj0_dm1,cat_mutau_dr_num_wj__nj0_dm1,'`
-        # `'cat_mutau_dr_num_qcd__nj1_dm1,cat_mutau_dr_num_wj__nj1_dm1,'`
-        # `'cat_mutau_dr_num_qcd__nj2_dm1,cat_mutau_dr_num_wj__nj2_dm1,'`
-        # #  #dm2
-        # `'cat_mutau_dr_num_qcd__nj0_dm2,cat_mutau_dr_num_wj__nj0_dm2,'`
-        # `'cat_mutau_dr_num_qcd__nj1_dm2,cat_mutau_dr_num_wj__nj1_dm2,'`
-        # `'cat_mutau_dr_num_qcd__nj2_dm2,cat_mutau_dr_num_wj__nj2_dm2,'`
-        #  #dm10
-        # `'cat_mutau_dr_num_qcd__nj0_dm10,cat_mutau_dr_num_wj__nj0_dm10,'`
-        # `'cat_mutau_dr_num_qcd__nj1_dm10,cat_mutau_dr_num_wj__nj1_dm10,'`
-        # `'cat_mutau_dr_num_qcd__nj2_dm10,cat_mutau_dr_num_wj__nj2_dm10,'`
-        #  #dm11
-        # `'cat_mutau_dr_num_qcd__nj0_dm11,cat_mutau_dr_num_wj__nj0_dm11,'`
-        # `'cat_mutau_dr_num_qcd__nj1_dm11,cat_mutau_dr_num_wj__nj1_dm11,'`
-        # `'cat_mutau_dr_num_qcd__nj2_dm11,cat_mutau_dr_num_wj__nj2_dm11,'`
-        # nj_inclusive cats
-        # 'cat_mutau_dr_num_qcd__dm0,cat_mutau_dr_num_wj__dm0,'`
-        # `'cat_mutau_dr_num_qcd__dm1,cat_mutau_dr_num_wj__dm1,'`
-        # `'cat_mutau_dr_num_qcd__dm2,cat_mutau_dr_num_wj__dm2,'`
-        # `'cat_mutau_dr_num_qcd__dm10,cat_mutau_dr_num_wj__dm10,'`
-        # `'cat_mutau_dr_num_qcd__dm11,cat_mutau_dr_num_wj__dm11,'
-
         --cf.CalibrateEvents-workflow $workflow
         --cf.CalibrateEvents-version $version
         
@@ -106,31 +31,42 @@ args=(
         
         --cf.MergeSelectionStats-version $version
         --cf.ProvideReducedEvents-version $version
-        --version $version
         
-        --cf.MergeSelectionStats-version $version
-        --cf.ProvideReducedEvents-version $version
-        --version bdt_check
-        --variables 
-        #'mutau_mvis,mutau_pt_vis,mutau_pt_vis,mutau_mt_ll,'`
+        --cf.ProduceColumns-version $prod_version
+        --cf.CreateHistograms-version $prod_version
+        --cf.MergeHistograms-version $prod_version
+        
+        --version $prod_version
+        --variables mutau_fastMTT_mass #'mutau_mvis,mutau_fastMTT_mass,mutau_lep1_pt,mutau_lep0_pt,'`
+        #'mutau_lep0_ipx_qm,mutau_lep0_ipx,mutau_lep1_ipx,mutau_lep1_ipx_qm,'`
+        #`'mutau_lep0_ipy_qm,mutau_lep0_ipy,mutau_lep1_ipy,mutau_lep1_ipy_qm,'`
+        #`'mutau_lep0_ipz_qm,mutau_lep0_ipz,mutau_lep1_ipz,mutau_lep1_ipz_qm,'
+
         #`'mutau_mt0,mutau_mt1,mutau_mt_tot,mutau_delta_eta,mutau_delta_r,'`
         #`'leading_jet_pt,subleading_jet_pt,leading_jet_eta,subleading_jet_eta,leading_jet_phi,subleading_jet_phi,'`
         #`'dijet_delta_eta,mjj,N_jets_pT_20_eta_4_7_Tight,N_b_jets,'`
         #`'mutau_delta_phi,mutau_delta_phi_0_met,mutau_delta_phi_1_met,'`
-        #'bdt_raw_score_gtau,bdt_raw_score_higgs,bdt_raw_score_fake,bdt_cat'
-        'phi_cp_mu_rho'
+        #'bdt_raw_score_gtau,bdt_raw_score_higgs,bdt_raw_score_fake'
+        #'phi_cp_mu_a1_3pr'
+        #'phi_cp_mu_a1_1pr'
+        #phi_cp_mu_pi
         #'mutau_lep1_pt,mutau_mvis,mutau_mvis_fine,mutau_lep0_ipx,mutau_lep0_ipx_qm,mutau_lep1_ipx,mutau_lep1_ipx_qm,'`
         #`'mutau_lep0_ipy,mutau_lep0_ipy_qm,mutau_lep1_ipy,mutau_lep1_ipy_qm,'`
         #`'mutau_lep0_ipz,mutau_lep0_ipz_qm,mutau_lep1_ipz,mutau_lep1_ipz_qm'
-        --file-types pdf #,png
+        #--file-types pdf #,png
        # Currently there are three methods that are implemented as hist hooks:
        # 1. ff_method: general fake factor method that requires ff weights to be present at the events tree
        # 2. ff_method_dr_closure_test: Calclulate fake contribution and apply it to the dr_num regions for the closure tests
        # 3. good_old_abcd: estimates QCD contribution by taking events from same sign region and transfer factors from inv. lep iso
          
-        #--hist-hooks good_old_abcd #ff_method_dr_closure_test
-        --general-settings "yscale=log,cms-label=pw"
-        --process-settings "h_ggf_htt_cpo,unstack,scale=1,color=#FF0000:h_ggf_htt_sm,unstack,scale=1,color=#0000FF"
+        --hist-hooks good_old_abcd
+        #--hist-hooks symmetrize_signal,flatten_dy,good_old_abcd,blind_sr #ff_method_dr_closure_test
+        --general-settings "cms-label=pw" #,yscale=log"
+        #--process-settings 'h_ggf_htt_sm_prod_sm,unstack,scale=stack,color=#0000FF:h_vbf_htt_sm,unstack,scale=stack,color=#00FFFF:zh_htt_sm,unstack,scale=stack,color=#FF00FF'
+        #--process-settings 'h_ggf_htt_cpo_prod_sm,unstack,scale=20,color=#FF0000:h_ggf_htt_sm_prod_sm,unstack,scale=20,color=#0000FF:h_ggf_htt_mm_prod_sm,unstack,scale=20,color=#00FF00'
+        
+        #`'h_ggf_htt_mm,unstack,scale=20,color=#00FF00:h_vbf_htt_cpo,unstack,scale=50,color=#FFFF00:'`
+        #`'h_vbf_htt_sm,unstack,scale=50,color=#00FFFF:h_vbf_htt_mm,unstack,scale=50,color=#FF00FF'
         "${@:2}"
     )
 echo law run cf.PlotVariables1D "${args[@]}"

@@ -23,7 +23,7 @@ data_mu_2022postEE='data_mu_E,data_mu_F,data_mu_G,'
 bkg_ewk='wj_incl_madgraph,ww,wz,zz,dy_lep_madgraph,'
 bkg_top='st_twchannel_t_sl,st_twchannel_t_dl,st_twchannel_tbar_sl,st_twchannel_tbar_dl,st_tchannel_tbar,st_tchannel_t,st_schannel_t_lep,st_schannel_tbar_lep,'
 bkg_ttbar='tt_sl,tt_dl,tt_fh,'
-signal='h_ggf_htt_cpo_filtered,h_ggf_htt_mm_filtered,h_ggf_htt_sm_filtered,'
+signal='h_ggf_htt_sm_prod_sm_filtered,h_ggf_htt_cpo_prod_sm_filtered,h_ggf_htt_mm_prod_sm_filtered,h_vbf_htt_sm_filtered,zh_htt_sm_filtered'
 
 data_egamma_2023preBPix='data_egamma_Cv123,data_egamma_Cv4,'
 data_egamma_2023postBPix='data_egamma_D,'
@@ -47,8 +47,8 @@ case $1 in
     ;;
     "run3_2022preEE_mutau_lim")
         config="run3_2022_preEE_mutau_limited"	
-        datasets='wj_incl_madgraph'
-        processes='wj'
+        datasets='wj_incl_madgraph,h_ggf_htt_mm_prod_sm_filtered'
+        processes='wj,h_ggf_htt_mm_prod_sm'
 	    categories=$categories_mutau
 	    variables=$variables_mutau
         workflow='local'
@@ -72,7 +72,7 @@ case $1 in
         bkg_top=$bkg_top
         bkg_ttbar=$bkg_ttbar
         datasets="$data$bkg_ewk$bkg_top$bkg_ttbar$signal"
-        processes='dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm,data'
+        processes='dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm,h_ggf_htt_cpo,h_ggf_htt_mm,h_vbf_htt_sm,h_vbf_htt_mm,h_vbf_htt_cpo,data'
 	    categories=$categories_mutau
 	    variables=$variables_mutau
         workflow='htcondor'
@@ -90,9 +90,9 @@ case $1 in
     ;;
     "run3_2022postEE_mutau_lim")
         config="run3_2022_postEE_mutau_limited"	
-        datasets='wj_incl_madgraph' 
-        processes='wj' 
-        workflow='htcondor'
+        datasets='wj_incl_madgraph,data_mu_E' 
+        processes='wj,data' 
+        workflow='local'
     ;;
     "run3_2022postEE_etau")
         config="run3_2022_postEE_etau"
@@ -114,7 +114,7 @@ case $1 in
         bkg_ttbar=$bkg_ttbar
         signal=$signal
       	datasets="$data$bkg_ewk$bkg_top$bkg_ttbar$signal"
-        processes='dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm,data'
+        processes='dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm,h_ggf_htt_cpo,h_ggf_htt_mm,h_vbf_htt_sm,h_vbf_htt_mm,h_vbf_htt_cpo,data'
 	    categories=$categories_mutau
 	    variables=$variables_mutau
 	    workflow='htcondor'
@@ -142,8 +142,8 @@ case $1 in
         bkg_top=$bkg_top
         bkg_ttbar=$bkg_ttbar
         datasets="$data$bkg_ewk$bkg_top$bkg_ttbar$signal"
-        processes='dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm,data'
-    categories=$categories_mutau
+        processes='dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,h_vbf_htt_sm,zh_htt_sm,data'
+	    categories=$categories_mutau
     variables=$variables_mutau
         workflow='htcondor'
      ;;
