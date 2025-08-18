@@ -136,6 +136,7 @@ def add_hist_hooks(config: od.Config) -> None:
                 tf_err2 = ((np.sum(data_num.variances()) + np.sum(mc_num.variances()))/den**2 + 
                     tf**2/den**2 *(np.sum(data_den.variances()) + np.sum(mc_den.variances())))
             hists_sr[qcd].view().value = np.maximum(data_ar.values() -  mc_ar.values(), 0.) * tf
+            hists_sr[qcd].view().variance = (data_ar.view().variance + mc_ar.view().variance) * tf**2
             
         return hists_sr
     
@@ -294,6 +295,16 @@ def add_hist_hooks(config: od.Config) -> None:
         hists[qcd] = fake_hist
         return hists
     
+    def ensure_zl_hist(task, hists, category_inst):
+        has_dy_z2ll = [the_proc 
+                       for the_proc in hists.keys() 
+                       if ('dy_z2mumu' in the_proc.name) or ('dy_z2ee' in the_proc.name)]
+        from cmsdb.processes.ewk import dy_z2ee,dy_z2tautau
+        if len(has_dy_z2ll) == 0:
+            tmp_h = [the_h for proc , the_h in hists if ('dy_z2tautau' in the_proc.name)][0] 
+            hists[dy_z2mumu] = tmp_h.copy().reset()
+            hists[dy_z2ee] = tmp_h.copy().reset()
+        return hists
     
     config.x.hist_hooks = {
         "good_old_abcd"             : qcd_estimation,
@@ -303,4 +314,5 @@ def add_hist_hooks(config: od.Config) -> None:
         "flatten_dy"                : flatten_dy,
         "symmetrize_signal"         : symmetrize_signal,
         "blind_sr"                  : blind_sr,
+        "ensure_zl_hist"            : ensure_zl_hist
     }

@@ -47,7 +47,7 @@ def fast_mtt(
     print('Running fastMTT (be patient)')
 
     # steering parameters
-    verbosity = True
+    verbosity = False
     delta = 1.0/1.15 # regularization parameter delta
     reg_order = 6.0  # regularization parameter order
     mX = 125.10 # Higgs mass

@@ -363,10 +363,23 @@ def add_hcp_bdt_output(cfg: od.Config) -> None:
                 discrete_x=True,
                 x_title=f"BDT class",
             )
+    cfg.add_variable(
+            name=f"bdt_raw_score_4bins_gtau",
+            expression=f"bdt_raw_score_gtau",
+            binning=[0,0.5,0.6,0.7,1],
+            x_title=f"raw BDT score for gtau",
+        )
+    cfg.add_variable(
+            name=f"bdt_raw_score_4bins_fake",
+            expression=f"bdt_raw_score_fake",
+            binning=[0,0.5,0.6,0.7,1],
+            x_title=f"raw BDT score for fake",
+        )
     
 
 
 def add_highlevel_features(cfg: od.Config) -> None:    
+    
     """
     Adds MET and other high-level features
     """
@@ -523,6 +536,10 @@ def phi_cp_variables(cfg: od.Config) -> None:
             title_str = "\\" + spitted_str[0] + fr" a_1, {spitted_str[2]}"
         else:
              title_str = "\\" + spitted_str[0] + "\\" + spitted_str[1]
+        if the_ch =='mu_rho' or the_ch == 'mu_a1_3pr':
+            n_bins_phi_cp = 10
+        else: 
+            n_bins_phi_cp = 8
         cfg.add_variable(
             name=f"phi_cp_{the_ch}",
             expression=f"phi_cp_{the_ch}",
@@ -530,14 +547,18 @@ def phi_cp_variables(cfg: od.Config) -> None:
             binning=(n_bins_phi_cp, 0, 2*np.pi),
             x_title=rf"$\varphi_{{CP}} [{title_str}]$ (rad)",
         )
-        for (the_cat,n_bins) in [('cat_0',9),('cat_1',5),('cat_2',3)]:
-            cfg.add_variable(
-                name=f"phi_cp_{the_ch}_{the_cat}",
-                expression=f"phi_cp_{the_ch}_{the_cat}",
-                null_value=EMPTY_FLOAT,
-                binning=(n_bins, 0, 2*np.pi),
-                x_title=rf"$\varphi_{{CP}} [{title_str}]$ (rad)",
-            )
+        
+        
+        
+        
+        # for (the_cat,n_bins) in [('cat_0',9),('cat_1',5),('cat_2',3)]:
+        #     cfg.add_variable(
+        #         name=f"phi_cp_{the_ch}_{the_cat}",
+        #         expression=f"phi_cp_{the_ch}_{the_cat}",
+        #         null_value=EMPTY_FLOAT,
+        #         binning=(n_bins, 0, 2*np.pi),
+        #         x_title=rf"$\varphi_{{CP}} [{title_str}]$ (rad)",
+        #     )
         # cfg.add_variable(
         #     name=f"phi_cp_{the_ch}_reg1",
         #     expression=f"phi_cp_{the_ch}_reg1",
@@ -820,7 +841,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
                     name=f"{ch_str}_{lep}_ip{proj}",
                     expression=f"hcand_{ch_str}.{lep}.IP{proj}",
                     null_value=EMPTY_FLOAT,
-                    binning=(50, -0.005, 0.005),
+                    binning=(40, -0.01, 0.01),
                     unit="",
                     x_title= rf"{lep_str} $IP_{proj}$",
                 )
@@ -828,9 +849,9 @@ def add_dilepton_features(cfg: od.Config) -> None:
                     name=f"{ch_str}_{lep}_ip{proj}_qm",
                     expression=f"hcand_{ch_str}.{lep}.IP{proj}_qm",
                     null_value=EMPTY_FLOAT,
-                    binning=(50, -0.005, 0.005),
+                    binning=(40, -0.01, 0.01),
                     unit="",
-                    x_title= rf"{lep_str} $IP_{proj} corrected$",
+                    x_title= rf"{lep_str} $IP_{proj}  corrected$",
                 )
                 
             #Variables with finer binning

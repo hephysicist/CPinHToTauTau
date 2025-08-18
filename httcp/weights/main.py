@@ -55,6 +55,7 @@ def main(self: WeightProducer, events: ak.Array, **kwargs) -> ak.Array:
 def main_init(self: WeightProducer) -> None:
     # store column names referring to weights to multiply
     self.weight_columns = {
+        #"filter_weight",
         "normalization_weight",
         "mc_weight",
         "pu_weight",
@@ -93,6 +94,7 @@ def ff_weight_producer(self: WeightProducer, events: ak.Array, **kwargs) -> ak.A
 def ff_weight_producer(self: WeightProducer) -> None:
     # store column names referring to weights to multiply
     self.weight_columns = {
+        "filter_weight",
         "normalization_weight",
         "mc_weight",
         "pu_weight",

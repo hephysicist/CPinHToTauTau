@@ -171,10 +171,10 @@ def add_categories(config: od.Config,
         "hig"   : {'selection'  : ["bdt_cat_higgs"], 'label': f"\nbdt cat Higgs",},
         "gtau"  : {'selection'  : ["bdt_cat_gtau"], 
                    'label'      : f"\nbdt cat genuine tau",
-                   'aux'        : {'fit_var': 'bdt_raw_score_gtau'},},
+                   'aux'        : {'fit_var': 'bdt_raw_score_4bins_gtau'},},
         "fake" : {'selection'  : ["bdt_cat_fake"],
                    'label'      : f"\nbdt cat fakes",
-                   'aux'        : {'fit_var': 'bdt_raw_score_fake'},},
+                   'aux'        : {'fit_var': 'bdt_raw_score_4bins_fake'},},
         })
     
     hig_cats_map  = DotDict.wrap({

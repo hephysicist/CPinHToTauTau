@@ -399,16 +399,19 @@ def tauspinner_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     A simple function that sets tauspinner_weight according to the cp_hypothesis
     
     """
-    if  ("h_ggf_htt" in self.dataset_inst.name) or ("h_vbf_htt" in self.dataset_inst.name): 
+    is_signal = ("_htt_" in self.dataset_inst.name)
+    if is_signal: 
         proc = self.dataset_inst.processes.get_first().name
-        if '_cpo' in proc:
+        if 'htt_cpo' in proc:
             the_weight = events.TauSpinner.weight_cp_0p5 
-        elif '_sm' in proc:
+        elif 'htt_sm' in proc:
             the_weight = events.TauSpinner.weight_cp_0
-        elif '_mm' in proc:
+        elif 'htt_mm' in proc:
             the_weight = events.TauSpinner.weight_cp_0p25
+        elif 'htt_flat' in proc:
+            the_weight = np.ones_like(events.event, dtype=np.float32)
         elif (proc == "h_ggf_htt") or (proc == "h_vbf_htt"):
-            the_weight = events.TauSpinner.weight_cp_0
+            the_weight = np.ones_like(events.event, dtype=np.float32)
         else: 
             raise NotImplementedError(f'TauSpinner weight for {proc} is not implemented!')
             the_weight = np.ones_like(events.event, dtype=np.float32)
@@ -827,4 +830,44 @@ def trigger_weight_mutau_setup(
     cs_tau           = correctionlib.CorrectionSet.from_string(tau_corr_str)
     self.id_vs_jet_corrector = cs_tau["tau_trigger"]
 
+@producer(
+    uses={
+        'event','hcand_*','n_jets',
+    },
+    produces={
+        'filter_weight'
+    },
+)
+def filter_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+    """
+    This function applies filter weights to the datasets 
+    """
+    datasets  = self.dataset_inst.keys
+    is_filtered = ['Filtered' in the_name for the_name in datasets]
+    if np.any(is_filtered):
+        dataset_name = datasets[0].replace('/','')
+        the_weight = self.lookup_table[dataset_name]['filter_efficiency']
+        print(f'Filter efficiency for {dataset_name} is {the_weight}')
+        filter_weight = np.full_like(events.event, the_weight, dtype=np.float32)
+    else:
+        filter_weight = np.ones_like(events.event, dtype=np.float32)
+    events = set_ak_column_f32(events,'filter_weight', filter_weight)
+    return events
 
+@filter_weight.requires
+def filter_weight_requires(self: Producer, reqs: dict) -> None:
+    if "external_files" in reqs:
+        return
+    
+    from columnflow.tasks.external import BundleExternalFiles
+    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    
+@filter_weight.setup
+def filter_weight_setup(
+    self: Producer,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: InsertableDict,
+) -> None:
+    bundle = reqs["external_files"]
+    self.lookup_table  = bundle.files.filter_eff.load(formatter='yaml')

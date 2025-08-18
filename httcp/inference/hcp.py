@@ -31,22 +31,39 @@ class hcp_model(HCPModelBase):
             #Diboson + single top
             ("VVT",'vvt'), #use hist_hooks to calculate his process
             #ttbar
-            ("TT","tt"),
+            ("TTT","tt"),
             #VBF Signal
-            ('qqH_sm_htt125', 'h_vbf_htt_sm'),
-            ('qqH_ps_htt125', 'h_vbf_htt_cpo'),
-            ('qqH_mm_htt125', 'h_vbf_htt_mm'),
+            ('qqH_sm_htt125',   'h_vbf_htt_sm'),
+            ('qqH_mm_htt125',   'h_vbf_htt_mm'),
+            ('qqH_ps_htt125',   'h_vbf_htt_cpo'),
+            ('qqH_flat_htt125', 'h_vbf_htt_flat'),
             #ggF Signal
-            ('ggH_sm_prod_sm_htt125', 'h_ggf_htt_sm'),
-            ('ggH_ps_prod_ps_htt125', 'h_ggf_htt_cpo'),
-            ('ggH_mm_prod_mm_htt125', 'h_ggf_htt_mm'),
+            ('ggH_sm_prod_sm_htt125', 'h_ggf_htt_sm_prod_sm'),
+            ('ggH_mm_prod_sm_htt125', 'h_ggf_htt_mm_prod_sm'),
+            ('ggH_ps_prod_sm_htt125', 'h_ggf_htt_cpo_prod_sm'),
+            ('ggH_flat_prod_sm_htt125', 'h_ggf_htt_flat_prod_sm'),
             
-            #('ggH_htt_sm', 'h_ggf_htt_sm'),
-            #('ggH_htt_mm', 'h_ggf_htt_mm'),
-            #('ggH_htt_cpo', 'h_ggf_htt_cpo'),
-            #('VBF_htt_sm', 'h_vbf_htt_sm'),
-            #('VBF_htt_mm', 'h_vbf_htt_mm'),
-            #('VBF_htt_cpo', 'h_vbf_htt_cpo'),
+            ('ggH_sm_prod_mm_htt125', 'h_ggf_htt_sm_prod_mm'),
+            ('ggH_mm_prod_mm_htt125', 'h_ggf_htt_mm_prod_mm'),
+            ('ggH_ps_prod_mm_htt125', 'h_ggf_htt_cpo_prod_mm'),
+            ('ggH_flat_prod_mm_htt125', 'h_ggf_htt_flat_prod_mm'),
+            
+            ('ggH_sm_prod_cpo_htt125', 'h_ggf_htt_sm_prod_cpo'),
+            ('ggH_mm_prod_cpo_htt125', 'h_ggf_htt_mm_prod_cpo'),
+            ('ggH_ps_prod_cpo_htt125', 'h_ggf_htt_cpo_prod_cpo'),
+            ('ggH_flat_prod_cpo_htt125', 'h_ggf_htt_flat_prod_cpo'),
+            
+            #ZH Signal
+            ('ZH_sm_htt125',   'zh_htt_sm'),
+            ('ZH_mm_htt125',   'zh_htt_mm'),
+            ('ZH_ps_htt125',   'zh_htt_cpo'),
+            ('ZH_flat_htt125', 'zh_htt_flat'),
+            
+            #WH Signal
+            #('WH_sm_htt125',   'wh_htt_sm'),
+            #('WH_mm_htt125',   'wh_htt_mm'),
+            #('WH_ps_htt125',   'wh_htt_cpo'),
+            #('WH_flat_htt125', 'wh_htt_flat'),
         ])
         if self.add_qcd:
             name_map["QCD"] = "qcd"
@@ -64,11 +81,19 @@ class hcp_model(HCPModelBase):
         data_datasets = []
         for the_dataset in self.config[0].datasets.names():
             if f"data_{lep_name}_" in the_dataset: data_datasets.append(the_dataset)
+        
+        ch_names = {
+            "tau2pi":  'mupi',
+            "tau2rho": 'murho',
+            "tau2a1":  'mua11pr',
+            "tau2a1_3pr":'mua1'
+        }
         for cat in ["tau2pi", "tau2rho", "tau2a1", "tau2a1_3pr"]:
             for bdt_reg in ["cat0","cat1","cat2"]:
                 the_cat = self.config[0].get_category(f"cat_{ch}_sr__hig__{bdt_reg}__{cat}")
+                ch_name = ch_names[cat]
                 self.add_category(
-                    f"{self.campaign_key}_{bdt_reg}_{cat}",
+                    f"mt_mva_higgs_{bdt_reg}_{ch_name}",
                     config_category=f"cat_{ch}_sr__hig__{bdt_reg}__{cat}",
                     config_variable=the_cat.x.fit_var,
                     config_data_datasets=data_datasets,
@@ -78,32 +103,16 @@ class hcp_model(HCPModelBase):
         #Adding background categories
         for cat_name in ['gtau','fake']:
             the_cat = self.config[0].get_category(f"cat_mutau_sr__{cat_name}")
-            if cat_name == 'gtau': dc_name = 'tautau'
+            if cat_name == 'gtau': dc_name = 'tau'
             else : dc_name = cat_name
             self.add_category(
-                    dc_name,
+                    f"mt_mva_{dc_name}",
                     config_category=f"cat_mutau_sr__{cat_name}",
                     config_variable=the_cat.x.fit_var,
                     config_data_datasets=data_datasets,
                     mc_stats = True,
                     empty_bin_value=0.0
                 )
-            
-    # def init_categories(self) -> None:
-    #     ch= self.config[0].channels.names()[0]
-    #     lep_name = ch.replace('tau','')
-    #     data_datasets = []
-    #     for the_dataset in self.config[0].datasets.names():
-    #         if f"data_{lep_name}_" in the_dataset: data_datasets.append(the_dataset)
-    #     for cat in ["tau2pi", "tau2rho"]:
-    #             the_cat = self.config[0].get_category(f"cat_{ch}_sr__{cat}__bdt_hig")
-    #             self.add_category(
-    #                 f"cat_{self.campaign_key}_{ch}_sr_{cat}__bdt_hig",
-    #                 config_category=f"cat_{ch}_sr__{cat}__bdt_hig",
-    #                 config_variable=the_cat.x.fit_var,
-    #                 config_data_datasets=data_datasets,
-    #                 mc_stats = True
-    #             )
 
     def init_processes(self) -> None:
         config_inst = self.config[0]
