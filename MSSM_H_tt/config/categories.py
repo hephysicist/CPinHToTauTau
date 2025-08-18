@@ -124,35 +124,82 @@ def add_categories(config: od.Config,
                                                'dr_num': 'abcd_dr_num',
                                                'dr_den':  'abcd_dr_den',
                                                },
-                                           },},
+                                           #fake factor categories
+                                           'ff_regs': {
+                                               "ar_qcd"      : "ar_qcd",
+                                               "dr_num_qcd"  : "dr_num_qcd",
+                                               "dr_den_qcd"  : "dr_den_qcd",
+                                               "ar_yields"   : "ar_yields",
+                                               #categories for closure tests
+                                               "dr_den_qcd_w_ff": "dr_den_qcd_w_ff",
+                                           },},},
+        #categories for jet fakes estimation via classic Fake Factor method    
+        "ar_qcd"         : {'selection' : ["lep_iso"    , "ss_charge"],
+                            'aux'       : {'apply_ff': ''}}, #qcd
+        "dr_num_qcd"     : {'selection' : ["lep_inv_iso", "os_charge"],},
+        "dr_den_qcd"     : {'selection' : ["lep_inv_iso", "ss_charge"],},
+        "dr_den_qcd_w_ff": {'selection' : ["lep_inv_iso", "os_charge"],
+                            'aux'       : {'apply_ff': ''}},
+        "ar_yields"      : {'selection' : ["lep_iso", "os_charge"],},
         #categories for QCD estimation via classic ABCD method 
         "abcd_ar"       : { 'selection' : ["lep_iso", "ss_charge"], 'label' : "same sign region"},
         "abcd_dr_num"   : { 'selection' : ["lep_inv_iso", "os_charge"]},
         "abcd_dr_den"   : { 'selection' : ["lep_inv_iso", "ss_charge"]},
-
+        
+        "sr_no_mt"      : { 'selection' : ["lep_iso", "os_charge"],
+                            'label'     : "signal region no mt",
+                            'aux'       : {
+                                           #qcd estimation categories
+                                           'abcd_regs' : {
+                                               'ar'    :  'abcd_ar_no_mt',
+                                               'dr_num':  'abcd_dr_num_no_mt',
+                                               'dr_den':  'abcd_dr_den_no_mt',
+                                               },
+                                           },},
+        #categories for QCD estimation via classic ABCD method 
+        "abcd_ar_no_mt"       : { 'selection' : ["lep_iso", "ss_charge"], 'label' : "ss region no mt"},
+        "abcd_dr_num_no_mt"   : { 'selection' : ["lep_inv_iso", "os_charge"]},
+        "abcd_dr_den_no_mt"   : { 'selection' : ["lep_inv_iso", "ss_charge"]},
     })
     
-    add_base_categories(config, channel, category_map, base_selection)
+    base_cats = add_base_categories(config, channel, category_map, base_selection)
+    
+    bdt_cats_map  = DotDict.wrap({
+        "bdt_sig": {'selection': ["bdt_cat_sig"], 'label': f" \n bdt sig",},
+        "bdt_dy" : {'selection': ["bdt_cat_dy"], 'label': f" \n bdt dy",},
+        "bdt_tt" : {'selection': ["bdt_cat_tt"], 'label': f" \n bdt tt",},
+        "bdt_wj" : {'selection': ["bdt_cat_wj"], 'label': f" \n bdt wj",},
+        })
+    
+    
+    sig_cats_map  = DotDict.wrap({
+        "sig_cat_0"   : {'selection': ["bdt_cat_sig","hig_sig_0"], 'label': f" \n  D_H in (0.3,0.5]",},
+        "sig_cat_1"   : {'selection': ["bdt_cat_sig","hig_sig_1"], 'label': f" \n  D_H in (0.5,0.7]",},
+        "sig_cat_2"   : {'selection': ["bdt_cat_sig","hig_sig_2"], 'label': f" \n  D_H in (0.7,1.0]",},
+        })
+    
+    # splitted_by_bdt = create_child_categories(config,
+    #                                           parent_categories=base_cats,
+    #                                           child_category_map=sig_cats_map)
     #Add child categories to base categories
+    
     child_category_map  = DotDict.wrap({
-        # TODO: Define DZ categories here 
-
         "nj0"    : {'selection' : ["Zero_b_jets"], 'label'     : f" \n $n_{{jets}}= 0$",},
-        "nj1"    : {'selection' : ["One_b_jets"], 'label'     : f" \n $n_{{jets}}= 1$",},
-        "nj2"    : {'selection' : ["At_least_2_b_jets"], 'label'     : f" \n $n_{{jets}}\geq 2$",},       
+        "nj1"    : {'selection' : ["At_least_1_b_jets"], 'label'     : f" \n $n_{{jets}}\geq 1$",},
+        })
+    
+    grand_child_category_map  = DotDict.wrap({
+
+        "dzl"    : {'selection' : ["D_zeta_cut_low"], 'label'     : f" \n $ -35 \leq D_{{\zeta}} < -10$",},
+        "dzm"    : {'selection' : ["D_zeta_cut_mid"], 'label'     : f" \n $ -10 \leq D_{{\zeta}} $",},
+        #"dzh"    : {'selection' : ["D_zeta_cut_high"], 'label'     : f" \n $D_{{\zeta}}\geq 30$",},       
         })
     
     create_child_categories(config,
                         parent_categories=config.categories.names(),
                         child_category_map=child_category_map)
 
-    grand_child_category_map  = DotDict.wrap({
-
-        "dzl"    : {'selection' : ["D_zeta_cut_low"], 'label'     : f" \n $ -35 \leq D_{{\zeta}} < -10$",},
-        "dzm"    : {'selection' : ["D_zeta_cut_mid"], 'label'     : f" \n $ -10 \leq D_{{\zeta}} < 30 $",},
-        "dzh"    : {'selection' : ["D_zeta_cut_high"], 'label'     : f" \n $D_{{\zeta}}\geq 30$",},       
-        })
-    
     create_child_categories(config,
                         parent_categories=config.categories.names(),
                         child_category_map=grand_child_category_map)
+    
