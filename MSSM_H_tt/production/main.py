@@ -26,6 +26,8 @@ from MSSM_H_tt.production.top_pt_weight import top_pt_weight, gen_parton_top
 from MSSM_H_tt.production.D_zeta import D_zeta
 from MSSM_H_tt.production.met_recoil_correction import gen_boson, met_recoil
 from MSSM_H_tt.production.bdt_score import mssm_bdt_score
+from MSSM_H_tt.production.fast_mtt import fast_mtt
+from MSSM_H_tt.production.pt_H import pt_H
 #from MSSM_H_tt.production.DY_recoil_unc import DY_pTll_recoil_unc
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -64,6 +66,8 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         met_recoil,
         trigger_sf,
         mssm_bdt_score,
+        fast_mtt,
+        pt_H,
         #DY_pTll_recoil_unc,
         },
     produces={
@@ -93,6 +97,8 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         met_recoil,
         trigger_sf,
         mssm_bdt_score,
+        fast_mtt,
+        pt_H,
         #DY_pTll_recoil_unc,     
     },
     # whether weight producers should be added and called
@@ -111,7 +117,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     events = self[D_zeta](events, **kwargs)
     print("Producing Hcand features...")
     events = self[hcand_fields](events, **kwargs)
-     
+    print("Producing category ids...")
     events = self[category_ids](events, **kwargs)
     
     if (self.dataset_inst.is_mc & (self.config_inst.channels.names()[0] != 'emu')):
@@ -160,6 +166,10 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
             events = self[top_pt_weight](events, **kwargs)
     print("Producing mT distributions...") 
     events = self[hcand_mt](events, **kwargs) 
+    print("Producing fast_mtt features...")
+    events = self[fast_mtt](events,**kwargs)
+    print("Producing pt_H features...")
+    events = self[pt_H](events,**kwargs)
     print("Producing bdt scores...")
     events = self[mssm_bdt_score](events, **kwargs)
     return events
