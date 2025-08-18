@@ -316,3 +316,4 @@ def add_hist_hooks(config: od.Config) -> None:
         "blind_sr"                  : blind_sr,
         "ensure_zl_hist"            : ensure_zl_hist
     }
+
