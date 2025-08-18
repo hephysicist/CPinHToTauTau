@@ -5,9 +5,9 @@ set_common_vars "$1"
 prod_version=ic_sync_a1
 args=(
         --config $config
-        --processes 'dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,data' #with signals 
-        #--processes 'dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,h_ggf_htt_mm_prod_sm,h_ggf_htt_cpo_prod_sm,data'
-        #--processes 'dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,h_vbf_htt_sm,zh_htt_sm,data' #with signals 
+        --processes 'dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,data' #no signals 
+        #--processes 'dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,h_ggf_htt_mm_prod_sm,h_ggf_htt_cpo_prod_sm,data' #sm, cpo and mm
+        #--processes 'dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,h_vbf_htt_sm,zh_htt_sm,data' #with only sm signals 
         --datasets $datasets
         
         --categories 
@@ -54,19 +54,12 @@ args=(
         #`'mutau_lep0_ipy,mutau_lep0_ipy_qm,mutau_lep1_ipy,mutau_lep1_ipy_qm,'`
         #`'mutau_lep0_ipz,mutau_lep0_ipz_qm,mutau_lep1_ipz,mutau_lep1_ipz_qm'
         #--file-types pdf #,png
-       # Currently there are three methods that are implemented as hist hooks:
-       # 1. ff_method: general fake factor method that requires ff weights to be present at the events tree
-       # 2. ff_method_dr_closure_test: Calclulate fake contribution and apply it to the dr_num regions for the closure tests
-       # 3. good_old_abcd: estimates QCD contribution by taking events from same sign region and transfer factors from inv. lep iso
-         
+    
         --hist-hooks good_old_abcd
         #--hist-hooks symmetrize_signal,flatten_dy,good_old_abcd,blind_sr #ff_method_dr_closure_test
         --general-settings "cms-label=pw" #,yscale=log"
         #--process-settings 'h_ggf_htt_sm_prod_sm,unstack,scale=stack,color=#0000FF:h_vbf_htt_sm,unstack,scale=stack,color=#00FFFF:zh_htt_sm,unstack,scale=stack,color=#FF00FF'
         #--process-settings 'h_ggf_htt_cpo_prod_sm,unstack,scale=20,color=#FF0000:h_ggf_htt_sm_prod_sm,unstack,scale=20,color=#0000FF:h_ggf_htt_mm_prod_sm,unstack,scale=20,color=#00FF00'
-        
-        #`'h_ggf_htt_mm,unstack,scale=20,color=#00FF00:h_vbf_htt_cpo,unstack,scale=50,color=#FFFF00:'`
-        #`'h_vbf_htt_sm,unstack,scale=50,color=#00FFFF:h_vbf_htt_mm,unstack,scale=50,color=#FF00FF'
         "${@:2}"
     )
 echo law run cf.PlotVariables1D "${args[@]}"
