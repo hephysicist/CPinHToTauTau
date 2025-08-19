@@ -40,23 +40,22 @@ def mssm_bdt_score(
     """
     Returns the bdt score per higgs candidate object. This score will be used to create signal categories.
     """
-
     ch_str = self.config_inst.channels.names()[0]
 
     hcand = events[f'hcand_{ch_str}']
     met = events.PuppiMET
-    # Lepton and MET components for pt_H
-    pt_mu   = flat_np_view(hcand.lep0.pt, axis=1)
-    phi_mu  = flat_np_view(hcand.lep0.phi, axis=1)
-    pt_ele  = flat_np_view(hcand.lep1.pt, axis=1)
-    phi_ele = flat_np_view(hcand.lep1.phi, axis=1)
-    pt_met  = flat_np_view(met.pt)
-    phi_met = flat_np_view(met.phi)
+    # # Lepton and MET components for pt_H
+    # pt_mu   = flat_np_view(hcand.lep0.pt, axis=1)
+    # phi_mu  = flat_np_view(hcand.lep0.phi, axis=1)
+    # pt_ele  = flat_np_view(hcand.lep1.pt, axis=1)
+    # phi_ele = flat_np_view(hcand.lep1.phi, axis=1)
+    # pt_met  = flat_np_view(met.pt)
+    # phi_met = flat_np_view(met.phi)
 
-    # Vector sum in px, py → pt_H
-    px_H = pt_mu * np.cos(phi_mu) + pt_ele * np.cos(phi_ele) + pt_met * np.cos(phi_met)
-    py_H = pt_mu * np.sin(phi_mu) + pt_ele * np.sin(phi_ele) + pt_met * np.sin(phi_met)
-    pt_H = np.sqrt(px_H**2 + py_H**2)
+    # # Vector sum in px, py → pt_H
+    # px_H = pt_mu * np.cos(phi_mu) + pt_ele * np.cos(phi_ele) + pt_met * np.cos(phi_met)
+    # py_H = pt_mu * np.sin(phi_mu) + pt_ele * np.sin(phi_ele) + pt_met * np.sin(phi_met)
+    # pt_H = np.sqrt(px_H**2 + py_H**2)
 
     features_dict = {
         'D_zeta':     flat_np_view(events.D_zeta),
@@ -79,7 +78,7 @@ def mssm_bdt_score(
         'jeta_2':     flat_np_view(events.subleading_jet_eta),
         'n_jets':     flat_np_view(events.n_jets),
         'n_bjets':    flat_np_view(events.N_b_jets),
-        'pt_H':       pt_H
+        'pt_H':       flat_np_view(events.pt_H),
     }
     features = pd.DataFrame.from_dict(features_dict)
     features.index = events.event

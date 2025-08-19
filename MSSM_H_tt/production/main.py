@@ -117,6 +117,14 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     events = self[D_zeta](events, **kwargs)
     print("Producing Hcand features...")
     events = self[hcand_fields](events, **kwargs)
+    print("Producing mT distributions...") 
+    events = self[hcand_mt](events, **kwargs) 
+    print("Producing fast_mtt features...")
+    events = self[fast_mtt](events,**kwargs)
+    print("Producing pt_H features...")
+    events = self[pt_H](events,**kwargs)
+    print("Producing bdt scores...")
+    events = self[mssm_bdt_score](events, **kwargs)
     print("Producing category ids...")
     events = self[category_ids](events, **kwargs)
     
@@ -164,13 +172,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
             print("Producing Top pT weights...")
             events = self[top_pt_weight](events, **kwargs)
-    print("Producing mT distributions...") 
-    events = self[hcand_mt](events, **kwargs) 
-    print("Producing fast_mtt features...")
-    events = self[fast_mtt](events,**kwargs)
-    print("Producing pt_H features...")
-    events = self[pt_H](events,**kwargs)
-    print("Producing bdt scores...")
-    events = self[mssm_bdt_score](events, **kwargs)
+
+
     return events
     
