@@ -56,7 +56,7 @@ case $1 in
         config="run3_2022_preEE_emu_limited"	
         datasets='dy_lep_madgraph,wj_incl_madgraph,data_egamma_C,' 
         processes='dy_lep,wj,data,' 
-	    categories='cat_emu_sr'
+	    categories='cat_emu_sr__bdt_sig'
 	    variables='pt_H,hcand_emu_fastMTT_mass,bdt_raw_score_sig,bdt_raw_score_dy,bdt_raw_score_tt,bdt_raw_score_wj'
         workflow='local'
     ;;
