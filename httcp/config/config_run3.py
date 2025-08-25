@@ -389,7 +389,7 @@ def add_run3(ana: od.Analysis,
     cfg.x.default_selector = "main"
     cfg.x.default_reducer = "cf_default"
     cfg.x.default_producer = "main"
-    cfg.x.default_weight_producer = "main"
+    cfg.x.default_hist_producer = "httcp_hist_producer"
     cfg.x.default_ml_model = None
     cfg.x.default_inference_model = "hcp_model"
     cfg.x.default_categories = ("incl",)
@@ -426,22 +426,10 @@ def add_run3(ana: od.Analysis,
     cfg.x.selector_step_groups = {
         "default": ["json", "met_filter", "dl_res_veto", "trigger", "lepton", "jet"],
     }
-    #  cfg.x.selector_step_labels = {"Initial":0, 
-    #                                "Trigger": , "Muon"}
      
     # whether to validate the number of obtained LFNs in GetDatasetLFNs
     # (currently set to false because the number of files per dataset is truncated to 2)
     cfg.x.validate_dataset_lfns = False
-    
-    # jec configuration  !!! moved to tags dict !!!
-    # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC?rev=201
-    # jerc_postfix = ""
-    # if year == 2016 and campaign.x.vfp == "post":
-    #     jerc_postfix = "APV"
-    # elif year == 2022 and campaign.x.tag == "postEE":
-    #     jerc_postfix = "EE"
-    # elif year == 2023 and campaign.x.tag == "postBPix":
-    #     jerc_postfix = "BPix"
 
     jet_type = "AK4PFPuppi"
     if year < 2022:
@@ -780,30 +768,20 @@ def add_run3(ana: od.Analysis,
     # names of muon correction sets and working points
     # (used in the muon producer)
     # --------------------------------------------------------------------------------------------- #
-
+    cfg.x.muon_id_wp = 'Medium'
     cfg.x.muon_sf = DotDict.wrap({ 
                                   
-        'ID': {'corrector': "NUM_MediumID_DEN_TrackerMuons",
-               'year': f"{year}_{pog_tag}"},
+        'ID': {'corrector': f"NUM_{cfg.x.muon_id_wp}ID_DEN_TrackerMuons",
+               },
         
-        'iso': {'corrector': "NUM_TightPFIso_DEN_MediumID",
-                'year': f"{year}_{pog_tag}"},
+        'iso': {'corrector': f"NUM_TightPFIso_DEN_{cfg.x.muon_id_wp}ID",
+                },
         
-        'trig': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
-                 'year': f"{year}_{pog_tag}"},
+        'trig': {'corrector': f"NUM_IsoMu24_DEN_CutBasedId{cfg.x.muon_id_wp}_and_PFIsoMedium", #TODO Worging points for trig and iso does not match!
+                 },
         
-        'trig_data_eff': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_MCeff",
-                 'year': f"{year}_{pog_tag}"},
-        
-        'trig_mc_eff': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff",
-                 'year': f"{year}_{pog_tag}"},
-        
-        'xtrig': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight",
-                  'year': f"{year}_{pog_tag}"},
-        
-        'MC_eff_mutau': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_MCeff"},
-        
-        'Data_eff_mutau': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff"},
+        'xtrig': {'corrector': f"NUM_IsoMu20_DEN_CutBasedId{cfg.x.muon_id_wp}_and_PFIsoMedium", 
+                  },
     })
     
     # target file size after MergeReducedEvents in MB
