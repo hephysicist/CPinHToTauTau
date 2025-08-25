@@ -248,14 +248,14 @@ def add_hist_hooks(config: od.Config) -> None:
                             hists[the_reg][p].view().value[:,idx]= val
                             hists[the_reg][p].view().variance[:,idx]= var
                             return hists 
-                        if ('cpo' in p.name) or ('sm' in p.name):
+                        if ('htt_cpo' in p.name) or ('htt_sm' in p.name):
                             for idx in range(n_bins//2):
                                 idxs = [idx,n_bins-idx-1]
                                 val = np.average([get_val(idy) for idy in idxs])
                                 var = np.average([get_val(idy,err=True) for idy in idxs])/2.
                                 hists = set_val(hists, idxs[0], val, var)
                                 hists = set_val(hists, idxs[1], val, var)
-                        elif ('mm' in p.name):
+                        elif ('htt_mm' in p.name):
                             for idx in range(n_bins//4):
                                 #left part of the distribution 
                                 idxs = [idx,(n_bins//2)-idx-1]

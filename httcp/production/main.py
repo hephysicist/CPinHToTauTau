@@ -62,7 +62,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         #fake_factors,
         hcand_fields,
         tauspinner_weight,
-        apply_fastMTT,
+        #apply_fastMTT,
         phi_cp,
         category_ids,
         gen_parton_top,
@@ -95,7 +95,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         fake_factors,
         hcand_fields,
         tauspinner_weight,
-        apply_fastMTT,
+        #apply_fastMTT,
         phi_cp,
         category_ids,
         gen_parton_top,
@@ -188,8 +188,8 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
             print("Producing Top pT weights...")
             events = self[top_pt_weight](events, **kwargs)
             
-        print("Producing fastMTT...")
-        events = self[apply_fastMTT](events, **kwargs)
+        #print("Producing fastMTT...")
+        #events = self[apply_fastMTT](events, **kwargs)
     
     
     #Assume that the corrections are done, now we can evaluate bdt scores and produce parameters of interest

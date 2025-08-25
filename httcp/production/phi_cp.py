@@ -195,7 +195,7 @@ def rotate_to_gj_max(tau_vis, tau_mtt) -> ak.Array:
 
 def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     tau     = events.hcand_mutau.lep1 
-    tau_MTT     = events.hcand_mutau.fastMTT.lep1 #used only in mu_a1_pv
+    tau_MTT = events.hcand_mutau.lep1 #used only in mu_a1_pv
     tauprod = events.tau_decay_prods_mutau_lep1
     muon    = events.hcand_mutau.lep0    
 
