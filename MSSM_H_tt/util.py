@@ -45,6 +45,19 @@ def get_p2(part): return ak.zip({f"{var}": part[var] for var in ['pt', 'phi']},
                                     with_name="PolarTwoVector",
                                     behavior=coffea.nanoevents.methods.vector.behavior)
 
+def to_pt_eta_phi_m(arr): return ak.zip({f"{var}": getattr(arr, var) for var in ['pt', 'eta', 'phi', 'mass']},
+                                    with_name="PtEtaPhiMLorentzVector",
+                                    behavior=coffea.nanoevents.methods.vector.behavior)
+
+def get_vec_p3(part,vec_column=None): 
+    if vec_column is not None:
+        return ak.zip({f'{var}': part[f'{vec_column}{var}']for var in ['x', 'y', 'z']},
+                                   with_name="ThreeVector",
+                                   behavior=coffea.nanoevents.methods.vector.behavior)# # lambda function to get 4-vector from the particle objects
+    else:
+        return ak.zip({f'{var}': part[f'{var}']for var in ['x', 'y', 'z']},
+                                   with_name="ThreeVector",
+                                   behavior=coffea.nanoevents.methods.vector.behavior)
 # lambda function to get 4-vector of impact parameter from the particle objects
 # Zeroth component of IP vector is set to zero by definition that can be found here: https://www.mdpi.com/2218-1997/8/5/256
 def get_ip_p4(part): return ak.zip({f'{var}': part[f'IP{var}']for var in ['x', 'y', 'z']} | {'t': ak.zeros_like(part.IPx)},
@@ -463,7 +476,7 @@ def hlt_path_matching(self: Producer, events: ak.Array, triggers: ak.Array, pair
             # For real data, apply the appropriate trigger selection if the 'emu' object is present.
             if 'emu' in pair_objects:
                 # For SingleMuon or Muon_Run datasets, select events where the muon trigger (HLT_IsoMu24) fired.
-                if ('SingleMuon' in dataset_name_tag) or ('Muon_Run' in dataset_name_tag):
+                if ('SingleMuon' in dataset_name_tag) or ('Muon' in dataset_name_tag):
                     matched_masks['emu'] = (triggerID_mu > 0)
                 # For EGamma (MuonEG) datasets, select events where:
                 # - The electron trigger (HLT_Ele30_WPTight_gsf) fired.

@@ -2,7 +2,7 @@
 # coding: utf-8
 
 """
-Configuration of the higgs_cp analysis.
+Configuration of the MSSM analysis.
 """
 
 import functools
@@ -816,6 +816,25 @@ def add_run3(ana: od.Analysis,
         #"met_phi_corr"            : (f"{jsonpog_dir}JME/{cfg.x.year}{tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
     })
     
+    from pathlib import Path
+    #Insert here the mass you want to use 
+    cfg.x.bdt_mass = {
+            "mass": 100,
+        }
+    bdt_eos_path = "/eos/user/j/jmalvaso/SWAN_projects/XGBoost_MSSM/"
+
+    for mass in signal_masses:
+        even_path = f"{bdt_eos_path}M{mass}/bst_model_M{mass}_even.json"
+        odd_path  = f"{bdt_eos_path}M{mass}/bst_model_M{mass}_odd.json"
+
+        if not Path(even_path).is_file():
+            raise FileNotFoundError(f"Missing model (even) for mass {mass}: {even_path}")
+        if not Path(odd_path).is_file():
+            raise FileNotFoundError(f"Missing model (odd) for mass {mass}: {odd_path}")
+
+        cfg.x.external_files[f"ml_model_even_{mass}"] = even_path
+        cfg.x.external_files[f"ml_model_odd_{mass}"]  = odd_path
+    
     # --------------------------------------------------------------------------------------------- #
     # electron settings
     # names of electron correction sets and working points
@@ -991,20 +1010,20 @@ def add_run3(ana: od.Analysis,
     })
     
     cfg.x.fake_factor_method = DotDict.wrap({
-    "axes": {'tau_pt': {
-                'var_route': [f'hcand_{channel}', 'lep1', 'pt'],
-                'ax_str'  : 'Variable([20,30,40,60,80,200], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
+    "axes": {'delta_r' : {
+                'var_route': [f'hcand_{channel}','delta_r'],
+                'ax_str'  : 'Variable([0.3,3,3.5,4,6], name="delta_r", label="Delta R", underflow=False, overflow=False)',
                 },
-             'tau_dm_pnet': {
-                'var_route' : [f'hcand_{channel}', 'lep1', 'decayModePNet'],
-                'ax_str'   :'IntCategory([0,1,2,10,11], name="tau_dm_pnet", label="Tau PNet decayMode")',
-             },
-             "n_jets": {
+             'N_jets'  : {
                 'var_route' : ['n_jets'],
-                'ax_str'   : 'Integer(0, 3, name="n_jets", label="Number of jets",underflow=False, overflow=False)',
-            },
+                'ax_str'  : 'Integer(0, 3, name="N_jets", label="Number of jets", underflow=False, overflow=False)',
+                },
+             "N_b_jets": {
+                'var_route' : ['N_b_jets'],
+                'ax_str'   : 'Integer(0, 2, name="N_b_jets", label="Number of b jets",underflow=False, overflow=False)',
+                },
     },
-    "columns" : ['ff_weight_wj','ff_weight_qcd'],
+    "columns" : ['ff_weight_qcd'],
     "shifts"  : ["up", "nominal", "down"]
     })   
     
