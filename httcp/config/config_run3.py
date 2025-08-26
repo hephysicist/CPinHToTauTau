@@ -156,6 +156,8 @@ def add_run3(ana: od.Analysis,
         # "dy_lep_m10to50",
         #W + jets
         "wj",
+        #diboson + single top
+        "vvt",
         #diboson
         "vv", #diboson inclusive
         "ww",
@@ -175,17 +177,24 @@ def add_run3(ana: od.Analysis,
         "st_schannel_t_lep",
         "st_schannel_tbar_lep",
         # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        "st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
-        "st_twchannel_tbar_fh",
-        "h_ggf_htt",
-        "h_ggf_htt_cpo",
-        "h_ggf_htt_mm",
+        "st_twchannel_t_fh","st_twchannel_t_sl","st_twchannel_t_dl",
+        "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh",
+        #ggF signal
         "h_ggf_htt_sm",
-
+        "h_ggf_htt_sm_prod_sm","h_ggf_htt_sm_prod_mm","h_ggf_htt_sm_prod_cpo",
+        "h_ggf_htt_mm",
+        "h_ggf_htt_mm_prod_sm","h_ggf_htt_mm_prod_mm","h_ggf_htt_mm_prod_cpo",
+        "h_ggf_htt_cpo",
+        "h_ggf_htt_cpo_prod_sm","h_ggf_htt_cpo_prod_mm","h_ggf_htt_cpo_prod_cpo",
+        "h_ggf_htt_flat",
+        "h_ggf_htt_flat_prod_sm","h_ggf_htt_flat_prod_mm","h_ggf_htt_flat_prod_cpo", 
+        #VBF signal
+        "h_vbf_htt_cpo","h_vbf_htt_sm","h_vbf_htt_mm","h_vbf_htt_flat",
+        #VH signal
+        "zh_htt_cpo","zh_htt_sm","zh_htt_mm","zh_htt_flat",
+        "wh_htt_cpo","wh_htt_sm","wh_htt_mm","wh_htt_flat",
+        "wph_htt_cpo","wph_htt_sm","wph_htt_mm","wph_htt_flat",
+        "wmh_htt_cpo","wmh_htt_sm","wmh_htt_mm","wmh_htt_flat",
     ]
         
     for process_name in process_names:
@@ -234,10 +243,17 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
-        #SM Higgs signal
-        "h_ggf_htt_cpo_filtered",
-        "h_ggf_htt_mm_filtered",
-        "h_ggf_htt_sm_filtered",
+        # ggH signal
+        "h_ggf_htt_sm_prod_sm_filtered","h_ggf_htt_sm_prod_mm_filtered","h_ggf_htt_sm_prod_cpo_filtered",
+        "h_ggf_htt_mm_prod_sm_filtered","h_ggf_htt_mm_prod_mm_filtered","h_ggf_htt_mm_prod_cpo_filtered",
+        "h_ggf_htt_cpo_prod_sm_filtered","h_ggf_htt_cpo_prod_mm_filtered","h_ggf_htt_cpo_prod_cpo_filtered",
+        "h_ggf_htt_flat_prod_sm_filtered","h_ggf_htt_flat_prod_mm_filtered","h_ggf_htt_flat_prod_cpo_filtered", 
+        #higgs signal vbf
+        "h_vbf_htt_cpo_filtered","h_vbf_htt_mm_filtered","h_vbf_htt_sm_filtered","h_vbf_htt_flat_filtered",
+        #higgs signal vh
+        "zh_htt_cpo_filtered","zh_htt_mm_filtered","zh_htt_sm_filtered","zh_htt_flat_filtered",
+        "wph_htt_sm_filtered","wph_htt_cpo_filtered","wph_htt_mm_filtered","wph_htt_flat_filtered",
+        "wmh_htt_sm_filtered","wmh_htt_cpo_filtered","wmh_htt_mm_filtered","wmh_htt_flat_filtered",
         ]
 
     dataset_names_2022postEE = [
@@ -280,12 +296,17 @@ def add_run3(ana: od.Analysis,
         #"st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
-        #higgs signal ggf
-        "h_ggf_htt_filtered",
-        "h_ggf_htt_cpo_filtered",
-        "h_ggf_htt_mm_filtered",
-        "h_ggf_htt_sm_filtered",
-
+         # ggH signal
+        "h_ggf_htt_sm_prod_sm_filtered","h_ggf_htt_sm_prod_mm_filtered","h_ggf_htt_sm_prod_cpo_filtered",
+        "h_ggf_htt_mm_prod_sm_filtered","h_ggf_htt_mm_prod_mm_filtered","h_ggf_htt_mm_prod_cpo_filtered",
+        "h_ggf_htt_cpo_prod_sm_filtered","h_ggf_htt_cpo_prod_mm_filtered","h_ggf_htt_cpo_prod_cpo_filtered",
+        "h_ggf_htt_flat_prod_sm_filtered","h_ggf_htt_flat_prod_mm_filtered","h_ggf_htt_flat_prod_cpo_filtered", 
+        #higgs signal vbf
+        "h_vbf_htt_cpo_filtered","h_vbf_htt_mm_filtered","h_vbf_htt_sm_filtered","h_vbf_htt_flat_filtered",
+        #higgs signal vh
+        "zh_htt_cpo_filtered","zh_htt_mm_filtered","zh_htt_sm_filtered","zh_htt_flat_filtered",
+        "wph_htt_sm_filtered","wph_htt_cpo_filtered","wph_htt_mm_filtered","wph_htt_flat_filtered",
+        "wmh_htt_sm_filtered","wmh_htt_cpo_filtered","wmh_htt_mm_filtered","wmh_htt_flat_filtered",
         ]
 
     dataset_names_2023preBPix = [
@@ -322,10 +343,17 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
-        #higgs signal ggf
-        "h_ggf_htt_sm_filtered",
-        "h_ggf_htt_cpo_filtered",
-        "h_ggf_htt_mm_filtered",
+        # ggH signal
+        "h_ggf_htt_sm_prod_sm_filtered","h_ggf_htt_sm_prod_mm_filtered","h_ggf_htt_sm_prod_cpo_filtered",
+        "h_ggf_htt_mm_prod_sm_filtered","h_ggf_htt_mm_prod_mm_filtered","h_ggf_htt_mm_prod_cpo_filtered",
+        "h_ggf_htt_cpo_prod_sm_filtered","h_ggf_htt_cpo_prod_mm_filtered","h_ggf_htt_cpo_prod_cpo_filtered",
+        "h_ggf_htt_flat_prod_sm_filtered","h_ggf_htt_flat_prod_mm_filtered","h_ggf_htt_flat_prod_cpo_filtered", 
+        #higgs signal vbf
+        "h_vbf_htt_cpo_filtered","h_vbf_htt_mm_filtered","h_vbf_htt_sm_filtered","h_vbf_htt_flat_filtered",
+        #higgs signal vh
+        "zh_htt_cpo_filtered","zh_htt_mm_filtered","zh_htt_sm_filtered","zh_htt_flat_filtered",
+        "wph_htt_sm_filtered","wph_htt_cpo_filtered","wph_htt_mm_filtered","wph_htt_flat_filtered",
+        "wmh_htt_sm_filtered","wmh_htt_cpo_filtered","wmh_htt_mm_filtered","wmh_htt_flat_filtered",
         ]
 
     dataset_names_2023postBPix = [
@@ -359,13 +387,25 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
+        # ggH signal
+        "h_ggf_htt_sm_prod_sm_filtered","h_ggf_htt_sm_prod_mm_filtered","h_ggf_htt_sm_prod_cpo_filtered",
+        "h_ggf_htt_mm_prod_sm_filtered","h_ggf_htt_mm_prod_mm_filtered","h_ggf_htt_mm_prod_cpo_filtered",
+        "h_ggf_htt_cpo_prod_sm_filtered","h_ggf_htt_cpo_prod_mm_filtered","h_ggf_htt_cpo_prod_cpo_filtered",
+        "h_ggf_htt_flat_prod_sm_filtered","h_ggf_htt_flat_prod_mm_filtered","h_ggf_htt_flat_prod_cpo_filtered", 
+        #higgs signal vbf
+        "h_vbf_htt_cpo_filtered","h_vbf_htt_mm_filtered","h_vbf_htt_sm_filtered","h_vbf_htt_flat_filtered",
+        #higgs signal vh
+        "zh_htt_cpo_filtered","zh_htt_mm_filtered","zh_htt_sm_filtered","zh_htt_flat_filtered",
+        "wph_htt_sm_filtered","wph_htt_cpo_filtered","wph_htt_mm_filtered","wph_htt_flat_filtered",
+        "wmh_htt_sm_filtered","wmh_htt_cpo_filtered","wmh_htt_mm_filtered","wmh_htt_flat_filtered",
+        
         ]
 
     #Simultaneously select the dataset list depending on the year,campaign tag, and iterate over the constituents
     for dataset_name in eval(f"dataset_names_{year}{tag}"):
         # add the dataset
         dataset = cfg.add_dataset(campaign.get_dataset(dataset_name))
-        if dataset_name.startswith("h_"):
+        if dataset_name.startswith("h_") or dataset_name.startswith("zh_") or dataset_name.startswith("zh_"):
             dataset.add_tag("signal")   
         if dataset.name.startswith("tt_"):
             dataset.add_tag({"has_top", "ttbar", "tt"})    
@@ -743,6 +783,7 @@ def add_run3(ana: od.Analysis,
         "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
         "ml_model_even"                 : f"{ml_dir}{ch_short}/EVEN/model_{ch_short}_EVEN.json",
         "ml_model_odd"                  : f"{ml_dir}{ch_short}/ODD/model_{ch_short}_ODD.json",
+        "filter_eff" : f"{corr_dir}/filter_eff/Run3_{year}{short_tag}.yaml",
     })
     #--------------------------------------------------------------------------------------------- #
     # electron settings
@@ -821,13 +862,15 @@ def add_run3(ana: od.Analysis,
  
     cfg.x.event_weights = DotDict({
         "normalization_weight": [],
+        "filter_weight": [],
         "mc_weight":[],
         "tau_weight_nom": get_shifts("tau"),
         "pu_weight": [],
         "tauspinner_weight": [],
         "zpt_weight":[],
         "muon_weight_nom": get_shifts("mu"),
-        "electron_weight_nom": get_shifts("electron"),        
+        #"electron_weight_nom": get_shifts("electron"), 
+        "top_pt_weight" : [],       
         "trigger_weight_mutau_nom": [],
     })
     for dataset in cfg.datasets:

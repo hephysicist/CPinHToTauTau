@@ -61,6 +61,12 @@ def get_mc_hist(hists: dict, remove_wj=False)-> hist.Hist :
     data_hist = sum(data_hists[1:], data_hists[0].copy())
     return data_hist
 
+def get_signal_hists(hists: dict)-> hist.Hist :
+    hists = [h 
+             for p, h in hists.items() 
+             if p.is_mc and p.has_tag("signal")]
+    return hists
+
 def rel_err(h_arr=[], err_arr=[]):
     if len(h_arr):  sum_var = np.zeros_like(h_arr[0].values())
     else: sum_var = np.zeros_like(err_arr[0])
@@ -126,6 +132,7 @@ def add_hist_hooks(config: od.Config) -> None:
                 tf_err2 = ((np.sum(data_num.variances()) + np.sum(mc_num.variances()))/den**2 + 
                     tf**2/den**2 *(np.sum(data_den.variances()) + np.sum(mc_den.variances())))
             hists_sr[qcd].view().value = np.maximum(data_ar.values() -  mc_ar.values(), 0.) * tf
+            hists_sr[qcd].view().variance = (data_ar.view().variance + mc_ar.view().variance) * tf**2
             
         return hists_sr
     
@@ -195,9 +202,113 @@ def add_hist_hooks(config: od.Config) -> None:
             
         return hists_sr
     
+    def flatten_dy(task, hists, category_inst):
+        if not hists:
+            return hists
+        for the_reg, h_single_reg in hists.items():
+            if ('fake' in the_reg) or ('gtau' in the_reg):
+                pass
+            else:
+                dy_procs = [p for p in h_single_reg.keys() if p.is_mc and 'dy' in p.name]
+                for p in dy_procs:
+                    dy_hist = h_single_reg[p].copy()
+                    if not dy_hist.empty():
+                        mean_val = np.average(dy_hist.view().value, axis=1)
+                        variance =np.average(dy_hist.view().variance, axis=1)/dy_hist.shape[-1]
+                        #print(f"Perform dy flattening for {the_reg}")
+                        #print(f"Before: {hists[the_reg][p].view().value}")
+                        hists[the_reg][p].view().value = mean_val
+                        hists[the_reg][p].view().variance = variance
+                        #print(f"After: {hists[the_reg][p].view().value}")
+                    else:
+                        print(f"DY histogram is empty for {the_reg}")
+        return hists
+
+    def symmetrize_signal(task, hists, category_inst):
+        if not hists:
+            return hists
+        for the_reg, h_single_reg in hists.items():
+            if ('fake' in the_reg) or ('gtau' in the_reg):
+                pass
+            else:
+                signal_procs = [p for p in h_single_reg.keys() if p.is_mc and p.has_tag("signal")]
+                for p in signal_procs:
+                    the_hist = h_single_reg[p].copy()
+                    if not the_hist.empty():
+                        n_bins = the_hist.shape[-1]
+                        def get_val(idx, err=None):
+                            the_field = 'variance' if err else 'value'
+                            return getattr(hists[the_reg][p].view(), the_field)[:,idx]
+                        def set_val(hists, idx, val, var):
+                            hists[the_reg][p].view().value[:,idx]= val
+                            hists[the_reg][p].view().variance[:,idx]= var
+                            return hists 
+                        if ('htt_cpo' in p.name) or ('htt_sm' in p.name):
+                            for idx in range(n_bins//2):
+                                idxs = [idx,n_bins-idx-1]
+                                val = np.average([get_val(idy) for idy in idxs])
+                                var = np.average([get_val(idy,err=True) for idy in idxs])/2.
+                                hists = set_val(hists, idxs[0], val, var)
+                                hists = set_val(hists, idxs[1], val, var)
+                        elif ('htt_mm' in p.name):
+                            for idx in range(n_bins//4):
+                                #left part of the distribution 
+                                idxs = [idx,(n_bins//2)-idx-1]
+                                val = np.average([get_val(idy) for idy in idxs])
+                                var = np.average([get_val(idy,err=True) for idy in idxs])/2.
+                                hists = set_val(hists, idxs[0], val, var)
+                                hists = set_val(hists, idxs[1], val, var)
+                                #right part of the distribution
+                                idxs = [idy+(n_bins//2) for idy in idxs]
+                                val = np.average([get_val(idy) for idy in idxs])
+                                var = np.average([get_val(idy,err=True) for idy in idxs])/2.
+                                hists = set_val(hists, idxs[0], val, var)
+                                hists = set_val(hists, idxs[1], val, var)
+                        else:
+                            raise NotImplementedError(f"Signal does not have any of this tags [sm, mm, cpo]. I don't know how to symmetrize it.")
+                        norm_after = np.sum(hists[the_reg][p].view().value,axis=1)
+                    else:
+                        print(f"signal histogram is empty for {the_reg}")
+        return hists
+
+
+    def blind_sr(task, hists, category_inst):
+        if not hists:
+            return hists
+        data_proc = [the_proc for the_proc in hists.keys() if 'data' in the_proc.name]
+        hists[data_proc[0]].view().value[:,1:] = 0
+        hists[data_proc[0]].view().variance[:,1:] = 0
+        return hists
+
+    def add_qcd_and_wj(task, hists, category_inst):
+        fake_hists = []
+        for (proc, h) in hists.items():
+            is_fake_proc = ('qcd' in proc.name) or ('wj' in proc.name )
+            if is_fake_proc: fake_hists.append(h)
+        fake_hist = sum(fake_hists[1:], fake_hists[0].copy())
+        from cmsdb.processes.qcd import qcd
+        hists[qcd] = fake_hist
+        return hists
+
+    def ensure_zl_hist(task, hists, category_inst):
+        has_dy_z2ll = [the_proc 
+                       for the_proc in hists.keys() 
+                       if ('dy_z2mumu' in the_proc.name) or ('dy_z2ee' in the_proc.name)]
+        from cmsdb.processes.ewk import dy_z2ee,dy_z2tautau
+        if len(has_dy_z2ll) == 0:
+            tmp_h = [the_h for proc , the_h in hists if ('dy_z2tautau' in the_proc.name)][0] 
+            hists[dy_z2mumu] = tmp_h.copy().reset()
+            hists[dy_z2ee] = tmp_h.copy().reset()
+        return hists
+    
 
     config.x.hist_hooks = {
-        "good_old_abcd"  : qcd_estimation,
-        "ff_method" : ff_method,
-        "ff_method_dr_closure_test": ff_method_dr_closure_test,
+        "good_old_abcd"             : qcd_estimation,
+        "add_qcd_and_wj"            : add_qcd_and_wj,
+        "ff_method"                 : ff_method,
+        "ff_method_dr_closure_test" : ff_method_dr_closure_test,
+        "flatten_dy"                : flatten_dy,
+        "symmetrize_signal"         : symmetrize_signal,
+        "blind_sr"                  : blind_sr,
+        "ensure_zl_hist"            : ensure_zl_hist
     }

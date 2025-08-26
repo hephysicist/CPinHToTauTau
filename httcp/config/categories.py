@@ -32,6 +32,8 @@ def add_categories(config: od.Config,
                     if 'regs' in aux_spec:
                         kwargs['aux'][aux_spec] = {key: '_'.join((base_cat.name, val)) for (key,val) in aux_content.items()}
                     else:
+                        if aux_spec == 'fit_var' and isinstance(aux_content, str):
+                            aux_content = [aux_content]
                         kwargs['aux'][aux_spec] = aux_content
             base_cats.append(kwargs['name'])
             add_category(config, **kwargs)
@@ -58,6 +60,8 @@ def add_categories(config: od.Config,
                     kwargs['aux'][aux_key] = aux_content
         if ('aux' in child_cat.keys()) and parent_cat.aux:
             for (aux_key, aux_content) in child_cat['aux'].items():
+                if aux_key == 'fit_var' and isinstance(aux_content, str):
+                    aux_content = [aux_content]
                 kwargs['aux'][aux_key] = aux_content
                 
         add_category(config, **kwargs)
@@ -168,40 +172,60 @@ def add_categories(config: od.Config,
     base_cats = add_base_categories(config, channel, category_map, base_selection)
     #Add child categories to base categories
     bdt_cats_map  = DotDict.wrap({
-        "bdt_hig"   : {'selection': ["bdt_cat_higgs"], 'label': f" \n bdt cat Higgs",},
-        "bdt_gtau"  : {'selection': ["bdt_cat_gtau"], 'label': f" \n bdt cat genuine tau",},
-        "bdt_fakes" : {'selection': ["bdt_cat_fake"], 'label': f" \n bdt cat fakes",},
-        
+        "hig"   : {'selection'  : ["bdt_cat_higgs"], 'label': f"\nbdt cat Higgs",},
+        "gtau"  : {'selection'  : ["bdt_cat_gtau"], 
+                   'label'      : f"\nbdt cat genuine tau",
+                   'aux'        : {'fit_var': 'bdt_raw_score_4bins_gtau'},},
+        "fake" : {'selection'  : ["bdt_cat_fake"],
+                   'label'      : f"\nbdt cat fakes",
+                   'aux'        : {'fit_var': 'bdt_raw_score_4bins_fake'},},
         })
-    
+
     hig_cats_map  = DotDict.wrap({
-        "hig_cat_0"   : {'selection': ["bdt_cat_higgs","hig_cat_0"], 'label': f" \n  D_H in (0.3,0.5]",},
-        "hig_cat_1"   : {'selection': ["bdt_cat_higgs","hig_cat_1"], 'label': f" \n  D_H in (0.5,0.7]",},
-        "hig_cat_2"   : {'selection': ["bdt_cat_higgs","hig_cat_2"], 'label': f" \n  D_H in (0.7,1.0]",},
+        "cat0"   : {'selection': ["hig_cat_0"], 'label': f"\nD_H in (0.33,0.5]",},
+        "cat1"   : {'selection': ["hig_cat_1"], 'label': f"\nD_H in (0.5,0.7]",},
+        "cat2"   : {'selection': ["hig_cat_2"], 'label': f"\nD_H in (0.7,1.0]",},
         })
     
     tau_decays_map  = DotDict.wrap({
         "tau2pi"     : {'selection': ["pnet_dm0","tau_ip_cut"], 
-                        'label': f" \n mu pi",
+                        'label': f"\n mu pi",
                         'aux'       : {'fit_var': 'phi_cp_mu_pi'},
                         },
+
         "tau2rho"    : {'selection': ["pnet_dm1", "hps_dm1", "pion_E_split_cut", "tau_has_em_prods"],
-                        'label': f" \n mu rho",
+                        'label': f"\n mu rho",
                         'aux'       : {'fit_var': 'phi_cp_mu_rho'},
                         },
-        "tau2a1"     : {'selection': ["pnet_dm10", "hps_dm10"],
-                        'label': f" \n mu a1",
-                        'aux'       : {'fit_var': 'phi_cp_mu_a1_1pr'},},
+
+        "tau2a1"    : {'selection': ["pnet_dm2", "hps_dm1","pion_E_split_cut","tau_has_em_prods"],
+                        'label': f"\n mu a1 1pr",
+                        'aux'       : {'fit_var': 'phi_cp_mu_a1_1pr'},
+                        },
+
+        "tau2a1_3pr": {'selection': ["pnet_dm10","has_refit_sv"],
+                        'label': f"\n mu a1 3pr",
+                        'aux'       : {'fit_var': 'phi_cp_mu_a1_3pr'},#TODO add variables 'phi_cp_mu_a1_3pr_dp', 'phi_cp_mu_a1_3pr_pv'
+                        },
         })
     
-    splitted_by_tau_dm = create_child_categories(config,
-                                                 parent_categories=base_cats,
-                                                 child_category_map=tau_decays_map)
-     
     splitted_by_bdt = create_child_categories(config,
-                                              parent_categories=splitted_by_tau_dm,
-                                              child_category_map=hig_cats_map)
+                                                 parent_categories=base_cats,
+                                                 child_category_map=bdt_cats_map)
+    sel_hig_cats = [the_cat for the_cat in splitted_by_bdt if '__hig' in the_cat]
 
+    splitted_by_hig_cats = create_child_categories(config,
+                                                 parent_categories=sel_hig_cats,
+                                                 child_category_map=hig_cats_map)
+
+    splitted_by_dm = create_child_categories(config,
+                                              parent_categories=splitted_by_hig_cats,
+                                              child_category_map=tau_decays_map)
+
+    #remove intermediate categories that are not required in the analysis
+    for the_name in splitted_by_hig_cats:
+        the_cat = config.get_category(the_name)
+        config.remove_category(the_cat)
 
 
 

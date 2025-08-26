@@ -76,3 +76,52 @@ class HCPModelBase(InferenceModel):
 
     def init_cleanup(self) -> None:
         self.cleanup(keep_parameters="")
+        
+    def format_systematics(self):
+        """ Function to format the systematics and prepare the processes_per_* dictionaries
+        """
+        years = {config_inst.campaign.x.year for config_inst in self.config_insts}
+
+        systematics_formatted = sorted({
+            syst.format(year=year, bjet_cat=bjet_cat)
+            for syst in self.systematics
+            for year in years
+            for bjet_cat in self.bjet_cats
+        })
+
+        available_procs = set(self.processes)
+
+        self.processes_per_shape = {
+            unc_formatted: available_procs
+            for year in years
+            for bjet_cat in self.bjet_cats
+            for unc, procs in const.processes_per_shape.items()
+            if (
+                (unc_formatted := unc.format(year=year, bjet_cat=bjet_cat))
+                in systematics_formatted and
+                any(available_procs := [proc for proc in procs if proc in ["all", *self.processes]])
+            )
+        }
+        # check that all systematics are considered and warn if not
+        all_systs = set()
+        for processes_per_syst in (
+            self.processes_per_QCDScale,
+            self.processes_per_pdf_rate,
+            self.processes_per_rate_unconstrained,
+            self.processes_per_shape,
+        ):
+            for syst, procs in processes_per_syst.items():
+                if procs:
+                    all_systs.add(syst)
+                else:
+                    logger.warning(
+                        f"No processes found for systematic {syst}. "
+                        "Please check your configuration.",
+                    )
+                    processes_per_syst.pop(syst)
+        if not_considered := set(systematics_formatted) - all_systs:
+            logger.warning(
+                f"The following systematics were not considered in the inference model: "
+                f"{', '.join(not_considered)}. Please check your configuration.",
+            )
+                    

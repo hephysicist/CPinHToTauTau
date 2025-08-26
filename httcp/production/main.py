@@ -14,7 +14,8 @@ from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 from columnflow.production.util import attach_coffea_behavior
 
 from httcp.production.weights import (muon_weight, tau_weight, get_mc_weight, tauspinner_weight, 
-                                      zpt_weight, electron_weight,fake_factors, trigger_weight_mutau)
+                                      zpt_weight, electron_weight,fake_factors, trigger_weight_mutau,
+                                      filter_weight)
 from httcp.production.sample_split import split_dy
 from httcp.production.generatorZ import genZ
 from httcp.production.met_recoil import gen_boson, met_recoil
@@ -67,6 +68,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         ip_correction,
         hcp_bdt_score,
         fast_mtt,
+        filter_weight,
         },
     produces={
         attach_coffea_behavior,
@@ -97,6 +99,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         ip_correction,
         hcp_bdt_score,
         fast_mtt,
+        filter_weight,
     },
     # whether weight producers should be added and called
     produce_weights=True,
@@ -130,12 +133,17 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         
         print("Producing Gen weights...")    
         events = self[get_mc_weight](events, **kwargs)
+        print("Producing filter weights...")
+        events = self[filter_weight](events, **kwargs)
+        
         print("Producing Normalization weights...")
         events = self[normalization_weights](events, **kwargs)
+        
         processes = self.dataset_inst.processes.names()
         if ak.any(['dy' in proc for proc in processes]):
             print("Splitting Drell-Yan dataset...")
             events = self[split_dy](events,**kwargs)
+        
         print("Z pt reweighting...")
         events = self[genZ](events, **kwargs)
         events = self[zpt_weight](events,**kwargs)

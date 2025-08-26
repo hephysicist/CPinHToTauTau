@@ -57,7 +57,7 @@ def hcp_bdt_score(
         'pt_tt': flat_np_view(hcand.pt_tt),
         'm_vis': flat_np_view(hcand.mass),
         'pt_vis': flat_np_view(hcand.pt_vis),
-        'FastMTT_mass': flat_np_view(hcand.mass),
+        'FastMTT_mass': flat_np_view(hcand.fastMTT.mass),
         'mt_1': flat_np_view(hcand.mt_0),
         'mt_2': flat_np_view(hcand.mt_1),
         'mt_lep': flat_np_view(hcand.mt_vis),
