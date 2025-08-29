@@ -83,7 +83,7 @@ def keep_columns(cfg: od.Config) -> None:
         } | {
             "GenTau.*", "GenTauProd.*", "nJet", "N_b_jets", "n_jets", 
             "leading_jet_pt","subleading_jet_pt","leading_jet_eta","subleading_jet_eta","leading_jet_phi","subleading_jet_phi","delta_eta_jj","mjj","n_jets_tag",
-            "all_triggers_id", "triggerID_e", "triggerID_mu", "triggerID_tau", "D_zeta",
+            "all_triggers_id", "triggerID_e", "triggerID_mu", "triggerID_tau", "D_zeta", "LHE.Njets", "LHE.NpNLO"
         } | {
             f"hcandprod.{var}" for var in [
                 "pt", "eta", "phi", "mass", "charge",
@@ -789,21 +789,27 @@ def add_dilepton_features(cfg: od.Config) -> None:
             unit="GeV",
             x_title=r"$mass^{fastMTT}$",
         )
-def add_mssm_bdt_output(cfg: od.Config) -> None:    
-    for the_var in ['sig','tt','dy','wj']:
-        cfg.add_variable(
-                name=f"bdt_raw_score_{the_var}",
-                expression=f"bdt_raw_score_{the_var}",
-                binning=(30, 0., 1.),
-                x_title=f"raw BDT score for {the_var}",
-            )
+        
+def add_mssm_bdt_output(cfg: od.Config) -> None:
+  # per-mass variables
+  from MSSM_H_tt.config.mass_points import read_bdt_masses
+  MASS_POINTS = read_bdt_masses()
+  for m in MASS_POINTS:
+    for the_var in ['sig', 'tt', 'dy', 'wj']:
+      cfg.add_variable(
+        name=f"bdt_raw_score_{the_var}_M{m}",
+        expression=f"bdt_raw_score_{the_var}_M{m}",
+        binning=(30, 0.25, 1.),
+        x_title=f"raw BDT score for {the_var} (M={m} GeV)",
+      )
     cfg.add_variable(
-                name=f"bdt_cat",
-                expression=f"bdt_cat",
-                binning=(4,-0.5,3.5),
-                discrete_x=True,
-                x_title=f"BDT class",
-            )
+      name=f"bdt_cat_M{m}",
+      expression=f"bdt_cat_M{m}",
+      binning=(4, -0.5, 3.5),
+      discrete_x=True,
+      x_title=f"BDT class (M={m})",
+    )
+
 
 def add_variables(cfg: od.Config) -> None:
     """
