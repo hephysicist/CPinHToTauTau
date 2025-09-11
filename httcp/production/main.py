@@ -168,13 +168,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         
         print("Producing GenPartonTop...")
         events = self[gen_parton_top](events, **kwargs)
-        top_pt_weight_dummy = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)
-        top_pt_weight_dummy = ak.ones_like(top_pt_weight_dummy)
-        for variation in ("", "_up", "_down"):
-            events = set_ak_column(events, f"top_pt_weight{variation}", top_pt_weight_dummy)
-        if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
-            print("Producing Top pT weights...")
-            events = self[top_pt_weight](events, **kwargs)
+        events = self[top_pt_weight](events, **kwargs)
     
     
     #Assume that the corrections are done, now we can evaluate bdt scores and produce parameters of interest
@@ -265,13 +259,8 @@ def ff_method(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = self[tauspinner_weight](events, **kwargs)
         print("Producing GenPartonTop...")
         events = self[gen_parton_top](events, **kwargs)
-        top_pt_weight_dummy = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)
-        top_pt_weight_dummy = ak.ones_like(top_pt_weight_dummy)
-        for variation in ("", "_up", "_down"):
-            events = set_ak_column(events, f"top_pt_weight{variation}", top_pt_weight_dummy)
-        if self.dataset_inst.has_tag("ttbar"):
-            print("Producing Top pT weights...")
-            events = self[top_pt_weight](events, **kwargs)
+        print("Producing Top pT weights...")
+        events = self[top_pt_weight](events, **kwargs)
     return events
 
 
