@@ -248,9 +248,9 @@ def add_jet_features(cfg: od.Config) -> None:
     )  
         
     cfg.add_variable(
-        name="N_jets_pT_20_eta_4_7_Tight",
+        name="n_j",
         expression="n_jets",
-        binning=(11, -0.5, 10.5),
+        binning=(4, -0.5, 3.5),
         discrete_x=True,
         x_title="N_jets_pT_20_eta_4_7_Tight",
     )
@@ -956,6 +956,10 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 x_title=f"{lep} " + r"$m^{fastMTT}$",
             )
 
+def add_ff_variables(cfg: od.Config) -> None:
+    for the_name, ax in cfg.x.fake_factor_method.axes.items():
+        cfg.add_variable(name = the_name, expression = '.'.join(ax.var_route))
+
 def add_variables(cfg: od.Config) -> None:
     """
     Adds all variables to a *config*.
@@ -969,4 +973,5 @@ def add_variables(cfg: od.Config) -> None:
     add_cutflow_features(cfg)
     add_dilepton_features(cfg)
     add_hcp_bdt_output(cfg)
+    add_ff_variables(cfg)
    

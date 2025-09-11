@@ -223,7 +223,7 @@ def lep_inv_iso(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array
         upper_lim = events.hcand_etau.lep0.pfRelIso03_all < 2.
     elif channel == 'mutau': 
         isolation = events.hcand_mutau.lep0.pfRelIso04_all >= 0.15
-        upper_lim = events.hcand_mutau.lep0.pfRelIso04_all < 0.5
+        upper_lim = events.hcand_mutau.lep0.pfRelIso04_all < 0.3
     else:
         raise NotImplementedError(
                 f'Can not find an isolation criteria for {channel} channel!')

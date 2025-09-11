@@ -741,7 +741,7 @@ def add_run3(ana: od.Analysis,
     ###### mT cut value ######
     ##########################
     
-    cfg.x.mt_cut_value = 70
+    cfg.x.mt_cut_value = 65
     
     ##########################
     ##########################
@@ -776,8 +776,7 @@ def add_run3(ana: od.Analysis,
         "zpt_weight"                    : f"{corr_dir}zpt_reweighting_LO_2022.root",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
-        "fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_2022_postEE_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
-        #"fake_factors"                 : (f"{corr_dir}fake_factors_{channel}_{year}_{campaign.x.tag}_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
+        "fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_22and23_mt{cfg.x.mt_cut_value}_4bins.json", "v2"),
         "met_recoil"                    : (f"{corr_dir}hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{tag}_v2.json.gz", "v2"),
         #"met_phi_corr": (f"{jsonpog_dir}JME/{cfg.x.year}{pog_tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
         "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
@@ -956,16 +955,16 @@ def add_run3(ana: od.Analysis,
     })
     cfg.x.fake_factor_method = DotDict.wrap({
     "axes": {'tau_pt': {
-                'var_route': [f'hcand_{channel}', 'lep1', 'pt'],
-                'ax_str'  : 'Variable([20,30,40,60,80,200], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
+                'var_route' : [f'hcand_{channel}', 'lep1', 'pt'],
+                'ax_str'    : 'Variable([20,30,40,60,200], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
                 },
              'tau_dm_pnet': {
                 'var_route' : [f'hcand_{channel}', 'lep1', 'decayModePNet'],
-                'ax_str'   :'IntCategory([0,1,2,10,11], name="tau_dm_pnet", label="Tau PNet decayMode")',
+                'ax_str'    : 'IntCategory([0,1,2,10,11], name="tau_dm_pnet", label="Tau PNet decayMode")',
              },
              "n_jets": {
                 'var_route' : ['n_jets'],
-                'ax_str'   : 'Integer(0, 3, name="n_jets", label="Number of jets",underflow=False, overflow=False)',
+                'ax_str'    : 'Integer(0, 3, name="n_jets", label="Number of jets",underflow=False, overflow=False)',
             },
     },
     "columns" : ['ff_weight_wj','ff_weight_qcd'],
@@ -1011,7 +1010,7 @@ def add_run3(ana: od.Analysis,
     add_variables(cfg)
     
     from data_driven.hist_hooks import add_hist_hooks
-    add_hist_hooks(cfg)
+    add_hist_hooks(ana)
 
 
     
