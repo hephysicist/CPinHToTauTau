@@ -403,16 +403,19 @@ def tauspinner_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     A simple function that sets tauspinner_weight according to the cp_hypothesis
     
     """
-    if  "h_ggf_htt" in self.dataset_inst.name: 
+    is_signal = ("_htt_" in self.dataset_inst.name)
+    if is_signal: 
         proc = self.dataset_inst.processes.get_first().name
-        if proc == "h_ggf_htt_cpo":
+        if 'htt_cpo' in proc:
             the_weight = events.TauSpinner.weight_cp_0p5 
-        elif proc == "h_ggf_htt_sm":
+        elif 'htt_sm' in proc:
             the_weight = events.TauSpinner.weight_cp_0
-        elif proc == "h_ggf_htt_mm":
+        elif 'htt_mm' in proc:
             the_weight = events.TauSpinner.weight_cp_0p25
-        elif proc == "h_ggf_htt":
-            the_weight = events.TauSpinner.weight_cp_0
+        elif 'htt_flat' in proc:
+            the_weight = np.ones_like(events.event, dtype=np.float32)
+        elif (proc == "h_ggf_htt") or (proc == "h_vbf_htt"):
+            the_weight = np.ones_like(events.event, dtype=np.float32)
         else: 
             raise NotImplementedError(f'TauSpinner weight for {proc} is not implemented!')
             the_weight = np.ones_like(events.event, dtype=np.float32)
@@ -499,295 +502,39 @@ def fake_factors_setup(
     mc_only=True,
 )
 def trigger_weight_mutau(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
-    # Initialize dictionaries to hold Data/MC efficiencies for tau and muon legs
-    Data_eff_values_tau_xtrig = {}
-    MC_eff_values_tau_xtrig   = {}
-    Data_eff_values_mu_xtrig  = {}
-    MC_eff_values_mu_xtrig    = {}
-    Data_eff_values_mu_trig   = {}
-    MC_eff_values_mu_trig     = {}
-
-    # Prepare default flat efficiency arrays for each systematic shift
-    shifts_tau_xtrig = ["nom", "up", "down"]
-    for the_shift in shifts_tau_xtrig:
-        Data_eff_values_tau_xtrig[the_shift] = np.ones_like(events.event, dtype=np.float32)
-        MC_eff_values_tau_xtrig[the_shift]   = np.ones_like(events.event, dtype=np.float32)
-    shifts_mu_xtrig = ["nominal", "systup", "systdown"]
-    for the_shift in shifts_mu_xtrig:
-        Data_eff_values_mu_xtrig[the_shift] = np.ones_like(events.event, dtype=np.float32)
-        MC_eff_values_mu_xtrig[the_shift]   = np.ones_like(events.event, dtype=np.float32)
-    shifts_mu_trig = ["nominal", "systup", "systdown"]
-    for the_shift in shifts_mu_trig:
-        Data_eff_values_mu_trig[the_shift] = np.ones_like(events.event, dtype=np.float32)
-        MC_eff_values_mu_trig[the_shift]   = np.ones_like(events.event, dtype=np.float32)
-
-    # Retrieve configured channel names and objects
-    channels   = self.config_inst.channels.names()
-    ch_objects = self.config_inst.x.ch_objects
-
-    # -----------------------
-    # Tau leg of mutau trigger
-    # -----------------------
-    for the_shift in shifts_tau_xtrig:
-        for ch_str in channels:
-            if ch_str == 'mutau':
-                # Working point for tau-vs-jet discriminant
-                wp_vs_jet = self.config_inst.x.deep_tau.vs_jet.mutau
-            hcand = events[f'hcand_{ch_str}']
-            # Loop over lepton candidates in the collection
-            for lep in ['lep0','lep1']:
-                if ch_objects[ch_str][lep] == 'Tau':
-                    # Extract tau candidate
-                    tau    = hcand[lep]
-                    pt_tau = flat_np_view(tau.pt, axis=1)
-                    # For events not passing tau trigger ID 13, use default pt cut
-                    pt_tau = ak.where(events.all_triggers_id == 13, pt_tau, 39.598)
-                    dm     = flat_np_view(tau.decayMode, axis=1)
-                    trigtype = "mutau"
-
-                    # Lambdas to collect args for correction evaluation
-                    args_tau_trigger_eff_data = lambda mask, syst: (
-                        pt_tau[mask], dm[mask], trigtype, wp_vs_jet, "eff_data", syst
-                    )
-                    args_tau_trigger_eff_mc = lambda mask, syst: (
-                        pt_tau[mask], dm[mask], trigtype, wp_vs_jet, "eff_mc", syst
-                    )
-
-                    # Mask out unwanted decay modes
-                    masked_dm = (dm != 5) & (dm != 6)
-                    # Evaluate Data efficiency
-                    flat_eff   = ak.ones_like(pt_tau)
-                    flat_eff   = flat_eff * self.id_vs_jet_corrector.evaluate(
-                        *args_tau_trigger_eff_data(masked_dm, the_shift)
-                    )
-                    shaped_eff = ak.unflatten(flat_eff, ak.num(tau.pt, axis=1))
-                    Data_eff_values_tau_xtrig[the_shift] = Data_eff_values_tau_xtrig[the_shift]*shaped_eff
-                    # Evaluate MC efficiency
-                    flat_eff   = ak.ones_like(pt_tau)
-                    flat_eff   = flat_eff * self.id_vs_jet_corrector.evaluate(
-                        *args_tau_trigger_eff_mc(masked_dm, the_shift)
-                    )
-                    shaped_eff = ak.unflatten(flat_eff, ak.num(tau.pt, axis=1))
-                    MC_eff_values_tau_xtrig[the_shift] = MC_eff_values_tau_xtrig[the_shift]*shaped_eff
-
-    # ---------------------------------
-    # Muon of Single mu trigger 
-    # ---------------------------------
-    for the_shift in shifts_mu_trig:
-        for ch_str in channels:
-            if ch_str == 'mutau':
-                wp_vs_jet = self.config_inst.x.deep_tau.vs_jet.mutau
-            hcand = events[f'hcand_{ch_str}']
-            for lep in [field for field in hcand.fields if 'lep' in field]:
-                if ch_objects[ch_str][lep] == 'Muon':
-                    muon = hcand[lep]
-                    pt   = flat_np_view(muon.pt, axis=1)
-                    # Default pt cut for events without triggerID 132
-                    pt   = ak.where(events.all_triggers_id == 132, pt, 26)
-                    pt   = flat_np_view(pt)
-                    eta  = flat_np_view(abs(muon.eta), axis=1)
-                    # Lambda for muon trigger SF args
-                    muon_sf_args_trigger_eff = lambda syst: (eta, pt, syst)
-
-                    # Data efficiency
-                    flat_eff   = ak.ones_like(pt)
-                    flat_eff   = flat_eff * self.muon_trig_data_eff.evaluate(
-                        *muon_sf_args_trigger_eff(the_shift)
-                    )
-                    shaped_eff = ak.unflatten(flat_eff, ak.num(muon.pt, axis=1))
-                    Data_eff_values_mu_trig[the_shift] = Data_eff_values_mu_trig[the_shift]*shaped_eff
-                    # MC efficiency
-                    flat_eff   = ak.ones_like(pt)
-                    flat_eff   = flat_eff * self.muon_trig_mc_eff.evaluate(
-                        *muon_sf_args_trigger_eff(the_shift)
-                    )
-                    shaped_eff = ak.unflatten(flat_eff, ak.num(muon.pt, axis=1))
-                    MC_eff_values_mu_trig[the_shift] = MC_eff_values_mu_trig[the_shift]*shaped_eff
-
-    # ---------------------------------
-    # Muon leg of mutau trigger 
-    # Cross mu leg SFs
-    # ---------------------------------
-    for the_shift in shifts_mu_xtrig:
-        for ch_str in channels:
-            if ch_str == 'mutau':
-                wp_vs_jet = self.config_inst.x.deep_tau.vs_jet.mutau
-            hcand = events[f'hcand_{ch_str}']
-            for lep in [field for field in hcand.fields if 'lep' in field]:
-                if ch_objects[ch_str][lep] == 'Muon':
-                    muon = hcand[lep]
-                    pt   = flat_np_view(muon.pt, axis=1)
-                    # Default pt and eta for cross trigger SF
-                    pt   = ak.where(events.all_triggers_id == 13, pt, 21)
-                    eta  = flat_np_view(abs(muon.eta), axis=1)
-                    eta  = ak.where(events.all_triggers_id == 13, eta, 0)
-                    muon_sf_args_trigger_eff = lambda syst: (eta, pt, syst)
-
-                    # Data efficiency
-                    flat_eff   = ak.ones_like(pt)
-                    flat_eff   = flat_eff * self.mutau_muleg_Data_eff.evaluate(
-                        *muon_sf_args_trigger_eff(the_shift)
-                    )
-                    shaped_eff = ak.unflatten(flat_eff, ak.num(muon.pt, axis=1))
-                    Data_eff_values_mu_xtrig[the_shift] = Data_eff_values_mu_xtrig[the_shift]*shaped_eff
-                    # MC efficiency
-                    flat_eff   = ak.ones_like(pt)
-                    flat_eff   = flat_eff * self.mutau_muleg_MC_eff.evaluate(
-                        *muon_sf_args_trigger_eff(the_shift)
-                    )
-                    shaped_eff = ak.unflatten(flat_eff, ak.num(muon.pt, axis=1))
-                    MC_eff_values_mu_xtrig[the_shift] = MC_eff_values_mu_xtrig[the_shift]*shaped_eff
-
-    # Mapping of systematic labels
-    rename_systs = {"nominal": "nom", "systup": "up", "systdown": "down"}
-    # Write out intermediate efficiency columns into events
-    for the_shift in shifts_tau_xtrig:
-        events = set_ak_column_f32(events, f"tau_xtrig_Data_eff_{the_shift}", Data_eff_values_tau_xtrig[the_shift])
-        events = set_ak_column_f32(events, f"tau_xtrig_MC_eff_{the_shift}",   MC_eff_values_tau_xtrig[the_shift])
-    for the_shift in shifts_mu_xtrig:
-        short = rename_systs[the_shift]
-        events = set_ak_column_f32(events, f"muon_xtrig_Data_eff_{short}", Data_eff_values_mu_xtrig[the_shift])
-        events = set_ak_column_f32(events, f"muon_xtrig_MC_eff_{short}",   MC_eff_values_mu_xtrig[the_shift])
-    for the_shift in shifts_mu_trig:
-        short = rename_systs[the_shift]
-        events = set_ak_column_f32(events, f"muon_trig_Data_eff_{short}", Data_eff_values_mu_trig[the_shift])
-        events = set_ak_column_f32(events, f"muon_trig_MC_eff_{short}",   MC_eff_values_mu_trig[the_shift])
-
-    # Define triggers passed masks
-    Pass_mu_trig    = ak.where(events.triggerID_mu > 0   , 1, 0)
-    Pass_mutau_trig = ak.where(events.triggerID_mutau > 0, 1, 0)
-
-    # Organize inputs for final SF calculation
-    eff_inputs = {
-        'data': {
-            'nom':  (events.muon_trig_Data_eff_nom,  events.muon_xtrig_Data_eff_nom,  events.tau_xtrig_Data_eff_nom),
-            'up':   (events.muon_trig_Data_eff_up,   events.muon_xtrig_Data_eff_up,   events.tau_xtrig_Data_eff_up),
-            'down': (events.muon_trig_Data_eff_down, events.muon_xtrig_Data_eff_down, events.tau_xtrig_Data_eff_down),
-        },
-        'mc': {
-            'nom':  (events.muon_trig_MC_eff_nom,    events.muon_xtrig_MC_eff_nom,    events.tau_xtrig_MC_eff_nom),
-            'up':   (events.muon_trig_MC_eff_up,     events.muon_xtrig_MC_eff_up,     events.tau_xtrig_MC_eff_up),
-            'down': (events.muon_trig_MC_eff_down,   events.muon_xtrig_MC_eff_down,   events.tau_xtrig_MC_eff_down),
-        }
-    }
-
-    # # Compute final scale factors and add to events
-    # for var in ('nom', 'up', 'down'):
-    #     eff_data = compute_eff(Pass_mu_trig, Pass_mutau_trig, *eff_inputs['data'][var])
-    #     eff_mc   = compute_eff(Pass_mu_trig, Pass_mutau_trig, *eff_inputs['mc'][var])
-    #     sf       = eff_data / eff_mc
-    #     events   = set_ak_column_f32(events, f"trigger_weight_mutau_{var}", sf)
     
-    # NOM
-    # data 
-    eff_trig_mu_Data_nom = events.muon_trig_Data_eff_nom
-    eff_xtrig_mu_Data_nom = events.muon_xtrig_Data_eff_nom
-    eff_xtrig_tau_Data_nom = events.tau_xtrig_Data_eff_nom
-    # MC
-    eff_trig_mu_MC_nom = events.muon_trig_MC_eff_nom
-    eff_xtrig_mu_MC_nom = events.muon_xtrig_MC_eff_nom
-    eff_xtrig_tau_MC_nom = events.tau_xtrig_MC_eff_nom
-    # UP
-    # data 
-    eff_trig_mu_Data_up = events.muon_trig_Data_eff_up
-    eff_xtrig_mu_Data_up = events.muon_xtrig_Data_eff_up
-    eff_xtrig_tau_Data_up = events.tau_xtrig_Data_eff_up
-    # MC
-    eff_trig_mu_MC_up = events.muon_trig_MC_eff_up
-    eff_xtrig_mu_MC_up = events.muon_xtrig_MC_eff_up
-    eff_xtrig_tau_MC_up = events.tau_xtrig_MC_eff_up
-    # DOWN
-    # data
-    eff_trig_mu_Data_down = events.muon_trig_Data_eff_down
-    eff_xtrig_mu_Data_down = events.muon_xtrig_Data_eff_down
-    eff_xtrig_tau_Data_down = events.tau_xtrig_Data_eff_down
-    # MC
-    eff_trig_mu_MC_down = events.muon_trig_MC_eff_down
-    eff_xtrig_mu_MC_down = events.muon_xtrig_MC_eff_down
-    eff_xtrig_tau_MC_down = events.tau_xtrig_MC_eff_down
+    channel = self.config_inst.channels.names()[0]
+    muon = events[f'hcand_{channel}'].lep0 # fake factor method works for nutau/etau channel
+    tau = events[f'hcand_{channel}'].lep1 # fake factor method works for nutau/etau channel
+    tau_vs_jet_wp = self.config_inst.x.deep_tau.vs_jet[channel]
     
-    # If  eff_trig_mu_Data_nom < eff_xtrig_mu_Data_nom and  eff_trig_mu_MC_nom <  eff_xtrig_mu_MC_nom
+    def prepare(var, low, up, absolute=False):
+        if absolute: return np.abs(np.clip(flat_np_view(var), low, up))
+        else: return np.clip(flat_np_view(var), low, up)
     
-    one_like_array = np.ones_like(eff_trig_mu_Data_nom, dtype=np.float32)
+    shifts = ["nom", "up", "down"]
+    sf_dict = {}
+    for the_shift in shifts:
+        #from IPython import embed; embed()
+        mu_syst_name = 'nominal' if the_shift == 'nom' else 'syst' + the_shift
+        strig_mu_sf = self.strig_mu.evaluate(prepare(muon.eta,low=-2.4,up=2.4,absolute=True),
+                                             prepare(muon.pt,low=26,up=np.inf),
+                                             mu_syst_name)
+        xtrig_mu_sf = self.xtrig_mu.evaluate(prepare(muon.eta,low=-2.1,up=2.1,absolute=True),
+                                             prepare(muon.pt,low=20,up=np.inf),
+                                             mu_syst_name)
+        xtrig_tau_sf = self.xtrig_tau.evaluate(prepare(tau.pt,low=25,up=np.inf),
+                                               flat_np_view(tau.decayMode), #TODO Replace it to PNet for new scale factors: https://gitlab.cern.ch/dwinterb/HiggsDNA/-/tree/master/higgs_dna/systematics/ditau/JSONs/Tau_Trigger/CP
+                                               channel,
+                                               tau_vs_jet_wp,
+                                               'sf',
+                                               the_shift)
+        sf = np.where(
+            flat_np_view(muon.pt) >=26,
+            strig_mu_sf,
+            xtrig_mu_sf*xtrig_tau_sf)
+        events = set_ak_column_f32(events, f"trigger_weight_mutau_{the_shift}",sf) #TODO remve abs when replacuing bugged trigger file
     
-    # Evauation of the nominal efficiencies for data and mc
-    eff_data = Pass_mu_trig*eff_trig_mu_Data_nom - Pass_mu_trig*Pass_mutau_trig*eff_trig_mu_Data_nom*eff_xtrig_tau_Data_nom + Pass_mutau_trig*eff_xtrig_mu_Data_nom*eff_xtrig_tau_Data_nom
-
-    eff_mc = Pass_mu_trig*eff_trig_mu_MC_nom - Pass_mu_trig*Pass_mutau_trig*eff_trig_mu_MC_nom*eff_xtrig_tau_MC_nom + Pass_mutau_trig*eff_xtrig_mu_MC_nom*eff_xtrig_tau_MC_nom
-    
-    SF = eff_data/eff_mc
-    # Evauation of the partial derivaties for data and mc
-    delta_eff_data_nom_delta_eff_trig_mu = Pass_mu_trig - Pass_mu_trig*Pass_mutau_trig*eff_xtrig_tau_Data_nom
-    delta_eff_data_nom_delta_eff_xtrig_mu = Pass_mutau_trig*eff_xtrig_tau_Data_nom
-    delta_eff_data_nom_delta_eff_xtrig_tau = Pass_mutau_trig*eff_xtrig_mu_Data_nom - Pass_mu_trig*Pass_mutau_trig*eff_trig_mu_Data_nom 
-    
-    delta_eff_data_mu = (eff_trig_mu_Data_up - eff_trig_mu_Data_nom)
-    delta_eff_data_xmu = (eff_xtrig_mu_Data_up - eff_xtrig_mu_Data_nom)
-    delta_eff_data_xtau =  (eff_xtrig_tau_Data_up - eff_xtrig_tau_Data_nom)
-
-    delta_eff_mc_nom_delta_eff_trig_mu = Pass_mu_trig - Pass_mu_trig*Pass_mutau_trig*eff_xtrig_tau_MC_nom
-    delta_eff_mc_nom_delta_eff_xtrig_mu = Pass_mutau_trig*eff_xtrig_tau_MC_nom
-    delta_eff_mc_nom_delta_eff_xtrig_tau = Pass_mutau_trig*eff_xtrig_mu_MC_nom - Pass_mu_trig*Pass_mutau_trig*eff_trig_mu_MC_nom
-    
-    delta_eff_mc_mu   = (eff_trig_mu_MC_up - eff_trig_mu_MC_nom)
-    delta_eff_mc_xmu  = (eff_xtrig_mu_MC_up - eff_xtrig_mu_MC_nom)
-    delta_eff_mc_xtau =  (eff_xtrig_tau_MC_up - eff_xtrig_tau_MC_nom)
-    
-    # Evauation of the partial derivaties for data and mc
-    Delta_eff_data = delta_eff_data_nom_delta_eff_trig_mu*delta_eff_data_mu + delta_eff_data_nom_delta_eff_xtrig_mu*delta_eff_data_xmu + delta_eff_data_nom_delta_eff_xtrig_tau*delta_eff_data_xtau
-    Delta_eff_mc   = delta_eff_mc_nom_delta_eff_trig_mu*delta_eff_mc_mu + delta_eff_mc_nom_delta_eff_xtrig_mu*delta_eff_mc_xmu + delta_eff_mc_nom_delta_eff_xtrig_tau*delta_eff_mc_xtau
-    
-    DELTA_EFF_sq = np.sqrt((Delta_eff_data/eff_data)**2 + (Delta_eff_mc/eff_mc)**2)
-    DELTA_EFF    = SF*DELTA_EFF_sq
-    
-    SF_UP   = SF + DELTA_EFF
-    SF_DOWN = SF - DELTA_EFF
-    
-    # If  eff_mu_trig_Data_nom >  eff_mu_xtrig_Data_nom and  eff_mu_trig_MC_nom > eff_mu_xtrig_MC_nom
-
-    # Evauation of the nominal efficiencies for data and mc
-
-    eff_data_1 = Pass_mu_trig*eff_trig_mu_Data_nom - Pass_mu_trig*Pass_mutau_trig*eff_xtrig_mu_Data_nom*eff_xtrig_tau_Data_nom + Pass_mutau_trig*eff_xtrig_mu_Data_nom*eff_xtrig_tau_Data_nom
-
-    eff_mc_1 = Pass_mu_trig*eff_trig_mu_MC_nom - Pass_mu_trig*Pass_mutau_trig*eff_xtrig_mu_MC_nom*eff_xtrig_tau_MC_nom + Pass_mutau_trig*eff_xtrig_mu_MC_nom*eff_xtrig_tau_MC_nom
-
-    SF_1 = eff_data_1/eff_mc_1
-    
-    # Evauation of the partial derivaties for data and mc
-    delta_eff_data_nom_delta_eff_trig_mu = Pass_mu_trig 
-    delta_eff_data_nom_delta_eff_xtrig_mu = Pass_mutau_trig*eff_xtrig_tau_Data_nom - Pass_mu_trig*Pass_mutau_trig*eff_xtrig_tau_Data_nom
-    delta_eff_data_nom_delta_eff_xtrig_tau = Pass_mutau_trig*eff_xtrig_mu_Data_nom - Pass_mutau_trig*eff_xtrig_mu_Data_nom
-
-    delta_eff_data_mu = (eff_trig_mu_Data_up - eff_trig_mu_Data_nom)
-    delta_eff_data_xmu = (eff_xtrig_mu_Data_up - eff_xtrig_mu_Data_nom)
-    delta_eff_data_xtau =  (eff_xtrig_tau_Data_up - eff_xtrig_tau_Data_nom)
-
-    delta_eff_mc_nom_delta_eff_trig_mu = Pass_mu_trig 
-    delta_eff_mc_nom_delta_eff_xtrig_mu = Pass_mutau_trig*eff_xtrig_tau_MC_nom - Pass_mu_trig*Pass_mutau_trig*eff_xtrig_tau_MC_nom
-    delta_eff_mc_nom_delta_eff_xtrig_tau = Pass_mutau_trig*eff_xtrig_mu_MC_nom - Pass_mutau_trig*eff_xtrig_mu_MC_nom
-
-    delta_eff_mc_mu   = (eff_trig_mu_MC_up - eff_trig_mu_MC_nom)
-    delta_eff_mc_xmu  = (eff_xtrig_mu_MC_up - eff_xtrig_mu_MC_nom)
-    delta_eff_mc_xtau =  (eff_xtrig_tau_MC_up - eff_xtrig_tau_MC_nom)
-
-    # Evauation of the partial derivaties for data and mc
-    Delta_eff_data = delta_eff_data_nom_delta_eff_trig_mu*delta_eff_data_mu + delta_eff_data_nom_delta_eff_xtrig_mu*delta_eff_data_xmu + delta_eff_data_nom_delta_eff_xtrig_tau*delta_eff_data_xtau
-    Delta_eff_mc   = delta_eff_mc_nom_delta_eff_trig_mu*delta_eff_mc_mu + delta_eff_mc_nom_delta_eff_xtrig_mu*delta_eff_mc_xmu + delta_eff_mc_nom_delta_eff_xtrig_tau*delta_eff_mc_xtau
-
-    DELTA_EFF_sq = np.sqrt((Delta_eff_data/eff_data_1)**2 + (Delta_eff_mc/eff_mc_1)**2)
-    DELTA_EFF    = SF_1*DELTA_EFF_sq
-    
-    SF_1_UP   = SF_1 + DELTA_EFF
-    SF_1_DOWN = SF_1 - DELTA_EFF
-    
-    mask = (eff_trig_mu_Data_nom < eff_xtrig_mu_Data_nom)
-    SF_final = ak.where(mask,SF,SF_1)
-    SF_final_UP = ak.where(mask,SF_UP,SF_1_UP)
-    SF_final_DOWN = ak.where(mask,SF_DOWN,SF_1_DOWN)
-
-    events = set_ak_column_f32(events, f"trigger_weight_mutau_nom", SF_final)
-    events = set_ak_column_f32(events, f"trigger_weight_mutau_up", SF_final_UP)
-    events = set_ak_column_f32(events, f"trigger_weight_mutau_down", SF_final_DOWN)
     
     return events
 
@@ -812,25 +559,54 @@ def trigger_weight_mutau_setup(
     import correctionlib
     # Monkey-patch evaluate method to __call__ for convenience
     correctionlib.highlevel.Correction.__call__ = correctionlib.highlevel.Correction.evaluate
+    muon_file = correctionlib.CorrectionSet.from_file(bundle.files.muon_correction.abspath)
+    self.strig_mu = muon_file[self.config_inst.x.muon_sf.trig.corrector]
+    
+    mutau_file = correctionlib.CorrectionSet.from_file(bundle.files.cross_mutau_mu_leg.abspath)
+    self.xtrig_mu = mutau_file[self.config_inst.x.muon_sf.xtrig.corrector]
+    
+    tau_file  = correctionlib.CorrectionSet.from_file(bundle.files.tau_correction.abspath)
+    self.xtrig_tau = tau_file['tau_trigger']
 
-    # 1) Single muon trigger corrections
-    muon_corr  = bundle.files.HLT_mu_eff.load(formatter="json")
-    muon_json  = json.dumps(muon_corr)
-    cs_mu      = correctionlib.CorrectionSet.from_string(muon_json)
-    self.muon_trig_data_eff = cs_mu[self.config_inst.x.muon_sf.trig_data_eff.corrector]
-    self.muon_trig_mc_eff   = cs_mu[self.config_inst.x.muon_sf.trig_mc_eff.corrector]
+@producer(
+    uses={
+        'event','hcand_*','n_jets',
+    },
+    produces={
+        'filter_weight'
+    },
+)
+def filter_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+    """
+    This function applies filter weights to the datasets 
+    """
+    datasets  = self.dataset_inst.keys
+    is_filtered = ['Filtered' in the_name for the_name in datasets]
+    if np.any(is_filtered):
+        dataset_name = datasets[0].replace('/','')
+        the_weight = self.lookup_table[dataset_name]['filter_efficiency']
+        print(f'Filter efficiency for {dataset_name} is {the_weight}')
+        filter_weight = np.full_like(events.event, the_weight, dtype=np.float32)
+    else:
+        filter_weight = np.ones_like(events.event, dtype=np.float32)
+    events = set_ak_column_f32(events,'filter_weight', filter_weight)
+    return events
 
-    # 2) Muon leg of mutau trigger corrections
-    muon_corr2 = bundle.files.cross_mutau_mu_leg.load(formatter="json")
-    muon_json2 = json.dumps(muon_corr2)
-    cs_mu2     = correctionlib.CorrectionSet.from_string(muon_json2)
-    self.mutau_muleg_Data_eff = cs_mu2[self.config_inst.x.muon_sf.Data_eff_mutau.corrector]
-    self.mutau_muleg_MC_eff   = cs_mu2[self.config_inst.x.muon_sf.MC_eff_mutau.corrector]
+@filter_weight.requires
+def filter_weight_requires(self: Producer, task: law.Task, reqs: dict) -> None:
+    if "external_files" in reqs:
+        return
 
-    # 3) Tau leg of mutau trigger corrections
-    tau_corr_bytes   = bundle.files.tau_correction.load(formatter="gzip")
-    tau_corr_str     = tau_corr_bytes.decode("utf-8")
-    cs_tau           = correctionlib.CorrectionSet.from_string(tau_corr_str)
-    self.id_vs_jet_corrector = cs_tau["tau_trigger"]
+    from columnflow.tasks.external import BundleExternalFiles
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
-
+@filter_weight.setup
+def filter_weight_setup(
+    self: Producer,
+    task: law.Task,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: law.util.InsertableDict,
+) -> None:
+    bundle = reqs["external_files"]
+    self.lookup_table  = bundle.files.filter_eff.load(formatter='yaml')

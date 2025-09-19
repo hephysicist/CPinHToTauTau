@@ -223,7 +223,7 @@ def lep_inv_iso(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array
         upper_lim = events.hcand_etau.lep0.pfRelIso03_all < 2.
     elif channel == 'mutau': 
         isolation = events.hcand_mutau.lep0.pfRelIso04_all >= 0.15
-        upper_lim = events.hcand_mutau.lep0.pfRelIso04_all < 0.5
+        upper_lim = events.hcand_mutau.lep0.pfRelIso04_all < 0.3
     else:
         raise NotImplementedError(
                 f'Can not find an isolation criteria for {channel} channel!')
@@ -321,8 +321,16 @@ def tau_has_pions(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Arr
     mask = ak.fill_none(ak.sum(pion_mask(tauprod), axis=1) >= 1,False)
     return events, mask
 
-
-
+#For a1_3pr decays additional cut on the quality of sv is required
+@categorizer(uses={'event', 'hcand_*','Tau.hasRefitSV', 'Tau.rawIdx'})
+def has_refit_sv(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    channel = self.config_inst.channels.names()[0]
+    sel_tau_raw_idx = events[f'hcand_{channel}'].lep1.rawIdx
+    tau_idx, sel_tau_idx = ak.broadcast_arrays(events.Tau.rawIdx, ak.firsts(sel_tau_raw_idx))
+    tau_mask = (tau_idx == sel_tau_idx)
+    hasRefitSV = events.Tau.hasRefitSV[tau_mask]
+    mask = ak.fill_none(ak.firsts((hasRefitSV == True), axis=1),False)
+    return events, mask
 
 #Cut  on energy split between charged and neutral pion used in definition of murho and mu a1 categories
 @categorizer(uses={'event', 'pion_E_split'})
@@ -346,7 +354,7 @@ def _hig_cat(self: Categorizer, events: ak.Array, low_cut, up_cut, **kwargs) -> 
     return events, ak.fill_none(mask,False)
 
 
-for cat_id,(low_cut, up_cut) in enumerate([(0.3,0.5),(0.5,0.7),(0.7,1)]):
+for cat_id,(low_cut, up_cut) in enumerate([(0.33,0.5),(0.5,0.7),(0.7,1)]):
     tmp_func = lambda self, events, **kwargs: _hig_cat(self,
                                                        events,
                                                        low_cut=low_cut,

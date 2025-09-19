@@ -55,11 +55,11 @@ def muon_selection(
     # setting two new columns for the muons
     events = set_ak_column(events, "Muon.rawIdx",    ak.local_index(events.Muon))
     events = set_ak_column(events, "Muon.ip_sig", events.Muon.sip3d)
-
+    muon_wp = (self.config_inst.x.muon_id_wp).lower()
     good_selections = {
         "muon_pt_26"          : events.Muon.pt >= 21,
         "muon_eta_2p4"        : abs(events.Muon.eta) < 2.4,
-        "mediumID"            : events.Muon.mediumId == 1,
+        "muon_ID"             : getattr(events.Muon, f'{muon_wp}Id') == 1,
         "muon_dxy_0p045"      : abs(events.Muon.dxy) < 0.045,
         "muon_dz_0p2"         : abs(events.Muon.dz) < 0.2,
         "muon_iso_0p5"        : events.Muon.pfRelIso04_all < 0.3 
@@ -67,7 +67,7 @@ def muon_selection(
     single_veto_selections = {
         "muon_pt_10"          : events.Muon.pt > 10,
         "muon_eta_2p4"        : abs(events.Muon.eta) < 2.4,
-        "mediumID"            : events.Muon.mediumId == 1,
+        "muon_ID"             : getattr(events.Muon, f'{muon_wp}Id') == 1,
         "muon_dxy_0p045"      : abs(events.Muon.dxy) < 0.045,
         "muon_dz_0p2"         : abs(events.Muon.dz) < 0.2,
         "muon_iso_0p3"        : events.Muon.pfRelIso04_all < 0.3

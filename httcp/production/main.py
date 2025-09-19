@@ -14,7 +14,8 @@ from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 from columnflow.production.util import attach_coffea_behavior
 
 from httcp.production.weights import (muon_weight, tau_weight, get_mc_weight, tauspinner_weight, 
-                                      zpt_weight, electron_weight,fake_factors, trigger_weight_mutau)
+                                      zpt_weight, electron_weight,fake_factors, trigger_weight_mutau,
+                                      filter_weight)
 from httcp.production.sample_split import split_dy
 from httcp.production.generatorZ import genZ
 from httcp.production.met_recoil import gen_boson, met_recoil
@@ -25,6 +26,7 @@ from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet,
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
 from httcp.production.ip_corrector import ip_correction
 from httcp.production.bdt_score import hcp_bdt_score
+from httcp.production.fast_mtt import fast_mtt
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -65,6 +67,8 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_lep_fields,
         ip_correction,
         hcp_bdt_score,
+        fast_mtt,
+        filter_weight,
         },
     produces={
         attach_coffea_behavior,
@@ -94,6 +98,8 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_lep_fields,
         ip_correction,
         hcp_bdt_score,
+        fast_mtt,
+        filter_weight,
     },
     # whether weight producers should be added and called
     produce_weights=True,
@@ -122,17 +128,22 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = self[gen_boson](events, **kwargs)
         
     events = self[met_recoil](events,**kwargs)
-   
+    events = self[fast_mtt](events,**kwargs)
     if self.dataset_inst.is_mc:
         
         print("Producing Gen weights...")    
         events = self[get_mc_weight](events, **kwargs)
+        print("Producing filter weights...")
+        events = self[filter_weight](events, **kwargs)
+        
         print("Producing Normalization weights...")
         events = self[normalization_weights](events, **kwargs)
+        
         processes = self.dataset_inst.processes.names()
         if ak.any(['dy' in proc for proc in processes]):
             print("Splitting Drell-Yan dataset...")
             events = self[split_dy](events,**kwargs)
+        
         print("Z pt reweighting...")
         events = self[genZ](events, **kwargs)
         events = self[zpt_weight](events,**kwargs)
@@ -157,13 +168,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         
         print("Producing GenPartonTop...")
         events = self[gen_parton_top](events, **kwargs)
-        top_pt_weight_dummy = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)
-        top_pt_weight_dummy = ak.ones_like(top_pt_weight_dummy)
-        for variation in ("", "_up", "_down"):
-            events = set_ak_column(events, f"top_pt_weight{variation}", top_pt_weight_dummy)
-        if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
-            print("Producing Top pT weights...")
-            events = self[top_pt_weight](events, **kwargs)
+        events = self[top_pt_weight](events, **kwargs)
     
     
     #Assume that the corrections are done, now we can evaluate bdt scores and produce parameters of interest
@@ -254,13 +259,8 @@ def ff_method(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = self[tauspinner_weight](events, **kwargs)
         print("Producing GenPartonTop...")
         events = self[gen_parton_top](events, **kwargs)
-        top_pt_weight_dummy = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)
-        top_pt_weight_dummy = ak.ones_like(top_pt_weight_dummy)
-        for variation in ("", "_up", "_down"):
-            events = set_ak_column(events, f"top_pt_weight{variation}", top_pt_weight_dummy)
-        if self.dataset_inst.has_tag("ttbar"):
-            print("Producing Top pT weights...")
-            events = self[top_pt_weight](events, **kwargs)
+        print("Producing Top pT weights...")
+        events = self[top_pt_weight](events, **kwargs)
     return events
 
 
