@@ -26,14 +26,14 @@ from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 from MSSM_H_tt.selection.physics_objects import muon_selection, electron_selection, tau_selection
 from MSSM_H_tt.selection.trigger import trigger_selection
 from MSSM_H_tt.selection.lepton_pair import pair_selection
-from MSSM_H_tt.selection.lepton_veto import single_lepton_veto, second_lepton_veto, OC_lepton_veto
+from MSSM_H_tt.selection.lepton_veto import single_lepton_veto, second_lepton_veto, OC_lepton_veto, bugged_DY_sample_event_veto
 from MSSM_H_tt.selection.higgscand import new_higgscand, mask_nans
 from MSSM_H_tt.selection.met_nanoAOD_filters import met_nanoAOD_filters
 from MSSM_H_tt.production.aux_columns import channel_id
 from MSSM_H_tt.selection.jets import jet_veto_map
 from MSSM_H_tt.production.btag import btag_weight
 from MSSM_H_tt.production.aux_columns import jets_taggable
-
+from MSSM_H_tt.selection.met_cov_check import met_cov_check
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 coffea = maybe_import("coffea")
@@ -66,6 +66,8 @@ coffea = maybe_import("coffea")
         btag_weight,
         jets_taggable,
         met_nanoAOD_filters,
+        bugged_DY_sample_event_veto,
+        met_cov_check,
     },
     produces={
         # selectors / producers whose newly created columns should be kept
@@ -92,6 +94,8 @@ coffea = maybe_import("coffea")
         met_nanoAOD_filters,
         "category_ids",
         "OC_lepton_veto",
+        bugged_DY_sample_event_veto,
+        met_cov_check,
     },
     exposed=True,
 )
@@ -204,7 +208,17 @@ def main(
     events, OC_lepton_veto_results = self[OC_lepton_veto](events,
                                                         OC_veto_electron_indices,
                                                         OC_veto_muon_indices)
+    # Met Covariance check
+    events, met_cov_check_results = self[met_cov_check](events,**kwargs)
     
+    results += met_cov_check_results
+
+    processes = self.dataset_inst.processes.names()
+    if processes[0] in self.config_inst.x.bugged_DYto2Tau_samples:
+        events, bugged_DY_sample_event_veto_results = self[bugged_DY_sample_event_veto](events)
+        
+        results+=bugged_DY_sample_event_veto_results   
+
     #Check arrays for np.nan values and mask them
     events, nan_mask_res = self[mask_nans](events)
     results += nan_mask_res
@@ -217,6 +231,7 @@ def main(
     if self.dataset_inst.is_data:
         events, met_nanoAOD_filters_result = self[met_nanoAOD_filters](events, **kwargs)
         results += met_nanoAOD_filters_result
+    
     
     # combined event selection after all steps
     event_sel = reduce(and_, results.steps.values())

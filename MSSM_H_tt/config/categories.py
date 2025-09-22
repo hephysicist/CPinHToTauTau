@@ -9,6 +9,7 @@ import order as od
 from columnflow.config_util import add_category
 from columnflow.util import DotDict
 from columnflow.util import maybe_import
+
 np = maybe_import("numpy")
 
 
@@ -124,83 +125,75 @@ def add_categories(config: od.Config,
                                                'dr_num': 'abcd_dr_num',
                                                'dr_den':  'abcd_dr_den',
                                                },
-                                           #fake factor categories
-                                           'ff_regs': {
-                                               "ar_qcd"      : "ar_qcd",
-                                               "dr_num_qcd"  : "dr_num_qcd",
-                                               "dr_den_qcd"  : "dr_den_qcd",
-                                               "ar_yields"   : "ar_yields",
-                                               #categories for closure tests
-                                               "dr_den_qcd_w_ff": "dr_den_qcd_w_ff",
-                                           },},},
+                                        #    #fake factor categories
+                                        #    'ff_regs': {
+                                        #        "ar_qcd"      : "ar_qcd",
+                                        #        "dr_num_qcd"  : "dr_num_qcd",
+                                        #        "dr_den_qcd"  : "dr_den_qcd",
+                                        #        "ar_yields"   : "ar_yields",
+                                        #        #categories for closure tests
+                                        #        "dr_den_qcd_w_ff": "dr_den_qcd_w_ff",
+                                        #    },
+                                           },},
         #categories for jet fakes estimation via classic Fake Factor method    
-        "ar_qcd"         : {'selection' : ["lep_iso"    , "ss_charge"],
-                            'aux'       : {'apply_ff': ''}}, #qcd
-        "dr_num_qcd"     : {'selection' : ["lep_inv_iso", "os_charge"],},
-        "dr_den_qcd"     : {'selection' : ["lep_inv_iso", "ss_charge"],},
-        "dr_den_qcd_w_ff": {'selection' : ["lep_inv_iso", "os_charge"],
-                            'aux'       : {'apply_ff': ''}},
-        "ar_yields"      : {'selection' : ["lep_iso", "os_charge"],},
+        # "ar_qcd"         : {'selection' : ["lep_iso"    , "ss_charge"],
+        #                     'aux'       : {'apply_ff': ''}}, #qcd
+        # "dr_num_qcd"     : {'selection' : ["lep_inv_iso", "os_charge"],},
+        # "dr_den_qcd"     : {'selection' : ["lep_inv_iso", "ss_charge"],},
+        # "dr_den_qcd_w_ff": {'selection' : ["lep_inv_iso", "os_charge"],
+        #                     'aux'       : {'apply_ff': ''}},
+        # "ar_yields"      : {'selection' : ["lep_iso", "os_charge"],},
         #categories for QCD estimation via classic ABCD method 
         "abcd_ar"       : { 'selection' : ["lep_iso", "ss_charge"], 'label' : "same sign region"},
         "abcd_dr_num"   : { 'selection' : ["lep_inv_iso", "os_charge"]},
         "abcd_dr_den"   : { 'selection' : ["lep_inv_iso", "ss_charge"]},
         
-        "sr_no_mt"      : { 'selection' : ["lep_iso", "os_charge"],
-                            'label'     : "signal region no mt",
-                            'aux'       : {
-                                           #qcd estimation categories
-                                           'abcd_regs' : {
-                                               'ar'    :  'abcd_ar_no_mt',
-                                               'dr_num':  'abcd_dr_num_no_mt',
-                                               'dr_den':  'abcd_dr_den_no_mt',
-                                               },
-                                           },},
-        #categories for QCD estimation via classic ABCD method 
-        "abcd_ar_no_mt"       : { 'selection' : ["lep_iso", "ss_charge"], 'label' : "ss region no mt"},
-        "abcd_dr_num_no_mt"   : { 'selection' : ["lep_inv_iso", "os_charge"]},
-        "abcd_dr_den_no_mt"   : { 'selection' : ["lep_inv_iso", "ss_charge"]},
+        # "sr_no_mt"      : { 'selection' : ["lep_iso", "os_charge"],
+        #                     'label'     : "signal region no mt",
+        #                     'aux'       : {
+        #                                    #qcd estimation categories
+        #                                    'abcd_regs' : {
+        #                                        'ar'    :  'abcd_ar_no_mt',
+        #                                        'dr_num':  'abcd_dr_num_no_mt',
+        #                                        'dr_den':  'abcd_dr_den_no_mt',
+        #                                        },
+        #                                    },},
+        # #categories for QCD estimation via classic ABCD method 
+        # "abcd_ar_no_mt"       : { 'selection' : ["lep_iso", "ss_charge"], 'label' : "ss region no mt"},
+        # "abcd_dr_num_no_mt"   : { 'selection' : ["lep_inv_iso", "os_charge"]},
+        # "abcd_dr_den_no_mt"   : { 'selection' : ["lep_inv_iso", "ss_charge"]},
     })
     
     add_base_categories(config, channel, category_map, base_selection)
     
-    bdt_cats_map  = DotDict.wrap({
-        "bdt_sig": {'selection': ["bdt_cat_sig"], 'label': f" \n bdt cat sig",},
-        "bdt_dy" : {'selection': ["bdt_cat_dy"], 'label': f" \n bdt cat dy",},
-        "bdt_tt" : {'selection': ["bdt_cat_tt"], 'label': f" \n bdt cat tt",},
-        "bdt_wj" : {'selection': ["bdt_cat_wj"], 'label': f" \n bdt cat wj",},
+    from MSSM_H_tt.config.mass_points import read_bdt_masses
+    MASS_POINTS = read_bdt_masses()
+    
+    bdt_cats_map = DotDict.wrap({})
+    for m in MASS_POINTS:
+        bdt_cats_map[f"bdt_sig_M{m}"] = DotDict.wrap({
+            'selection': [f"bdt_cat_sig_M{m}"],
+            'label': f" \n bdt cat sig (M={m})",
         })
-    
-    # sig_cats_map  = DotDict.wrap({
-    #     "sig_cat_0"   : {'selection': ["bdt_cat_sig","hig_sig_0"], 'label': f" \n  D_H in (0.3,0.5]",},
-    #     "sig_cat_1"   : {'selection': ["bdt_cat_sig","hig_sig_1"], 'label': f" \n  D_H in (0.5,0.7]",},
-    #     "sig_cat_2"   : {'selection': ["bdt_cat_sig","hig_sig_2"], 'label': f" \n  D_H in (0.7,1.0]",},
-    #     })
-    
-    create_child_categories(config,
-                            parent_categories=config.categories.names(),
-                            child_category_map=bdt_cats_map)
-    
+        bdt_cats_map[f"bdt_dy_M{m}"] = DotDict.wrap({
+            'selection': [f"bdt_cat_dy_M{m}"],
+            'label': f" \n bdt cat dy (M={m})",
+        })
+        bdt_cats_map[f"bdt_tt_M{m}"] = DotDict.wrap({
+            'selection': [f"bdt_cat_tt_M{m}"],
+            'label': f" \n bdt cat tt (M={m})",
+        })
+        bdt_cats_map[f"bdt_wj_M{m}"] = DotDict.wrap({
+            'selection': [f"bdt_cat_wj_M{m}"],
+            'label': f" \n bdt cat wj (M={m})",
+        })
 
-    #Add child categories to base categories
-    
-    # child_category_map  = DotDict.wrap({
-    #     "nj0"    : {'selection' : ["Zero_b_jets"], 'label'     : f" \n $n_{{jets}}= 0$",},
-    #     "nj1"    : {'selection' : ["At_least_1_b_jets"], 'label'     : f" \n $n_{{jets}}\geq 1$",},
-    #     })
-    
-    # grand_child_category_map  = DotDict.wrap({
 
-    #     "dzl"    : {'selection' : ["D_zeta_cut_low"], 'label'     : f" \n $ -35 \leq D_{{\zeta}} < -10$",},
-    #     "dzm"    : {'selection' : ["D_zeta_cut_mid"], 'label'     : f" \n $ -10 \leq D_{{\zeta}} $",},
-    #     #"dzh"    : {'selection' : ["D_zeta_cut_high"], 'label'     : f" \n $D_{{\zeta}}\geq 30$",},       
-    #     })
-    
-    # create_child_categories(config,
-    #                     parent_categories=config.categories.names(),
-    #                     child_category_map=child_category_map)
-
-    # create_child_categories(config,
-    #                     parent_categories=config.categories.names(),
-    #                     child_category_map=grand_child_category_map)
+    create_child_categories(
+    config,
+    parent_categories=config.categories.names(),
+    child_category_map=bdt_cats_map,)
+    # if channel=='emu':
+    #     #debugging
+    #     from IPython import embed; embed()
     

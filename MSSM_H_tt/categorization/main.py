@@ -238,19 +238,22 @@ for cat_id, the_name in enumerate(["sig", "dy", "tt", "wj"]):
     tmp_func = lambda self, events, **kwargs: _bdt_cat(self, events, cat_id=cat_id, **kwargs)
     globals()[f'bdt_cat_{the_name}'] = categorizer(copy_function(tmp_func,f'bdt_cat_{the_name}'),
                                                uses={'event', 'bdt_cat'}, )
-    
 
-def _hig_cat(self: Categorizer, events: ak.Array, low_cut, up_cut, **kwargs) -> tuple[ak.Array, ak.Array]:
-    mask = (events.bdt_raw_score_higgs > low_cut) & (events.bdt_raw_score_higgs <= up_cut)
-    return events, ak.fill_none(mask,False)
+# Higgs BDT score categories --------------------------------------------------
 
+def _bdt_cat_mass(self: Categorizer, events: ak.Array, cat_id: int, mass: int, **kwargs) -> tuple[ak.Array, ak.Array]:
+  field = f"bdt_cat_M{mass}"
+  mask = (events[field] == cat_id)
+  return events, ak.fill_none(mask, False)
 
-for cat_id,(low_cut, up_cut) in enumerate([(0.3,0.5),(0.5,0.7),(0.7,1)]):
-    tmp_func = lambda self, events, **kwargs: _hig_cat(self,
-                                                       events,
-                                                       low_cut=low_cut,
-                                                       up_cut=up_cut,
-                                                       **kwargs)
-    
-    globals()[f'hig_cat_{cat_id}'] = categorizer(copy_function(tmp_func,f'hig_cat_{cat_id}'),
-                                               uses={'event', 'bdt_raw_score_sig'}, )
+from MSSM_H_tt.config.mass_points import read_bdt_masses
+MASS_POINTS = read_bdt_masses()
+for mass in MASS_POINTS:
+  for cat_id, the_name in enumerate(["sig", "dy", "tt", "wj"]):
+    # capture loop vars via defaults to avoid late-binding
+    tmp_func = (lambda self, events, _cat_id=cat_id, _mass=mass, **kwargs:
+                  _bdt_cat_mass(self, events, cat_id=_cat_id, mass=_mass, **kwargs))
+    globals()[f'bdt_cat_{the_name}_M{mass}'] = categorizer(
+      copy_function(tmp_func, f'bdt_cat_{the_name}_M{mass}'),
+      uses={'event', f'bdt_cat_M{mass}'},
+    )

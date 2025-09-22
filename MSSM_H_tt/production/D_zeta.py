@@ -34,7 +34,7 @@ def D_zeta(
 
     electron    = events.hcand_emu.lep0
     muon        = events.hcand_emu.lep1
-    
+
     puppi_met_p2 = get_p2(events.PuppiMET)  
     electron_p2 = get_p2(electron)
     muon_p2 = get_p2(muon)
