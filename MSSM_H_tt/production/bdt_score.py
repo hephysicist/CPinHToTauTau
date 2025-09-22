@@ -23,11 +23,8 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
 # -------------------------------------------------------------------------
 # Mass points and model locations
 # -------------------------------------------------------------------------
-MASS_POINTS = [
-    60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140,
-    160, 180, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1100,
-    1200, 1400, 1600, 1800, 2000, 2300, 2600, 2900, 3200, 3500,
-]
+from MSSM_H_tt.config.mass_points import read_bdt_masses
+MASS_POINTS = read_bdt_masses()
 
 BDT_EOS_BASE = "/eos/user/j/jmalvaso/SWAN_projects/XGBoost_MSSM/"
 def _even_path(mass: int) -> str:

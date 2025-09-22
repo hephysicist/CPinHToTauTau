@@ -28,6 +28,7 @@ from MSSM_H_tt.production.met_recoil_correction import gen_boson, met_recoil
 from MSSM_H_tt.production.bdt_score import mssm_bdt_score
 from MSSM_H_tt.production.fast_mtt import fast_mtt
 from MSSM_H_tt.production.pt_H import pt_H
+from MSSM_H_tt.production.stitching_weights import stitching_weight
 #from MSSM_H_tt.production.DY_recoil_unc import DY_pTll_recoil_unc
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -68,6 +69,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         mssm_bdt_score,
         fast_mtt,
         pt_H,
+        stitching_weight,
         #DY_pTll_recoil_unc,
         },
     produces={
@@ -99,6 +101,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         mssm_bdt_score,
         fast_mtt,
         pt_H,
+        stitching_weight,
         #DY_pTll_recoil_unc,     
     },
     # whether weight producers should be added and called
@@ -172,7 +175,11 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
             print("Producing Top pT weights...")
             events = self[top_pt_weight](events, **kwargs)
-
-
+        # if self.dataset_inst.name in self.config_inst.x.stitch_DYto2L_samples:
+        #     print("Producing stitching weights...")
+        #     events = self[stitching_weight](events,**kwargs)
+        # else:
+        events = set_ak_column_f32(events,"stitching_weights",ak.ones_like(events.event, dtype=np.float32))
+            
     return events
     

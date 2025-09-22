@@ -52,7 +52,7 @@ def electron_smearing_scaling(self: Calibrator, events: ak.Array, **kwargs) -> a
                                                             r9,
                                                             et,
                                                             )
-
+            
         electron_scaling_nom = self.electron_scaling_corrector.evaluate(*electron_scaling_args(events, syst))
 
         events = set_ak_column_f32(events, "Electron.pt", electron_pt * electron_scaling_nom)

@@ -1,11 +1,12 @@
 #!/bin/bash
-source ./common_run3_MSSM_skim_2025_v1.sh #to access set_common_vars() function
+source ./common_run3_MSSM.sh #to access set_common_vars() function
 #The following function defines config, processes, version and datasets variables
 set_common_vars "$1"
+prod_version=desy_dev
 args=(
         --config $config
-        --datasets $datasets
-
+        #-processes $processes
+        #--datasets $datasets
         --cf.CalibrateEvents-workflow $workflow
         --cf.CalibrateEvents-version $version
         
@@ -20,8 +21,16 @@ args=(
         
         --cf.MergeSelectionStats-version $version
         --cf.ProvideReducedEvents-version $version
-        --version $version
+        
+        --cf.ProduceColumns-version $prod_version
+        --cf.CreateHistograms-version $prod_version
+        --cf.MergeHistograms-version $prod_version
+        
+        --version $prod_version
+       
+        --inference-model hcp_model
+        --hist-hooks good_old_abcd
         "${@:2}"
     )
-echo law run cf.ProduceColumnsWrapper "${args[@]}"
-law run cf.ProduceColumnsWrapper "${args[@]}"
+echo law run cf.CreateDatacards "${args[@]}"
+law run cf.CreateDatacards "${args[@]}"
