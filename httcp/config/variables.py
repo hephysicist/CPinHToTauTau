@@ -829,7 +829,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
                         name=f"{ch_str}_{lep}_iso",
                         expression=f"hcand_{ch_str}.{lep}.pfRelIso04_all",
                         null_value=EMPTY_FLOAT,
-                        binning=(40,0, 0.2),
+                        binning=(40,0, 0.3),
                         x_title=rf"{lep_str} rel. iso",
                     )
                     cfg.add_variable(

@@ -1011,7 +1011,6 @@ def add_run3(ana: od.Analysis,
     
     from data_driven.hist_hooks import add_hist_hooks
     add_hist_hooks(ana)
-
-
     
-    
+    from httcp.config.styles import setup_plot_styles
+    setup_plot_styles(cfg)
