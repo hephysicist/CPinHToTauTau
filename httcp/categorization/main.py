@@ -194,13 +194,23 @@ def tau_eta2p3(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array,
     return events, mask
 
 @categorizer(uses={'event', 'hcand_*'})
-def tau_no_fakes(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+def tau_no_jet_fakes(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     channel = self.config_inst.channels.names()[0] #We are processing a single channel at once
     if self.dataset_inst.is_mc:
         mask = ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep1.genPartFlav!=0, axis=1),False)
     else:
         mask = ak.ones_like(events.event, dtype=np.bool_)
     return events, mask
+
+@categorizer(uses={'event', 'hcand_*'})
+def tau_jet_fakes(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    channel = self.config_inst.channels.names()[0] #We are processing a single channel at once
+    if self.dataset_inst.is_mc:
+        mask = ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep1.genPartFlav==0, axis=1),False)
+    else:
+        mask = ak.ones_like(events.event, dtype=np.bool_)
+    return events, mask
+
 
 @categorizer(uses={'event', 'hcand_*'})
 def lep_iso(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:

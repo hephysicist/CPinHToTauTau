@@ -112,7 +112,7 @@ def add_categories(config: od.Config,
     
     category_map  = DotDict.wrap({
         "sr"            : { 'selection' : ['mt_cut', "deep_tau_wp", "lep_iso", "os_charge"],
-                            'label'     : "signal region",
+                            'label'     : r"inclusive",
                             'aux'       : {
                                            #qcd estimation categories
                                            'abcd_regs' : {
@@ -122,32 +122,36 @@ def add_categories(config: od.Config,
                                                },
                                            #fake factor categories
                                            'ff_regs': {
-                                               "ar_wj"      : "ar_wj",
-                                               "dr_num_wj"  : "dr_num_wj",
-                                               "dr_den_wj"  : "dr_den_wj",
+                                               "ar_wj"       : "ar_wj",
+                                               "dr_num_wj"   : "dr_num_wj",
+                                               "dr_den_wj"   : "dr_den_wj",
                                                "ar_qcd"      : "ar_qcd",
                                                "dr_num_qcd"  : "dr_num_qcd",
                                                "dr_den_qcd"  : "dr_den_qcd",
                                                "ar_yields"   : "ar_yields",
+                                               "ar_yields_fakes"   : "ar_yields_fakes",
                                             #    #categories for closure tests
                                             #    "dr_den_wj_w_ff": "dr_den_wj_w_ff",
                                             #    "dr_den_qcd_w_ff": "dr_den_qcd_w_ff",
                                            },},},
         #categories for jet fakes estimation via classic Fake Factor method 
-        "ar_wj"          : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso", "os_charge"],
+        "ar_wj"          : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "tau_no_jet_fakes", "lep_iso", "os_charge"],
                             'aux'       : {'apply_ff': 'wj'}},
-        "dr_num_wj"      : {'selection' : ['mt_inv_cut',  "deep_tau_wp",      "lep_iso", "tau_no_fakes", "ss_charge"],},
-        "dr_den_wj"      : {'selection' : ['mt_inv_cut',  "deep_tau_inv_wp",  "lep_iso", "tau_no_fakes", "ss_charge"],},
-        # "dr_den_wj_w_ff" : {'selection' : ['mt_inv_cut',  "deep_tau_inv_wp",  "lep_iso", "tau_no_fakes", "os_charge"],
+        "dr_num_wj"      : {'selection' : ['mt_inv_cut',  "deep_tau_wp",      "lep_iso", "tau_no_jet_fakes", "ss_charge"],},
+        "dr_den_wj"      : {'selection' : ['mt_inv_cut',  "deep_tau_inv_wp",  "lep_iso", "tau_no_jet_fakes", "ss_charge"],},
+        # "dr_den_wj_w_ff" : {'selection' : ['mt_inv_cut',  "deep_tau_inv_wp",  "lep_iso", "tau_no_jet_fakes", "os_charge"],
         #                     'aux'       : {'apply_ff': 'wj'}},
         
-        "ar_qcd"         : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso"    , "os_charge"],
+        "ar_qcd"         : {'selection' : ['mt_cut',      "deep_tau_inv_wp", "tau_no_jet_fakes", "lep_iso"    , "os_charge"],
                            'aux'       : {'apply_ff': 'qcd'}},
-        "dr_num_qcd"     : {'selection' : ['mt_cut',      "deep_tau_wp",      "lep_inv_iso", "tau_no_fakes", "ss_charge"],},
-        "dr_den_qcd"     : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_inv_iso", "tau_no_fakes", "ss_charge"],},
-        # "dr_den_qcd_w_ff": {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso", "tau_no_fakes", "os_charge"],
+        
+        "dr_num_qcd"     : {'selection' : ['mt_cut',      "deep_tau_wp",      "lep_inv_iso", "tau_no_jet_fakes", "ss_charge"],},
+        "dr_den_qcd"     : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_inv_iso", "tau_no_jet_fakes", "ss_charge"],},
+        # "dr_den_qcd_w_ff": {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso", "tau_no_jet_fakes", "os_charge"],
         #                     'aux'       : {'apply_ff': 'qcd'}},
-        "ar_yields"      : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso", "os_charge"],},
+        "ar_yields"      : {'selection' : ['mt_cut',      "deep_tau_inv_wp", "tau_no_jet_fakes", "lep_iso", "os_charge"],},
+        "ar_yields_fakes": {'selection' : ['mt_cut',      "deep_tau_inv_wp", "tau_jet_fakes"   , "lep_iso", "os_charge"],},
+        
         # #categories for QCD estimation via classic ABCD method 
          "abcd_ar"       : { 'selection' : ['mt_cut', "deep_tau_wp", "lep_iso", "ss_charge"], 'label' : "same sign region"},
          "abcd_dr_num"   : { 'selection' : ['mt_cut', "deep_tau_wp", "lep_inv_iso", "os_charge"]},
