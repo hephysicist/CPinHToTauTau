@@ -53,12 +53,29 @@ from httcp.config.config_run3 import add_run3
 channels = ['mutau','etau']
 
 #------------------------ Run3 2022 preEE samples ----------------------- #
-from cmsdb.campaigns.run3_2022_preEE_nano_tau_skim_v2 import campaign_run3_2022_preEE_nano_tau_skim_v2
+#from cmsdb.campaigns.run3_2022_preEE_nano_tau_skim_v2 import campaign_run3_2022_preEE_nano_tau_skim_v2
+# for counter, value in enumerate(channels):
+#     add_run3(
+#         analysis_httcp,
+#         campaign_run3_2022_preEE_nano_tau_skim_v2.copy(),
+#         channel=value,
+#         config_name=f"run3_2022_preEE_{value}_limited",
+#         config_id=6+counter,
+#         limit_dataset_files=1)
+# for counter, value in enumerate(channels):
+#     add_run3(
+#         analysis_httcp,
+#         campaign_run3_2022_preEE_nano_tau_skim_v2.copy(),
+#         channel=value,
+#         config_name=f"run3_2022_preEE_{value}",
+#         config_id=9+counter,)
+    
+from cmsdb.campaigns.run3_2022_preEE_nano_tau_skim_2025_v1 import campaign_run3_2022_preEE_nano_tau_skim_2025_v1
 
 for counter, value in enumerate(channels):
     add_run3(
         analysis_httcp,
-        campaign_run3_2022_preEE_nano_tau_skim_v2.copy(),
+        campaign_run3_2022_preEE_nano_tau_skim_2025_v1.copy(),
         channel=value,
         config_name=f"run3_2022_preEE_{value}_limited",
         config_id=6+counter,
@@ -66,7 +83,7 @@ for counter, value in enumerate(channels):
 for counter, value in enumerate(channels):
     add_run3(
         analysis_httcp,
-        campaign_run3_2022_preEE_nano_tau_skim_v2.copy(),
+        campaign_run3_2022_preEE_nano_tau_skim_2025_v1.copy(),
         channel=value,
         config_name=f"run3_2022_preEE_{value}",
         config_id=9+counter,)
