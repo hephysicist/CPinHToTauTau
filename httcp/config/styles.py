@@ -12,9 +12,10 @@ from collections import defaultdict
 
 import order as od
 
-from columnflow.util import DotDict, try_int
+from columnflow.util import DotDict, try_int,maybe_import
 from columnflow.types import Callable
 
+np = maybe_import("numpy")
 def setup_plot_styles(config: od.Config) -> None:
     """
     Setup plot styles.
@@ -33,7 +34,10 @@ def setup_plot_styles(config: od.Config) -> None:
         "cf_line_breaks": True, "cf_short_labels": False,
     }
     ratio = {
-        "yloc": "center",
+        "yloc" : "center",
+        "xticks" : np.linspace(-0.01,0.01,5),
+        "xminorticks" : np.linspace(-0.01,0.01,25)
+        
     }
     annotate = {
         "fontsize": 18, "style": "italic", "xycoords": "axes fraction", "xy": (0.035, 0.955),
@@ -105,3 +109,4 @@ def legend_entries_per_column(ax, handles: list, labels: list, n_cols: int) -> l
         entries_per_col[i] = n_backgrounds // n_bkg_cols + (n_backgrounds % n_bkg_cols > i)
 
     return entries_per_col
+

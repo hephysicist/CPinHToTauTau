@@ -22,7 +22,8 @@ def keep_columns(cfg: od.Config) -> None:
             "GenVtx.*",
             # general event info
             "run", "luminosityBlock", "event",
-            "PV.npvs","Pileup.nTrueInt","Pileup.nPU","genWeight", "LHEWeight.originalXWGTUP", "HTXS_njets*", "LHE_Njets","weight","zpt_weight","muon_weight_nom","mc_weight","tau_weight_nom",
+            "PV.npvs","Pileup.nTrueInt","Pileup.nPU","genWeight", "LHEWeight.originalXWGTUP", "HTXS_njets*","weight","zpt_weight","muon_weight_nom","mc_weight","tau_weight_nom",
+            "LHE.Njets", "LHE.NpNLO",
         } | {
             f"PuppiMET.{var}" for var in [
                 "pt", "phi", "significance",
@@ -860,7 +861,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
                     name=f"{ch_str}_{lep}_ip{proj}",
                     expression=f"hcand_{ch_str}.{lep}.IP{proj}",
                     null_value=EMPTY_FLOAT,
-                    binning=(40, -0.01, 0.01),
+                    binning=(30, -0.01, 0.01),
                     unit="",
                     x_title= rf"{lep_str} $IP_{proj}$",
                 )
@@ -868,7 +869,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
                     name=f"{ch_str}_{lep}_ip{proj}_qm",
                     expression=f"hcand_{ch_str}.{lep}.IP{proj}_qm",
                     null_value=EMPTY_FLOAT,
-                    binning=(40, -0.01, 0.01),
+                    binning=(30, -0.01, 0.01),
                     unit="",
                     x_title= rf"{lep_str} $IP_{proj} corrected$",
                 )
