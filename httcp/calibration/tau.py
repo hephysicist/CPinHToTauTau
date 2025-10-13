@@ -71,8 +71,6 @@ def tau_energy_scale(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
                                                             match[mask],
                                                             deep_tau_obj.tagger,
                                                             syst)
-        
-   
     tes_nom[mask2prong] = self.tes_corrector.evaluate(*tes_args(events, mask2prong,deep_tau, syst))
     
     tes_nom     = np.asarray(tes_nom)
