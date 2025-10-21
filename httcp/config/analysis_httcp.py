@@ -53,88 +53,11 @@ from httcp.config.config_run3 import add_run3
 channels = ['mutau','etau']
 
 #------------------------ Run3 2022 preEE samples ----------------------- #
-from cmsdb.campaigns.run3_2022_preEE_nano_tau_skim_v2 import campaign_run3_2022_preEE_nano_tau_skim_v2
-for counter, value in enumerate(channels):
-    add_run3(
-        analysis_httcp,
-        campaign_run3_2022_preEE_nano_tau_skim_v2.copy(),
-        channel=value,
-        config_name=f"run3_2022_preEE_{value}_limited",
-        config_id=6+counter,
-        limit_dataset_files=1)
-for counter, value in enumerate(channels):
-    add_run3(
-        analysis_httcp,
-        campaign_run3_2022_preEE_nano_tau_skim_v2.copy(),
-        channel=value,
-        config_name=f"run3_2022_preEE_{value}",
-        config_id=9+counter,)
-
-#------------------------ Run3 2022 postEE samples ------------------------------------------------- #
-from cmsdb.campaigns.run3_2022_postEE_v2_nano_tau_v14 import campaign_run3_2022_postEE_v2_nano_tau_v14
-for counter, value in enumerate(channels): 
-    add_run3(
-        analysis_httcp,
-        campaign_run3_2022_postEE_v2_nano_tau_v14.copy(),
-        channel=value,
-        config_name=f"run3_2022_postEE_{value}_limited",
-        config_id=12+counter,
-        limit_dataset_files=1)
-for counter, value in enumerate(channels):
-    add_run3(
-        analysis_httcp,
-        campaign_run3_2022_postEE_v2_nano_tau_v14.copy(),
-        channel=value,
-        config_name=f"run3_2022_postEE_{value}",
-        config_id=15+counter,)
-# -------------------------------------------------------------------------------------------------- #
-
-
-#------------------------ Run3 2023 preBPix samples ------------------------------------------------- #
-from cmsdb.campaigns.run3_2023_preBPix_nano_tau_skim_v2 import campaign_run3_2023_preBPix_nano_tau_skim_v2
-for counter, value in enumerate(channels):
-    add_run3(
-        analysis_httcp,
-        campaign_run3_2023_preBPix_nano_tau_skim_v2.copy(),
-        channel=value,
-        config_name=f"run3_2023_preBPix_{value}_limited",
-        config_id=18+counter,
-        limit_dataset_files=1)
-for counter, value in enumerate(channels):
-    add_run3(
-        analysis_httcp,
-        campaign_run3_2023_preBPix_nano_tau_skim_v2.copy(),
-        channel=value,
-        config_name=f"run3_2023_preBPix_{value}",
-        config_id=21+counter,)
-# -------------------------------------------------------------------------------------------------- #
-
-#------------------------ Run3 2023 postBPix samples ------------------------------------------------- #
-from cmsdb.campaigns.run3_2023_postBPix_nano_tau_skim_v2 import campaign_run3_2023_postBPix_nano_tau_skim_v2
-for counter, value in enumerate(channels):
-    add_run3(
-        analysis_httcp,
-        campaign_run3_2023_postBPix_nano_tau_skim_v2.copy(),
-        channel=value,
-        config_name=f"run3_2023_postBPix_{value}_limited",
-        config_id=24+counter,
-        limit_dataset_files=1)
-for counter, value in enumerate(channels):
-    add_run3(
-        analysis_httcp,
-        campaign_run3_2023_postBPix_nano_tau_skim_v2.copy(),
-        channel=value,
-        config_name=f"run3_2023_postBPix_{value}",
-        config_id=27+counter,)
-# -------------------------------------------------------------------------------------------------- #
-
-
-# from cmsdb.campaigns.run3_2022_preEE_nano_tau_skim_2025_v1 import campaign_run3_2022_preEE_nano_tau_skim_2025_v1
-
+# from cmsdb.campaigns.run3_2022_preEE_nano_tau_skim_v2 import campaign_run3_2022_preEE_nano_tau_skim_v2
 # for counter, value in enumerate(channels):
 #     add_run3(
 #         analysis_httcp,
-#         campaign_run3_2022_preEE_nano_tau_skim_2025_v1.copy(),
+#         campaign_run3_2022_preEE_nano_tau_skim_v2.copy(),
 #         channel=value,
 #         config_name=f"run3_2022_preEE_{value}_limited",
 #         config_id=6+counter,
@@ -142,9 +65,104 @@ for counter, value in enumerate(channels):
 # for counter, value in enumerate(channels):
 #     add_run3(
 #         analysis_httcp,
-#         campaign_run3_2022_preEE_nano_tau_skim_2025_v1.copy(),
+#         campaign_run3_2022_preEE_nano_tau_skim_v2.copy(),
 #         channel=value,
 #         config_name=f"run3_2022_preEE_{value}",
 #         config_id=9+counter,)
-# -------------------------------------------------------------------------------------------------- #
 
+#------------------------ Run3 2022 postEE samples ------------------------------------------------- #
+# from cmsdb.campaigns.run3_2022_postEE_v2_nano_tau_v14 import campaign_run3_2022_postEE_v2_nano_tau_v14
+# for counter, value in enumerate(channels): 
+#     add_run3(
+#         analysis_httcp,
+#         campaign_run3_2022_postEE_v2_nano_tau_v14.copy(),
+#         channel=value,
+#         config_name=f"run3_2022_postEE_{value}_limited",
+#         config_id=12+counter,
+#         limit_dataset_files=1)
+# for counter, value in enumerate(channels):
+#     add_run3(
+#         analysis_httcp,
+#         campaign_run3_2022_postEE_v2_nano_tau_v14.copy(),
+#         channel=value,
+#         config_name=f"run3_2022_postEE_{value}",
+#         config_id=15+counter,)
+# # -------------------------------------------------------------------------------------------------- #
+
+
+# #------------------------ Run3 2023 preBPix samples ------------------------------------------------- #
+# from cmsdb.campaigns.run3_2023_preBPix_nano_tau_skim_v2 import campaign_run3_2023_preBPix_nano_tau_skim_v2
+# for counter, value in enumerate(channels):
+#     add_run3(
+#         analysis_httcp,
+#         campaign_run3_2023_preBPix_nano_tau_skim_v2.copy(),
+#         channel=value,
+#         config_name=f"run3_2023_preBPix_{value}_limited",
+#         config_id=18+counter,
+#         limit_dataset_files=1)
+# for counter, value in enumerate(channels):
+#     add_run3(
+#         analysis_httcp,
+#         campaign_run3_2023_preBPix_nano_tau_skim_v2.copy(),
+#         channel=value,
+#         config_name=f"run3_2023_preBPix_{value}",
+#         config_id=21+counter,)
+# # -------------------------------------------------------------------------------------------------- #
+
+# #------------------------ Run3 2023 postBPix samples ------------------------------------------------- #
+# from cmsdb.campaigns.run3_2023_postBPix_nano_tau_skim_v2 import campaign_run3_2023_postBPix_nano_tau_skim_v2
+# for counter, value in enumerate(channels):
+#     add_run3(
+#         analysis_httcp,
+#         campaign_run3_2023_postBPix_nano_tau_skim_v2.copy(),
+#         channel=value,
+#         config_name=f"run3_2023_postBPix_{value}_limited",
+#         config_id=24+counter,
+#         limit_dataset_files=1)
+# for counter, value in enumerate(channels):
+#     add_run3(
+#         analysis_httcp,
+#         campaign_run3_2023_postBPix_nano_tau_skim_v2.copy(),
+#         channel=value,
+#         config_name=f"run3_2023_postBPix_{value}",
+#         config_id=27+counter,)
+# # -------------------------------------------------------------------------------------------------- #
+
+
+from cmsdb.campaigns.run3_2022_preEE_nano_tau_skim_2025_v1 import campaign_run3_2022_preEE_nano_tau_skim_2025_v1
+
+for counter, value in enumerate(channels):
+    add_run3(
+        analysis_httcp,
+        campaign_run3_2022_preEE_nano_tau_skim_2025_v1.copy(),
+        channel=value,
+        config_name=f"run3_2022_preEE_{value}_limited",
+        config_id=6+counter,
+        limit_dataset_files=1)
+for counter, value in enumerate(channels):
+    add_run3(
+        analysis_httcp,
+        campaign_run3_2022_preEE_nano_tau_skim_2025_v1.copy(),
+        channel=value,
+        config_name=f"run3_2022_preEE_{value}",
+        config_id=9+counter,)
+#-------------------------------------------------------------------------------------------------- #
+
+#------------------------ Run3 2022 postEE samples ------------------------------------------------- #
+from cmsdb.campaigns.run3_2022_postEE_nano_tau_skim_2025_v1 import campaign_run3_2022_postEE_nano_tau_skim_2025_v1 
+for counter, value in enumerate(channels): 
+    add_run3(
+        analysis_httcp,
+        campaign_run3_2022_postEE_nano_tau_skim_2025_v1.copy(),
+        channel=value,
+        config_name=f"run3_2022_postEE_{value}_limited",
+        config_id=12+counter,
+        limit_dataset_files=1)
+for counter, value in enumerate(channels):
+    add_run3(
+        analysis_httcp,
+        campaign_run3_2022_postEE_nano_tau_skim_2025_v1.copy(),
+        channel=value,
+        config_name=f"run3_2022_postEE_{value}",
+        config_id=15+counter,)
+# -------------------------------------------------------------------------------------------------- #
