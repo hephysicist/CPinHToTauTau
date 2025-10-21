@@ -1,9 +1,9 @@
 #!/bin/bash
-source ./common_run3.sh #to access set_common_vars() function
+source ./cp_samples_2025_v1.sh #to access set_common_vars() function
 #The following function defines config, processes, version and datasets variables
 set_common_vars "$1"
 args=(
-        --configs $configs
+        --configs $config
         --processes $processes
         --datasets $datasets
         
@@ -13,11 +13,9 @@ args=(
         
         --cf.CalibrateEvents-workflow $workflow
         --cf.CalibrateEvents-version $version
-        --cf.CalibrateEvents-branch 90
         
         --cf.SelectEvents-workflow $workflow
         --cf.SelectEvents-version $version
-        --cf.SelectEvents-branch 90
         
         --cf.ReduceEvents-workflow $workflow
         --cf.ReduceEvents-version $version
@@ -31,12 +29,12 @@ args=(
         --cf.MergeSelectionStats-version $version
         --cf.ProvideReducedEvents-version $version
 
-        --cf.ProduceColumns-workflow local #$workflow
-        --cf.ProduceColumns-version cf0p3_ff_test
+        --cf.ProduceColumns-workflow $workflow
+        --cf.ProduceColumns-version bugfree_samples
         --cf.CreateHistograms-workflow $workflow
         --cf.MergeHistograms-workflow local
-        --version cf0p3_mt65_4bins
-        --variables mutau_lep0_pt
+        --version bugfree_samples
+        --variables mutau_lep0_pt,mutau_lep1_pt,mutau_mvis,mutau_pt_vis
         
         #mutau_mt0, mutau_lep0_pt,mutau_lep1_pt,mutau_lep0_eta,mutau_lep1_eta,mutau_lep0_phi,mutau_lep1_phi,mutau_mt0,mutau_lep0_iso #bdt_raw_score_fake,bdt_raw_score_gtau,bdt_raw_score_higgs
         
@@ -60,7 +58,7 @@ args=(
        # 2. ff_method_dr_closure_test: Calclulate fake contribution and apply it to the dr_num regions for the closure tests
        # 3. good_old_abcd: estimates QCD contribution by taking events from same sign region and transfer factors from inv. lep iso
          
-       --hist-hooks ff_method,add_cats,order #ff_method_dr_closure_test,qcd,incl,
+       --hist-hooks qcd,incl,order #ff_method_dr_closure_test,qcd,incl,
         #--skip-ratio
         --general-settings "cms-label=pw" #,yscale=log" # 
         --process-settings "h_ggf_htt_sm_prod_sm,unstack,scale=30,color=#0000FF:h_vbf_htt_sm,unstack,scale=100,color=#00FFFF"

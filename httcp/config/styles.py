@@ -35,8 +35,8 @@ def setup_plot_styles(config: od.Config) -> None:
     }
     ratio = {
         "yloc" : "center",
-        "xticks" : np.linspace(-0.01,0.01,5),
-        "xminorticks" : np.linspace(-0.01,0.01,25)
+        #"xticks" : np.linspace(-0.01,0.01,5),
+        #"xminorticks" : np.linspace(-0.01,0.01,25)
         
     }
     annotate = {
