@@ -1,11 +1,8 @@
 import functools
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div
-from law.util import InsertableDict
-from columnflow.columnar_util import sorted_indices_from_mask, set_ak_column, has_ak_column, flat_np_view, optional_column as optional
-from columnflow.production.util import attach_coffea_behavior
-from httcp.util import compute_eff
-import json
+from columnflow.columnar_util import set_ak_column, has_ak_column, flat_np_view, optional_column as optional
+from columnflow.util import maybe_import, load_correction_set
+
 import law
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
@@ -59,25 +56,23 @@ def get_mc_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 def zpt_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 
     # is within range
-    is_outside_range = (
-        ((events.GenZ.pt == 0.0) & (events.GenZ.mass == 0.0))
-        | ((events.GenZ.pt >= 600.0) | (events.GenZ.mass >= 1000.0))
-    )
+    mask = (events.GenZ.pt < 600) | (events.GenZ.mass < 1000) | (events.GenZ.pt > 0) 
 
-    sf_nom = ak.ones_like(events.event,dtype=np.float32)
     
-    # for safety
-    zm  = ak.where(events.GenZ.mass > 1000.0, 999.99, events.GenZ.mass)
-    zpt = ak.where(events.GenZ.pt > 600.0, 599.99, events.GenZ.pt)
-
-    processes = self.dataset_inst.processes.names()
-    if ak.any(['dy' in proc for proc in processes]):
-        sf_nom = ak.where(is_outside_range,
-                          1.0,
-                          self.zpt_corrector(self,zm,zpt))
-
+    zpt = flat_np_view(np.clip(events.GenZ.pt, 0, 600))
+    sf_nom = np.ones_like(zpt,dtype=np.float32)
+    dataset = self.dataset_inst.name
+    if 'DY' in dataset:
+        order = self.config_inst.x.dy_ptll_corrs.datasets[dataset]
+        sf_nom[mask] = self.zpt_corrector.evaluate(order, zpt[mask], 'nom')
     events = set_ak_column(events, "zpt_weight", sf_nom, value_type=np.float32)
     return events
+@zpt_weight.requires
+def zpt_weight_requires(self: Producer, task: law.Task, reqs: dict) -> None:
+    if "external_files" in reqs:
+        return
+    from columnflow.tasks.external import BundleExternalFiles
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 @zpt_weight.setup
 def zpt_weight_setup(
@@ -87,14 +82,9 @@ def zpt_weight_setup(
     inputs: dict,
     reader_targets: law.util.InsertableDict,
 ) -> None:
-    from coffea.lookup_tools import extractor
-    ext = extractor()
-    full_fname = self.config_inst.x.external_files.zpt_weight
-    ext.add_weight_sets([f'zpt_weight zptmass_histo {full_fname}'])
-    ext.finalize()
-    self.evaluator = ext.make_evaluator()
-    self.zpt_corrector = lambda self, mass, pt: self.evaluator['zpt_weight'](mass,pt)
-                        
+    bundle = reqs["external_files"]
+    correction_set = load_correction_set(bundle.files.zpt_weight)
+    self.zpt_corrector = correction_set[f"DY_pTll_reweighting"]
 
 ### MUON WEIGHT CALCULATOR ###
 
@@ -381,13 +371,18 @@ def tau_weight_setup(
     import correctionlib
     correctionlib.highlevel.Correction.__call__ = correctionlib.highlevel.Correction.evaluate
     
-    correction_set = correctionlib.CorrectionSet.from_string(
+    cs1 = correctionlib.CorrectionSet.from_string(
         bundle.files.tau_correction.load(formatter="gzip").decode("utf-8"),
     )
+    cs2 = correctionlib.CorrectionSet.from_string(
+        bundle.files.tau_sf.load(formatter="gzip").decode("utf-8"),
+    )
     tagger_name = self.config_inst.x.deep_tau.tagger
-    self.id_vs_jet_corrector    = correction_set[f"{tagger_name}VSjet"]
-    self.id_vs_e_corrector      = correction_set[f"{tagger_name}VSe"]
-    self.id_vs_mu_corrector     = correction_set[f"{tagger_name}VSmu"]
+    year = self.config_inst.x.year
+    tag = self.config_inst.x.long_tag
+    self.id_vs_e_corrector      = cs1[f"{tagger_name}VSe"]
+    self.id_vs_mu_corrector     = cs1[f"{tagger_name}VSmu"]
+    self.id_vs_jet_corrector     = cs2[f"tau_sf_pt-dm_{tagger_name}VSjet_{year}_{tag}"]
 
 @producer(
     uses={
@@ -515,7 +510,6 @@ def trigger_weight_mutau(self: Producer, events: ak.Array, **kwargs) -> ak.Array
     shifts = ["nom", "up", "down"]
     sf_dict = {}
     for the_shift in shifts:
-        #from IPython import embed; embed()
         mu_syst_name = 'nominal' if the_shift == 'nom' else 'syst' + the_shift
         strig_mu_sf = self.strig_mu.evaluate(prepare(muon.eta,low=-2.4,up=2.4,absolute=True),
                                              prepare(muon.pt,low=26,up=np.inf),
@@ -584,7 +578,7 @@ def filter_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     is_filtered = ['Filtered' in the_name for the_name in datasets]
     if np.any(is_filtered):
         dataset_name = datasets[0].replace('/','')
-        the_weight = self.lookup_table[dataset_name]['filter_efficiency']
+        the_weight = self.lookup_table[dataset_name]
         print(f'Filter efficiency for {dataset_name} is {the_weight}')
         filter_weight = np.full_like(events.event, the_weight, dtype=np.float32)
     else:
