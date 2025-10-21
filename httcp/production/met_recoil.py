@@ -112,10 +112,10 @@ def gen_boson(
     },
 )
 def met_recoil(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
-    met_recoil_dict = self.config_inst.x.met_recoil.datasets
-    dataset_name = self.dataset_inst.name
-    if dataset_name in met_recoil_dict.keys():
-        print(f"Applying MET recoil correction for {dataset_name}")
+    met_recoil_dict = self.config_inst.x.dy_ptll_corrs.datasets
+    dataset = self.dataset_inst.name
+    if dataset in met_recoil_dict.keys():
+        print(f"Applying MET recoil correction for {dataset}")
         boson_p4     = events.gen_boson.sum(axis=1)
         boson_p4_vis = events.gen_boson_vis.sum(axis=1)
         zeros_arr = ak.zeros_like(events.PuppiMET.pt)
@@ -137,7 +137,7 @@ def met_recoil(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         ch_str = self.config_inst.channels.names()[0]
         hcand = events[f'hcand_{ch_str}']
         
-        order      = met_recoil_dict[dataset_name]
+        order      = met_recoil_dict[dataset]
         njet       = events.n_jets 
         ptll       = flat_np_view(hcand.pt_vis)
         
@@ -175,7 +175,7 @@ def met_recoil(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = set_ak_column_f32(events, "PuppiMET.pt", met_p4_corr.pt)
         events = set_ak_column_f32(events, "PuppiMET.phi", met_p4_corr.phi)
     else:
-        print(f"NOT applying MET recoil correction for {dataset_name}")
+        print(f"NOT applying MET recoil correction for {dataset}")
         events = set_ak_column_f32(events, "PuppiMET.pt_no_recoil", events.PuppiMET.pt)
         events = set_ak_column_f32(events, "PuppiMET.phi_no_recoil", events.PuppiMET.phi)
         events = set_ak_column_f32(events, "PuppiMET.pt_recoil_effect", ak.zeros_like(events.PuppiMET.pt))
@@ -220,25 +220,6 @@ def met_recoil_setup(
     )
     self.QuantileHistCorr = correction_set["Recoil_correction_QuantileMapHist"]
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # # "name": "Recoil_correction_Uncertainty",
 # #    "description": "Various values needed to recompute the PuppiMET of single-boson processes like DY. The values were derived from a mu-mu control region, while validation and uncertainties are obtained from e-e control region. 'Recoil_correction_Uncertainty' gives uncertainties which are to be applies in addition to the nominal corrections. Note that a different input is required. The uncertainties were derived based on corrections applied with the QuantileMapHist method.",
 # #    "version": 1,
