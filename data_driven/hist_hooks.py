@@ -156,7 +156,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         from cmsdb.processes.qcd import jet_fakes,qcd
         output = {}
         for config, hists in inputs.items():
-            sr_cats = [c for c in config.categories.names() if '_sr' in c]
+            sr_cats = [c for c in config.categories.names() if ('_sr' in c) and ('no_mt' not in c) ]
             for the_cat in sr_cats:
                 print(f'Applying fake factor method on {the_cat}')
                 sr = config.get_category(the_cat)
