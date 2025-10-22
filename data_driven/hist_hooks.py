@@ -19,28 +19,31 @@ hist = maybe_import("hist")
 
 logger = law.logger.get_logger(__name__)
 
-def calc_yields(hists: dict,locator: dict)-> hist.Hist :
+def calc_yields(hists: dict, locator: dict, fake_locator: dict)-> hist.Hist :
+    #Get data hists
     data_hists = [h for p, h in hists.items() if p.is_data]
     data_hist = sum(data_hists[1:], data_hists[0].copy())
     data = data_hist[locator].values()
     
+    #Get all monte-carlo hists
     mc_hists = [h for p, h in hists.items() if (p.is_mc and not p.has_tag("signal"))]
     mc_hist = sum(mc_hists[1:], mc_hists[0].copy())
     mc = mc_hist[locator].values()
+    mc_fakes = mc_hist[fake_locator].values()
+
+    wj_ratio =  (mc_fakes) / np.maximum(data - mc , 1)
+    wj_err   = np.ones_like(wj_ratio)
     
-    wj_hists = [h for p, h in hists.items() if (p.is_mc and (not p.has_tag("signal")) and 'wj' in p.name)]
-    wj_hist = sum(wj_hists[1:], wj_hists[0].copy())
-    wj = wj_hist[locator].values()
-    #from IPython import embed; embed()
-    wj_ratio =  wj / np.maximum(data, 1)
-    wj_err   =  np.where(data > 0,
-                            rel_err(h_arr=[wj_hist[locator],data_hist[locator]]) * wj_ratio,
-                            np.ones_like(wj_ratio)) 
+    qcd_ratio =  np.maximum((data - (mc_fakes + mc)), 0)/ np.maximum(data - mc, 1)
+    qcd_err   = np.ones_like(wj_ratio) 
+    # np.where(data > 0,
+    #                         rel_err(h_arr=[wj_hist[fake_locator],data_hist[locator]]) * wj_ratio,
+    #                         np.ones_like(wj_ratio)) 
     
-    qcd_ratio =  np.maximum((data - mc), 0)/ np.maximum(data, 1)
-    qcd_err   =  np.where((data - mc) > 0,
-                        rel_err(h_arr=[wj_hist[locator],data_hist[locator]]) * qcd_ratio,
-                        np.ones_like(wj_ratio)) 
+   
+    # np.where((data - mc) > 0,
+    #                     rel_err(h_arr=[wj_hist[fake_locator],data_hist[locator]]) * qcd_ratio,
+    #                     np.ones_like(wj_ratio)) 
     
     return {'wj': wj_ratio,
             'wj_err': wj_err,
@@ -86,18 +89,21 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
     def qcd_estimation(task, inputs): #cf0p3
         output = {}
         for config, hists in inputs.items():
-            sr_cats = [c for c in config.categories.names() if '_sr_' in c]
+            sr_cats = [c for c in config.categories.names() if '_sr' in c]
             for the_cat in sr_cats:
                 print(f'producing qcd for {the_cat}')
                 sr = config.get_category(the_cat)
                 d = {}
                 mc = {}
+                cr_cat = ''
                 for reg_name, full_name in sr.aux['abcd_regs'].items():   
                     loc_dict = {'category': hist.loc(full_name),'shift': hist.loc(task.shift)}
                     full_d = get_data_hist(hists)
                     full_mc = get_mc_hist(hists)   
                     if full_name in list(full_d.axes[0]): d[reg_name] = get_data_hist(hists)[loc_dict]
                     if full_name in list(full_mc.axes[0]): mc[reg_name] = get_mc_hist(hists)[loc_dict]
+                    if reg_name == 'dr_num': cr_cat = full_name
+                        
                 from cmsdb.processes.qcd import qcd
                 h_donor_name  = list(hists.keys())[0]
                 if qcd not in hists.keys():
@@ -117,38 +123,54 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                         num = d['dr_num'].values() - mc['dr_num'].values()
                         den = d['dr_den'].values() - mc['dr_den'].values()
 
-                        mask = ((num > 0) & (den > 0))
+                        # mask = ((num > 0) & (den > 0))
                     
-                        tf = num/den
-                        tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
+                        # tf = num/den
+                        # tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
                 
-                        tf_err2 = ((np.sum(d['dr_num'].variances()) + np.sum(mc['dr_num'].variances()))/den**2 + 
-                            tf**2/den**2 *(np.sum(d['dr_den'].variances()) + np.sum(mc['dr_den'].variances())))
+                        # tf_err2 = ((np.sum(d['dr_num'].variances()) + np.sum(mc['dr_num'].variances()))/den**2 + 
+                        #     tf**2/den**2 *(np.sum(d['dr_den'].variances()) + np.sum(mc['dr_den'].variances())))
+                    
                     val = np.maximum(d['ar'].values() - mc['ar'].values(), 0.) * tf
                     var = (d['ar'].view().variance + mc['ar'].view().variance) * tf**2
                   
                     tmp_arr[find_idxs(hists[qcd], the_cat, task.shift)].value = val
                     tmp_arr[find_idxs(hists[qcd], the_cat, task.shift)].variance = var
+                    if len(cr_cat):
+                        if ('dr_den' in d.keys()) and ('dr_den' in mc.keys()):  
+                            cr_val = np.maximum(d['dr_den'].values() - mc['dr_den'].values(), 0)
+                            cr_var = d['dr_den'].variances() - mc['dr_den'].variances()
+                        elif ('dr_den' in d.keys()):
+                            cr_val = d['dr_den'].values() 
+                            cr_var = d['dr_den'].variances()
+                        else:
+                            cr_val = 0
+                            cr_var = 0
+                        tmp_arr[find_idxs(hists[qcd], cr_cat, task.shift)].value = cr_val
+                        tmp_arr[find_idxs(hists[qcd], cr_cat, task.shift)].variance = cr_var
             hists[qcd][...] = tmp_arr
             output[config] = hists
             return output
     
-    def ff_method(task, inputs):
+    def ff_method(task, inputs): #cf0p3
         from cmsdb.processes.qcd import jet_fakes,qcd
         output = {}
         for config, hists in inputs.items():
-            sr_cats = [c for c in config.categories.names() if '_sr_' in c]
+            sr_cats = [c for c in config.categories.names() if '_sr' in c]
             for the_cat in sr_cats:
                 print(f'Applying fake factor method on {the_cat}')
                 sr = config.get_category(the_cat)
                 data = get_data_hist(hists)
-                hist_qcd = data[{'category': hist.loc(sr.aux['ff_regs']['ar_qcd']),
-                                 'shift': hist.loc(task.shift)}]
-                hist_wj  = data[{'category': hist.loc(sr.aux['ff_regs']['ar_wj']),
-                                 'shift': hist.loc(task.shift)}]
-                locator = {'category': hist.loc(sr.aux['ff_regs']['ar_yields']),
-                                 'shift': hist.loc(task.shift)}
-                yields   = calc_yields(hists, locator)
+                mc = get_mc_hist(hists)
+               
+                locator = lambda reg:  {'category': hist.loc(sr.aux['ff_regs'][reg]),'shift': hist.loc(task.shift)}
+                
+                data_qcd = data[locator('ar_qcd')]
+                mc_qcd = mc[locator('ar_qcd')]
+                data_wj = data[locator('ar_wj')]
+                mc_wj = mc[locator('ar_wj')]
+                #from IPython import embed; embed()
+                yields = calc_yields(hists, locator('ar_yields'), locator('ar_yields_fakes'))
                 
                 
                 h_donor_name  = list(hists.keys())[0]
@@ -160,11 +182,11 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                     hists[jet_fakes] = hists[h_donor_name].copy().reset()
                     tmp_fakes = hists[jet_fakes].view()
                     
-                tmp_qcd[find_idxs(hists[qcd], the_cat, task.shift)].value = hist_qcd.values() * yields['qcd']
-                tmp_qcd[find_idxs(hists[qcd], the_cat, task.shift)].variance = hist_qcd.variances()
+                tmp_qcd[find_idxs(hists[qcd], the_cat, task.shift)].value = np.maximum(data_qcd.values() - mc_qcd.values(), 0) * yields['qcd']
+                tmp_qcd[find_idxs(hists[qcd], the_cat, task.shift)].variance = data_qcd.variances() + mc_qcd.variances()
                 
-                tmp_fakes[find_idxs(hists[jet_fakes], the_cat, task.shift)].value = hist_wj.values() * yields['wj']
-                tmp_fakes[find_idxs(hists[jet_fakes], the_cat, task.shift)].variance = hist_wj.variances()
+                tmp_fakes[find_idxs(hists[jet_fakes], the_cat, task.shift)].value = np.maximum(data_wj.values() - mc_wj.values(), 0) * yields['wj']
+                tmp_fakes[find_idxs(hists[jet_fakes], the_cat, task.shift)].variance = data_wj.variances() + mc_wj.variances()
                 
             hists[qcd][...] = tmp_qcd
             hists[jet_fakes][...] = tmp_fakes
@@ -279,13 +301,23 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         return hists
 
 
-    def blind_sr(task, hists, category_inst):
-        if not hists:
-            return hists
-        data_proc = [the_proc for the_proc in hists.keys() if 'data' in the_proc.name]
-        hists[data_proc[0]].view().value[:,1:] = 0
-        hists[data_proc[0]].view().variance[:,1:] = 0
-        return hists
+    def blind_sr(task, inputs):
+        ouputs = {}
+       
+        for config, hists in inputs.items():
+            sr_cats = [c for c in config.categories.names() if '_sr' in c]
+            out_h = hists.copy()
+            for p, h in hists.items():
+                if 'data' in p.name:
+                    tmp_arr = h.view()
+                    for the_cat in sr_cats:
+                        loc_dict = {'category': hist.loc(the_cat),'shift': hist.loc(task.shift)}
+                        tmp_arr[find_idxs(h, the_cat, task.shift)].value[-5:] = 0
+                        tmp_arr[find_idxs(h, the_cat, task.shift)].variance[-5:] = 0
+
+                    out_h[p][...] = tmp_arr
+            ouputs[config] = out_h
+        return ouputs
 
     def add_qcd_and_wj(task, hists, category_inst):
         fake_hists = []
@@ -329,6 +361,27 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
             ouputs[config] = out_h
         return ouputs
 
+    def add_cats(task, inputs): #cf0p3
+        ouputs = {}
+        for config, hists in inputs.items():
+            incl = 'cat_mutau_sr'
+            #subcats = ['cat_mutau_sr','cat_mutau_abcd_dr_num'] #to plot iso inclusive
+            subcats = ['cat_mutau_sr','cat_mutau_dr_num_wj'] #to plot mt inclusive
+            out_h = hists.copy()
+            for p, h in hists.items():
+                tmp_arr = h.view()
+                subhists = []
+                for subcat in subcats:
+                    loc_dict = {'category': hist.loc(subcat),'shift': hist.loc(task.shift)}
+                    subhists.append(h[loc_dict])
+                incl_h = sum(subhists)
+                tmp_arr[find_idxs(h, incl, task.shift)].value = incl_h.view().value
+                tmp_arr[find_idxs(h, incl, task.shift)].variance = incl_h.view().variance
+                out_h[p][...] = tmp_arr
+            ouputs[config] = out_h
+        return ouputs
+    
+
     def order_hists(task, inputs): #cf0p3
         ouputs = {}
         for config, hists in inputs.items():
@@ -356,5 +409,6 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         "blind_sr"                  : blind_sr,
         "ensure_zl_hist"            : ensure_zl_hist,
         "order"                     : order_hists,
-       "incl"                      : make_inclusive_hists,
+       "incl"                       : make_inclusive_hists,
+       "add_cats"                   : add_cats,
        }

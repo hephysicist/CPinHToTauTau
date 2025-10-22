@@ -27,7 +27,7 @@ from httcp.selection.physics_objects import jet_selection, muon_selection, elect
 from httcp.selection.trigger import trigger_selection
 from httcp.selection.lepton_pair import pair_selection
 from httcp.selection.match_trigobj import match_trigobj
-from httcp.selection.lepton_veto import double_lepton_veto, extra_lepton_veto
+from httcp.selection.lepton_veto import double_lepton_veto, extra_lepton_veto,tau_veto
 from httcp.selection.higgscand import new_higgscand, mask_nans
 
 from httcp.production.aux_columns import channel_id, create_jetID_masks, jet_veto, add_tau_prods
@@ -67,6 +67,7 @@ coffea = maybe_import("coffea")
         jet_veto_map,
         create_jetID_masks,
         met_filters_aux,
+        tau_veto,
     },
     produces={
         # selectors / producers whose newly created columns should be kept
@@ -93,6 +94,7 @@ coffea = maybe_import("coffea")
         jet_veto_map,
         create_jetID_masks,
         met_filters_aux,
+        tau_veto,
         "category_ids",
     },
     exposed=True,
@@ -212,7 +214,11 @@ def main(
     if self.has_dep(jet_veto_map):
         events, jet_veto_map_result = self[jet_veto_map](events, **kwargs)
         results += jet_veto_map_result
-    
+    #veto tau leptons in the DY datasets where taus are bagged 
+    if self.dataset_inst.name in self.config_inst.x.datasets2apply_tau_veto:
+        events, tau_veto_results = self[tau_veto](events)
+        results+=tau_veto_results
+        
     # combined event selection after all steps
     event_sel = reduce(and_, results.steps.values())
     results.event = event_sel
