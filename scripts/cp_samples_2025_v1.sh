@@ -63,13 +63,6 @@ case $1 in
         processes='wj'
         workflow='local'
     ;;
-    "22pre_mt_ewk")
-        config="run3_2022_preEE_mutau"
-        data=$data_mu_2022preEE
-        datasets='WtoLNu_4J_madgraphMLM' #,WtoLNu_2J_madgraphMLM,WtoLNu_3J_madgraphMLM,WtoLNu_4J_madgraphMLM,WtoLNu_madgraphMLM,'
-        processes='wj'
-        workflow='local'
-     ;;
     "22pre_mt")
         config="run3_2022_preEE_mutau"
         data=$data_mu_2022preEE
@@ -82,43 +75,35 @@ case $1 in
 ###############################    
     "22post_mt_lim")
         config="run3_2022_postEE_mutau_limited"	
-        datasets='wj_incl_madgraph' 
+        datasets='WtoLNu_madgraphMLM' 
         processes='wj' 
         workflow='local'
     ;;
-    "22post_mt_ewk")
-        config="run3_2022_postEE_mutau_limited"
-        data=$data_mu_2022postEE
-        datasets='WtoLNu_madgraphMLM' #,WtoLNu_2J_madgraphMLM,WtoLNu_3J_madgraphMLM,WtoLNu_4J_madgraphMLM,WtoLNu_madgraphMLM,'
-        processes='wj'
-        workflow='local'
-     ;;
     "22post_mt")
         config="run3_2022_postEE_mutau"
         data=$data_mu_2022postEE
+        signal='h_ggf_htt_sm_prod_sm_filtered,'
+      	datasets=$data$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal
+        processes='dy_tt_m50,dy_ll_m50,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,data'
+	    workflow='htcondor'
+    ;;
+##############################
+####### 2023preBPix ############
+##############################
+    "23pre_mt_lim")
+        config="run3_2023_preBPix_mutau_limited"	
+        datasets='WtoLNu_madgraphMLM' 
+        processes='wj' 
+        workflow='local'
+    ;;
+    "23pre_mt")
+        config="run3_2023_preBPix_mutau"
+        data=$data_mu_2023preBPix
         signal='h_ggf_htt_sm_prod_sm_filtered,'
       	datasets=$data$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal #$signal
         processes='dy_tt_m50,dy_ll_m50,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,data'
 	    workflow='htcondor'
     ;;
-# ##############################
-# ####### 2023preBPix ############
-# ##############################
-#     "23pre_mt")
-#         config="run3_2023_preBPix_mutau"
-#         data=$data_mu_2023preBPix
-#         bkg_ewk=$bkg_ewk
-#         bkg_top=$bkg_top
-#         bkg_ttbar=$bkg_ttbar
-#         datasets="$data$bkg_ewk$bkg_top$bkg_ttbar$signal"
-#         processes='dy_z2tautau,dy_z2mumu,dy_z2ee,vv,tt,st,wj,h_ggf_htt_sm,data'
-#         workflow='htcondor'
-#      ;;
-#     "23pre_mt_lim")
-#         config="run3_2023_preBPix_mutau_limited"
-#         datasets='dy_lep_madgraph'
-#         processes='dy_z2tautau'
-#         workflow='local'
 #     ;;
 # ##############################
 # ####### 2023postBPix ############

@@ -6,14 +6,12 @@ args=(
         --configs $config
         --processes $processes
         --datasets $datasets
-        
         --categories   'cat_mutau_sr' #'cat_mutau_ar_yields,cat_mutau_ar_yields_fakes,cat_mutau_dr_num_qcd,cat_mutau_dr_den_qcd,cat_mutau_dr_den_wj,cat_mutau_dr_num_wj,cat_mutau_ar_qcd,cat_mutau_ar_yields' #,cat_mutau_sr__tau2pi,cat_mutau_sr__tau2rho,cat_mutau_sr__tau2a1,cat_mutau_sr__tau2pi_3pr' #__tau2rho,cat_mutau_sr__tau2rho__hig_cat_0,cat_mutau_sr__tau2rho__hig_cat_1,cat_mutau_sr__tau2rho__hig_cat_2'
-        
         #'cat_mutau_sr__tau2rho,cat_mutau_sr__tau2rho__hig_cat_0,cat_mutau_sr__tau2rho__hig_cat_1,cat_mutau_sr__tau2rho__hig_cat_2'
         
         --cf.CalibrateEvents-workflow $workflow
         --cf.CalibrateEvents-version $version
-        
+
         --cf.SelectEvents-workflow $workflow
         --cf.SelectEvents-version $version
         
@@ -22,9 +20,7 @@ args=(
 
         --cf.MergeReducedEvents-workflow $workflow
         --cf.MergeReducedEvents-version $version
-        
-        --cf.MergeSelectionStats-version $version
-        --cf.ProvideReducedEvents-version $version
+
         
         --cf.MergeSelectionStats-version $version
         --cf.ProvideReducedEvents-version $version
@@ -58,7 +54,7 @@ args=(
        # 2. ff_method_dr_closure_test: Calclulate fake contribution and apply it to the dr_num regions for the closure tests
        # 3. good_old_abcd: estimates QCD contribution by taking events from same sign region and transfer factors from inv. lep iso
          
-       --hist-hooks qcd,incl,order #ff_method_dr_closure_test,qcd,incl,
+       --hist-hooks ff_method,incl,order #ff_method_dr_closure_test,qcd,incl,
         #--skip-ratio
         --general-settings "cms-label=pw" #,yscale=log" # 
         --process-settings "h_ggf_htt_sm_prod_sm,unstack,scale=30,color=#0000FF:h_vbf_htt_sm,unstack,scale=100,color=#00FFFF"
