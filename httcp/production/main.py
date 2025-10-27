@@ -26,7 +26,6 @@ from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet,
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
 from httcp.production.ip_corrector import ip_correction
 from httcp.production.bdt_score import hcp_bdt_score
-#from httcp.production.fast_mtt import fast_mtt
 from httcp.production.fastMTT import fastMTT
 from httcp.production.stitching_weights import stitching_weight
 
@@ -69,7 +68,6 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_lep_fields,
         ip_correction,
         hcp_bdt_score,
-        #fast_mtt,
         fastMTT,
         filter_weight,
         stitching_weight,
@@ -102,7 +100,6 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_lep_fields,
         ip_correction,
         hcp_bdt_score,
-        #fast_mtt,
         fastMTT,
         filter_weight,
         stitching_weight,
@@ -133,7 +130,6 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = self[gen_boson](events, **kwargs)
         
     events = self[met_recoil](events,**kwargs)
-    #events = self[fast_mtt](events,**kwargs)
     events = self[fastMTT](events,**kwargs)
     if self.dataset_inst.is_mc:
         
