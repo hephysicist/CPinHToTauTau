@@ -117,8 +117,8 @@ def add_categories(config: od.Config,
                                            #qcd estimation categories
                                            'abcd_regs' : {
                                                'ar'    : 'abcd_ar',
-                                               'dr_num': 'abcd_dr_num',
-                                               'dr_den':  'abcd_dr_den',
+                                               #'dr_num': 'abcd_dr_num',
+                                               #'dr_den':  'abcd_dr_den',
                                                },
                                            #fake factor categories
                                            'ff_regs': {
@@ -131,10 +131,10 @@ def add_categories(config: od.Config,
                                                "ar_yields"   : "ar_yields",
                                                "ar_yields_fakes" : "ar_yields_fakes",
                                                 #categories for closure tests
-                                                "dr_den_wj_w_ff": "dr_den_wj_w_ff",
-                                                "dr_den_wj_w_ff_fakes":"dr_den_wj_w_ff_fakes",
-                                                "dr_den_qcd_w_ff": "dr_den_qcd_w_ff",
-                                                "dr_den_qcd_w_ff_fakes":"dr_den_qcd_w_ff_fakes",
+                                                #"dr_den_wj_w_ff": "dr_den_wj_w_ff",
+                                                #"dr_den_wj_w_ff_fakes":"dr_den_wj_w_ff_fakes",
+                                                #"dr_den_qcd_w_ff": "dr_den_qcd_w_ff",
+                                                #"dr_den_qcd_w_ff_fakes":"dr_den_qcd_w_ff_fakes",
                                                 
                                            },},},
         #categories for jet fakes estimation via classic Fake Factor method 
