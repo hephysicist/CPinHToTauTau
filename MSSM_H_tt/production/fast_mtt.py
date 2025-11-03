@@ -12,8 +12,7 @@ import fastmtt_cpp
 
 import functools
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, dev_sandbox
-from columnflow.util import DotDict, InsertableDict
+from columnflow.util import maybe_import
 from columnflow.columnar_util import EMPTY_FLOAT, set_ak_column, flat_np_view
 
 np = maybe_import("numpy")

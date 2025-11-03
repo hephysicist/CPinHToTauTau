@@ -8,7 +8,7 @@ http://cms.cern.ch/iCMS/jsp/openfile.jsp?tp=draft&files=AN2019_192_v15.pdf
 
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.columnar_util import set_ak_column
-from columnflow.util import maybe_import, DotDict
+from columnflow.util import maybe_import
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -148,11 +148,17 @@ def bugged_DY_sample_event_veto(
         events: ak.Array,
         **kwargs,
 ) -> tuple[ak.Array, SelectionResult]:
-    
+    import law
+    logger = law.logger.get_logger(__name__)
+
     n_taus = ak.sum(abs(events.LHEPart.pdgId) == 15, axis=-1)
-    bugged_DY_sample_event_veto = events[n_taus == 0]
-    logger.warning(f"[{dataset_name}] Removed events with taus")
-    events = set_ak_column(events, "bugged_DY_sample_event_veto", bugged_DY_sample_event_veto) 
-    
+    zero_taus = (n_taus == 0)
+    dataset_name = self.dataset_inst.name
+
+    removed = int(ak.sum(~zero_taus))
+    total = len(events)
+    logger.warning(f"[{dataset_name}] Removed {removed}/{total} events with taus")
+
+    events = set_ak_column(events, "bugged_DY_sample_event_veto", zero_taus) 
     return events, SelectionResult(
-        steps={"bugged_DY_sample_event_veto": bugged_DY_sample_event_veto})
+        steps={"bugged_DY_sample_event_veto": zero_taus})

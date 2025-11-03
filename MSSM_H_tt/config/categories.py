@@ -5,11 +5,9 @@ Definition of categories.
 """
 
 import order as od
-
+import law
 from columnflow.config_util import add_category
-from columnflow.util import DotDict
-from columnflow.util import maybe_import
-
+from columnflow.util import maybe_import, DotDict
 np = maybe_import("numpy")
 
 
@@ -18,6 +16,7 @@ def add_categories(config: od.Config,
     
     
     def add_base_categories(config, channel, category_map, base_selection=[]):
+        base_cats = []
         base_cat = config.get_category('_'.join(('cat',channel)))      
         for i, (cat_name, cat) in enumerate(category_map.items()):
             kwargs = {
@@ -32,9 +31,12 @@ def add_categories(config: od.Config,
                     if 'regs' in aux_spec:
                         kwargs['aux'][aux_spec] = {key: '_'.join((base_cat.name, val)) for (key,val) in aux_content.items()}
                     else:
+                        if aux_spec == 'fit_var' and isinstance(aux_content, str):
+                            aux_content = [aux_content]
                         kwargs['aux'][aux_spec] = aux_content
-
+            base_cats.append(kwargs['name'])
             add_category(config, **kwargs)
+        return base_cats
             
     
     def add_child_category(config, parent_cat, child_cat, child_name):
@@ -55,17 +57,26 @@ def add_categories(config: od.Config,
                     kwargs['aux'][aux_key] = reg_map_tagged
                 else:
                     kwargs['aux'][aux_key] = aux_content
+        if ('aux' in child_cat.keys()) and parent_cat.aux:
+            for (aux_key, aux_content) in child_cat['aux'].items():
+                if aux_key == 'fit_var' and isinstance(aux_content, str):
+                    aux_content = [aux_content]
+                kwargs['aux'][aux_key] = aux_content
+                
         add_category(config, **kwargs)
+        return kwargs['name']
     
     
     def create_child_categories(config, parent_categories, child_category_map):
+        out_cats = []
         for cat_name in parent_categories:
             #skip 0-level categories that are used to define channelss
-            if cat_name in ['incl', 'cat_mutau', 'cat_etau', 'cat_tautau', 'cat_emu']: continue
+            if cat_name in ['incl', 'cat_mutau', 'cat_etau']: continue
             parent_cat = config.get_category(cat_name)
             for child_name, child_cat in child_category_map.items():
-                add_child_category(config, parent_cat, child_cat, child_name)
-    
+                full_name = add_child_category(config, parent_cat, child_cat, child_name)
+                out_cats.append(full_name)
+        return out_cats
     """
     Adds all categories to a *config*.
     ids from 1 to 9 are reserved for channels
@@ -123,7 +134,7 @@ def add_categories(config: od.Config,
                                            'abcd_regs' : {
                                                'ar'    : 'abcd_ar',
                                                'dr_num': 'abcd_dr_num',
-                                               'dr_den':  'abcd_dr_den',
+                                               'dr_den': 'abcd_dr_den',
                                                },
                                         #    #fake factor categories
                                         #    'ff_regs': {
@@ -192,7 +203,7 @@ def add_categories(config: od.Config,
     create_child_categories(
     config,
     parent_categories=config.categories.names(),
-    child_category_map=bdt_cats_map,)
+    child_category_map=bdt_cats_map)
     # if channel=='emu':
     #     #debugging
     #     from IPython import embed; embed()

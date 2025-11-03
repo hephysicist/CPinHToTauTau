@@ -1,10 +1,15 @@
 import functools
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div, InsertableDict
-from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
+from columnflow.util import maybe_import, safe_div, DotDict
+from law.util import InsertableDict
+from columnflow.columnar_util import sorted_indices_from_mask, set_ak_column, has_ak_column, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.selection.util import sorted_indices_from_mask
+
+from columnflow.columnar_util import sorted_indices_from_mask
+from columnflow.types import Any
+
 import json
+import law
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
 coffea = maybe_import("coffea")
@@ -82,9 +87,10 @@ def zpt_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 @zpt_weight.setup
 def zpt_weight_setup(
     self: Producer,
-    reqs: dict,
-    inputs: dict,
-    reader_targets: InsertableDict,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    inputs: dict[str, Any],
+    reader_targets: law.util.InsertableDict,
 ) -> None:
     from coffea.lookup_tools import extractor
     ext = extractor()
@@ -182,19 +188,25 @@ def muon_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) -> a
     return events
 
 @muon_weight.requires
-def muon_weight_requires(self: Producer, reqs: dict) -> None:
+def muon_weight_requires(
+    self: Producer,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    **kwargs,   
+    ) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 @muon_weight.setup
 def muon_weight_setup(
     self: Producer,
+    task: law.Task,
     reqs: dict,
     inputs: dict,
-    reader_targets: InsertableDict,
+    reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -203,6 +215,7 @@ def muon_weight_setup(
     correction_set = correctionlib.CorrectionSet.from_string(
         bundle.files.muon_correction.load(formatter="gzip").decode("utf-8"),
     )
+   
     self.muon_id = correction_set[self.config_inst.x.muon_sf.ID.corrector]
     self.muon_iso = correction_set[self.config_inst.x.muon_sf.iso.corrector]
     #self.muon_trig = correction_set[self.config_inst.x.muon_sf.trig.corrector]
@@ -333,19 +346,26 @@ def electron_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) 
     return events
 
 @electron_weight.requires
-def electron_weight_requires(self: Producer, reqs: dict) -> None:
+
+def electron_weight_requires(
+    self: Producer,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    **kwargs,
+    ) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 @electron_weight.setup
 def electron_weight_setup(
     self: Producer,
-    reqs: dict,
-    inputs: dict,
-    reader_targets: InsertableDict,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    inputs: dict[str, Any],
+    reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -357,9 +377,9 @@ def electron_weight_setup(
     correction_set_trig = correctionlib.CorrectionSet.from_string(
         bundle.files.electron_trigger.load(formatter="gzip").decode("utf-8"),
     )
-    
+   
     self.electron_idiso   = correction_set_idiso[self.config_inst.x.electron_sf.ID.corrector]
-    #self.electron_trig = correction_set_trig[self.config_inst.x.electron_sf.trig.corrector]
+    # self.electron_trig = correction_set_trig[self.config_inst.x.electron_sf.trig.corrector]
     self.electron_trig_Data_eff = correction_set_trig[self.config_inst.x.electron_sf.Data_eff.corrector]
     self.electron_trig_MC_eff = correction_set_trig[self.config_inst.x.electron_sf.MC_eff.corrector]
 
@@ -556,20 +576,28 @@ https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/849c6a6efef907f403
     return events
 
 @tau_weight.requires
-def tau_weight_requires(self: Producer, reqs: dict) -> None:
+
+def tau_weight_requires(
+    self: Producer,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    **kwargs,
+    ) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 @tau_weight.setup
 def tau_weight_setup(
     self: Producer,
-    reqs: dict,
-    inputs: dict,
-    reader_targets: InsertableDict,
-) -> None:
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    inputs: dict[str, Any],
+    reader_targets: law.util.InsertableDict,
+    **kwargs,
+    ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
     correctionlib.highlevel.Correction.__call__ = correctionlib.highlevel.Correction.evaluate
@@ -581,3 +609,47 @@ def tau_weight_setup(
     self.id_vs_jet_corrector    = correction_set[f"{tagger_name}VSjet"]
     self.id_vs_e_corrector      = correction_set[f"{tagger_name}VSe"]
     self.id_vs_mu_corrector     = correction_set[f"{tagger_name}VSmu"]
+
+
+@producer(
+    uses={
+        'event','hcand_*','n_jets',
+    },
+    produces={
+        'filter_weight'
+    },
+)
+def filter_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+    """
+    This function applies filter weights to the datasets 
+    """
+    datasets  = self.dataset_inst.keys
+    is_filtered = ['Filtered' in the_name for the_name in datasets]
+    if np.any(is_filtered):
+        dataset_name = datasets[0].replace('/','')
+        the_weight = self.lookup_table[dataset_name]['filter_efficiency']
+        print(f'Filter efficiency for {dataset_name} is {the_weight}')
+        filter_weight = np.full_like(events.event, the_weight, dtype=np.float32)
+    else:
+        filter_weight = np.ones_like(events.event, dtype=np.float32)
+    events = set_ak_column_f32(events,'filter_weight', filter_weight)
+    return events
+
+@filter_weight.requires
+def filter_weight_requires(self: Producer, task: law.Task, reqs: dict) -> None:
+    if "external_files" in reqs:
+        return
+
+    from columnflow.tasks.external import BundleExternalFiles
+    reqs["external_files"] = BundleExternalFiles.req(task)
+
+@filter_weight.setup
+def filter_weight_setup(
+    self: Producer,
+    task: law.Task,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: law.util.InsertableDict,
+) -> None:
+    bundle = reqs["external_files"]
+    self.lookup_table  = bundle.files.filter_eff.load(formatter='yaml')

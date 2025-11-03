@@ -7,10 +7,11 @@ Now supports multiple mass points: one even/odd model per mass, producing per-ma
 import law
 import luigi
 import functools
+from columnflow.util import maybe_import, DotDict, dev_sandbox
+from law.util import InsertableDict
+from columnflow.columnar_util import sorted_indices_from_mask, set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
+from columnflow.types import Any
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, dev_sandbox, DotDict, InsertableDict
-from columnflow.columnar_util import EMPTY_FLOAT, set_ak_column, flat_np_view
-
 logger = law.logger.get_logger(__name__)
 
 np = maybe_import("numpy")
@@ -141,7 +142,12 @@ def mssm_bdt_score(
 
 
 @mssm_bdt_score.requires
-def mssm_bdt_score_requires(self: Producer, reqs: dict) -> None:
+def mssm_bdt_score_requires(
+    self: Producer,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    **kwargs,
+    ) -> None:
     """
     No external bundle needed; models are read directly from EOS in setup.
     """
@@ -151,10 +157,12 @@ def mssm_bdt_score_requires(self: Producer, reqs: dict) -> None:
 @mssm_bdt_score.setup
 def mssm_bdt_score_setup(
     self: Producer,
-    reqs: dict,
-    inputs: dict,
-    reader_targets: InsertableDict,
-) -> None:
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    inputs: dict[str, Any],
+    reader_targets: law.util.InsertableDict,
+    **kwargs,
+    ) -> None:
     """
     Loads one XGBoost model pair (even/odd) for each mass point.
     """

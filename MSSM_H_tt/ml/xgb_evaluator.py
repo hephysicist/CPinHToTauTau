@@ -6,18 +6,17 @@ import pathlib
 from multiprocessing import Process, Pipe
 from multiprocessing.connection import Connection
 from dataclasses import dataclass
-from typing import Any
+from columnflow.types import Any
 
 import law
 import order as od
 
 from columnflow.types import Any
 from columnflow.ml import MLModel
-from columnflow.util import maybe_import, dev_sandbox,InsertableDict
+from columnflow.util import maybe_import
+from law.util import InsertableDict
 from columnflow.columnar_util import Route, set_ak_column
 ak = maybe_import("awkward")
-xgb = maybe_import("xgboost")
-
 STOP_SIGNAL = "STOP"
 
 
@@ -140,16 +139,12 @@ def _xgb_evaluate(
     config: list[dict[str, Any]],
     /,
     *,
-    delay = 0.2,
+    delay = 1,
     silent: bool = False,
 ) -> None:
     _print = (lambda *args, **kwargs: None) if silent else print
-
-    _print("importing xgboost ...")
+    import xgboost as xgb
     import numpy as np
-    import xgboost as xgb  # type: ignore[import-not-found,import-untyped]
-    _print("done")
-
     @dataclass
     class Model:
         name: str
@@ -234,24 +229,3 @@ def _xgb_evaluate(
         # reduce models and sleep
         models = [model for i, model in enumerate(models) if i not in remove_models]
         time.sleep(delay)
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

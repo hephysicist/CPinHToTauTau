@@ -9,13 +9,11 @@ from __future__ import annotations
 
 import law
 import order as od
-from typing import Any
 from columnflow.util import maybe_import
 from columnflow.columnar_util import ArrayFunction, deferred_column
-from columnflow.util import DotDict
 from columnflow.columnar_util import set_ak_column
 from columnflow.production import Producer, producer
-
+from columnflow.types import Any
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")

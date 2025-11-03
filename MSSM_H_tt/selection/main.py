@@ -212,13 +212,13 @@ def main(
     events, met_cov_check_results = self[met_cov_check](events,**kwargs)
     
     results += met_cov_check_results
-
-    processes = self.dataset_inst.processes.names()
-    if processes[0] in self.config_inst.x.bugged_DYto2Tau_samples:
-        events, bugged_DY_sample_event_veto_results = self[bugged_DY_sample_event_veto](events)
+    
+    dataset_name = self.dataset_inst.name
+    if dataset_name in self.config_inst.x.bugged_DYto2Tau_samples:
+        events, bugged_DY_sample_event_veto_results = self[bugged_DY_sample_event_veto](events, **kwargs)
         
         results+=bugged_DY_sample_event_veto_results   
-
+   
     #Check arrays for np.nan values and mask them
     events, nan_mask_res = self[mask_nans](events)
     results += nan_mask_res

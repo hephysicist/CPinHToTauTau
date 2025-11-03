@@ -1,8 +1,10 @@
 import functools
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div, InsertableDict
+from columnflow.util import maybe_import, safe_div
+from law.util import InsertableDict
 from columnflow.columnar_util import set_ak_column,remove_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
+
 
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
@@ -42,10 +44,9 @@ def split_dy(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
             fake_mask = fake_mask | (tau_dm == tau_part_flav["prompt_mu"])
             fake_mask = fake_mask | (tau_dm == tau_part_flav["tau->mu"])
             process_id = ak.where(ak.fill_none(fake_mask, False), 51004, process_id) #z->mumu events
-        
+
         process_id = ak.where(ak.fill_none(tau_dm == tau_part_flav["tau_had"], False), 51005, process_id) #z->tautau events    
     
     events = set_ak_column(events, "process_id", process_id, value_type=np.int64)
     return events
-
 

@@ -1,10 +1,11 @@
 import functools
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div, InsertableDict
-from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
+from columnflow.util import maybe_import, DotDict
+from law.util import InsertableDict
+from columnflow.columnar_util import sorted_indices_from_mask, set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.selection.util import sorted_indices_from_mask
-from MSSM_H_tt.util import find_fields_with_nan
+from columnflow.types import Any
+import law
 
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
@@ -39,11 +40,10 @@ def btag_weight(
     year = self.config_inst.x.year
     jet_mask = ((events.Jet.pt >= 20) & 
                 (abs(events.Jet.eta) < 2.5) & 
-                (events.Jet.jetId & 0b10 == 0b10))
+                ((events.Jet.jetId & 0b10) == 0b10))
     
     #Removing NaNs from discriminat
     dis = events.Jet.btagDeepFlavB 
-    nan_mask = np.isnan(dis)
     mask = ~np.isnan(dis)
     jet_mask = jet_mask & mask
     
@@ -80,20 +80,29 @@ def btag_weight(
     return events
 
 @btag_weight.requires
-def btag_weight_requires(self: Producer, reqs: dict) -> None:
+def btag_weight_requires(
+    self: Producer,
+    task: law.Task,
+    reqs: dict,
+    **kwargs,
+    ) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
+    
 @btag_weight.setup
 def btag_weight_setup(
     self: Producer,
+    task: law.Task,
     reqs: dict,
     inputs: dict,
-    reader_targets: InsertableDict,
+    reader_targets: law.util.InsertableDict,
+    **kwargs,
 ) -> None:
+   
     bundle = reqs["external_files"]
     import correctionlib
     correctionlib.highlevel.Correction.__call__ = correctionlib.highlevel.Correction.evaluate

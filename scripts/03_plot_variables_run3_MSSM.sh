@@ -12,13 +12,13 @@ args=(
         --cf.SelectEvents-workflow $workflow
         --cf.ReduceEvents-workflow $workflow
         --cf.MergeReducedEvents-workflow $workflow
-        --cf.ProduceColumns-workflow local
-        --cf.MergeHistograms-workflow local
+        --cf.ProduceColumns-workflow $workflow
+        --cf.MergeHistograms-workflow $workflow
         --variables $variables
         --file-types pdf,png
-	# --hist-hooks good_old_abcd
+	--hist-hooks qcd
         --general-settings "cms-label=pw"
-        # --process-settings "h_ggf_htt_100,unstack,scale=1500,color=#FF0000:bbh_htt_100,unstack,scale=50000,color=#0000FF"
+        --process-settings "h_ggf_htt_100,unstack,scale=1000"  #,color=#FF0000:bbh_htt_100,unstack,scale=1000,color=#0000FF"
         #"h_ggf_htt_80,unstack,scale=stack,color=#FF0000:h_ggf_htt_100,unstack,scale=stack,color=#0000FF:h_ggf_htt_120,unstack,scale=stack"
         "${@:2}"
     )

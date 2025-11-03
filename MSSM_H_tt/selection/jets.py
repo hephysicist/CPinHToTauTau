@@ -5,17 +5,16 @@ Selection modules for jets.
 """
 
 from __future__ import annotations
-
-import law
 import math
-
+import law
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.util import maybe_import, InsertableDict
+from columnflow.util import maybe_import, DotDict
+from law.util import InsertableDict
 from columnflow.columnar_util import set_ak_column, flat_np_view, optional_column as optional
+from columnflow.types import Any
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
-
 
 logger = law.logger.get_logger(__name__)
 
@@ -127,21 +126,27 @@ def jet_veto_map(
 
 
 @jet_veto_map.requires
-def jet_veto_map_requires(self: Selector, reqs: dict) -> None:
+def jet_veto_map_requires(
+    self: Selector,
+    task: law.Task,
+    reqs: dict,
+    **kwargs,) -> None:
     if "external_files" in reqs:
         return
 
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 
 @jet_veto_map.setup
 def jet_veto_map_setup(
     self: Selector,
-    reqs: dict,
-    inputs: dict,
-    reader_targets: InsertableDict,
-) -> None:
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    inputs: dict[str, Any],
+    reader_targets: law.util.InsertableDict,
+    **kwargs,
+    ) -> None:
     bundle = reqs["external_files"]
 
     # create the corrector

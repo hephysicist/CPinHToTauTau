@@ -1,10 +1,12 @@
 from __future__ import annotations
 import functools
+import law
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div, InsertableDict
-from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
+from columnflow.util import maybe_import, DotDict
+from law.util import InsertableDict
+from columnflow.columnar_util import sorted_indices_from_mask, set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.selection.util import sorted_indices_from_mask
+from columnflow.types import Any
 import json
 
 ak     = maybe_import("awkward")
@@ -132,56 +134,44 @@ def stitching_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
   return events
 
 @stitching_weight.requires
-def stitching_weight_requires(self: Producer, reqs: dict) -> None:
+def stitching_weight_requires(
+    self: Producer,
+    task: law.Task,
+    reqs: dict,
+    **kwargs,
+    ) -> None:
   if "external_files" in reqs:
     return
   from columnflow.tasks.external import BundleExternalFiles
-  reqs["external_files"] = BundleExternalFiles.req(self.task)
+  reqs["external_files"] = BundleExternalFiles.req(task)
 
 @stitching_weight.setup
 def stitching_weight_setup(
-  self: Producer,
-  reqs: dict,
-  inputs: dict,
-  reader_targets: InsertableDict,
+    self: Producer,
+    task: law.Task,
+    reqs: dict,
+    inputs: dict,
+    reader_targets: InsertableDict,
 ) -> None:
-  bundle = reqs["external_files"]
-
-  import correctionlib
-  try:
-    # make __call__ behave like .evaluate in older/newer correctionlib
-    correctionlib.highlevel.Correction.__call__ = correctionlib.highlevel.Correction.evaluate
-  except Exception:
-    pass
-
-  # --- robust load: accept both .json and .json.gz ---
-  tgt = bundle.files.stitching_correction
-  raw = tgt.load()  # don't pass formatter="gzip" — let law pick by suffix, or return raw bytes/str
-
-  # Normalize to JSON string
-  if isinstance(raw, (bytes, bytearray)):
-    # detect gzip magic bytes
-    if len(raw) >= 2 and raw[0] == 0x1F and raw[1] == 0x8B:
-      import gzip
-      cjson = gzip.decompress(raw).decode("utf-8")
-    else:
-      cjson = raw.decode("utf-8")
-  elif isinstance(raw, str):
-    cjson = raw
-  else:
-    # in case a formatter returned a Python object
-    cjson = json.dumps(raw)
-
-  # cache valid sample keys for name-matching
-  self._stitch_valid_samples, self._stitch_samples_per_era = _collect_sample_keys_from_cset_json(cjson)
-
-  # init correction handles
-  correction_set = correctionlib.CorrectionSet.from_string(cjson)
-
-  corr_name = getattr(self.config_inst.x.stitching_settings, "corrector", "stitch_weight")
-  if corr_name not in correction_set.keys():
-    raise RuntimeError(
-      f"stitching_weight: corrector '{corr_name}' not found in CorrectionSet. "
-      f"Available: {list(correction_set.keys())}"
-    )
-  self.stitching = correction_set[corr_name]
+    def get_nj(s: str) -> int:
+      m = re.search(r'_(\d+)J_', s)
+      return int(m.group(1)) if m else -1
+    
+    def get_xsec(self, dataset_name):
+      d = self.config_inst.get_dataset(dataset_name)
+      ecm = self.config_inst.campaign.ecm
+      return self.config_inst.get_process(d.processes.names()[0]).get_xsec(ecm)
+    self.weight_dict = None
+    dataset = self.dataset_inst.name 
+    if dataset in self.config_inst.x.stitch_samples:
+        start_str = [s for s in ["DYto2L","WtoLNu"] if dataset.startswith(s)]
+        self.var = 'NpNLO' if start_str == "DYto2L" else 'Njets'
+        self.config_inst.campaign.ecm
+        stitch_samples = {get_nj(key): (get_xsec(self, key), self.config_inst.get_dataset(key).n_events)
+                          for key in self.config_inst.x.stitch_samples 
+                          if key.startswith(*start_str)} 
+        (xsec_incl, n_evt_incl) = stitch_samples.pop(-1)
+        self.weight_dict = {}
+        for nj, (xsec,n_evt) in stitch_samples.items():
+            num = (xsec/xsec_incl)*n_evt_incl
+            self.weight_dict[nj] = num / (num + n_evt)

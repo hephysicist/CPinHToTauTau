@@ -17,7 +17,8 @@ args=(
         
         --cf.MergeReducedEvents-workflow $workflow
         --cf.MergeReducedEvents-version $version
-        
+        --cf.ProduceColumns-workflow $workflow
+
         --cf.MergeSelectionStats-version $version
         --cf.ProvideReducedEvents-version $version
         --version $version

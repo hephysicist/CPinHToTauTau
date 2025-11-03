@@ -1,9 +1,11 @@
 import functools
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div, InsertableDict
-from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
+from columnflow.util import maybe_import, DotDict
+from law.util import InsertableDict
+from columnflow.columnar_util import sorted_indices_from_mask, set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.selection.util import sorted_indices_from_mask
+from columnflow.types import Any
+import law
 
 ak     = maybe_import("awkward")
 np     = maybe_import("numpy")
@@ -25,8 +27,9 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
     mc_only=True,
 )
 def btag_weight_SF(
-    self: Producer, 
-    events: ak.Array, 
+    self: Producer,
+    events: ak.Array,
+    task: law.Task,
     do_syst: bool,
     **kwargs,  
 ) -> ak.Array:
@@ -68,7 +71,7 @@ def btag_weight_SF(
                     
     rename_systs = {"central" : "nom",} 
 
-    selection_stats = self.task.cached_value(
+    selection_stats = task.cached_value(
         key="selection_stats",
         func=lambda: inputs["selection_stats"]["stats"].load(formatter="json"),
     ) 
@@ -86,28 +89,34 @@ def btag_weight_SF(
         
     return events
 
-@btag_weight_SF.requires
-def btag_weight_SF_requires(self: Producer, reqs: dict) -> None:
+@btag_weight_SF.requires    
+def btag_weight_SF_requires(
+    self: Producer,
+    task: law.Task,
+    reqs: dict,
+    **kwargs,
+    ) -> None:
     from columnflow.tasks.selection import MergeSelectionStats
     reqs["selection_stats"] = MergeSelectionStats.req_different_branching(
-        self.task,
-        branch=-1 if self.task.is_workflow() else 0,
+        task,
+        branch=-1 if task.is_workflow() else 0,
     )
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 @btag_weight_SF.setup
 def btag_weight_SF_setup(
     self: Producer,
-    reqs: dict,
-    inputs: dict,
-    reader_targets: InsertableDict,
+    task: law.Task,
+    reqs: dict[str, DotDict[str, Any]],
+    inputs: dict[str, Any],
+    reader_targets: law.util.InsertableDict,
+    **kwargs,
 ) -> None:
-    
-    selection_stats = self.task.cached_value(
+    selection_stats = task.cached_value(
         key="selection_stats",
         func=lambda: inputs["selection_stats"]["stats"].load(formatter="json"),
     )
@@ -120,30 +129,3 @@ def btag_weight_SF_setup(
         bundle.files.btag_sf_corr.load(formatter="gzip").decode("utf-8"),
     )
     self.btag_sf_corr = correction_set[self.config_inst.x.btag_sf[0]]
-
-    # nan_mask = np.isnan(discriminant)
-    
-    # mask = ~np.isnan(discriminant)
-
-    # # nan_mask = np.isnan(discriminant)
-    # if ak.any(nan_mask):
-    #     print("NaN values found in the array.")
-    # else:
-    #     print("No NaN values in the array.")
-    # nan_count = ak.sum(np.isnan(discriminant))
-    # print(f"Found {nan_count} NaN values.")
-    
-    # # Filter out the nested subarrays that contain NaN values.
-    # filtered = discriminant[mask]
-
-    # print("Original array:")
-    # print(discriminant)
-    # print("\nMask for subarrays without NaNs:")
-    # print(mask)
-    # print("\nFiltered array (NaN-containing entries removed):")
-    # print(filtered)
-
-    # flavor_ = flavor[mask]
-    # eta_ = eta[mask]
-    # pt_ = pt[mask]
-    # discriminant_ = discriminant[mask]

@@ -8,9 +8,8 @@ from collections import defaultdict
 
 from typing import Optional
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.selection.util import sorted_indices_from_mask
-from columnflow.util import maybe_import, DotDict
-from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
+from columnflow.util import maybe_import
+from columnflow.columnar_util import sorted_indices_from_mask, EMPTY_FLOAT, Route, set_ak_column
 from columnflow.columnar_util import optional_column as optional
 
 from MSSM_H_tt.util import IF_NANO_V9, IF_NANO_V11
@@ -57,19 +56,19 @@ def muon_selection(
     # setting two new columns for the muons
     events = set_ak_column(events, "Muon.rawIdx",    ak.local_index(events.Muon))
     events = set_ak_column(events, "Muon.ip_sig", events.Muon.sip3d)
-
+    muon_wp = (self.config_inst.x.muon_id_wp).lower()
     good_selections = {
         "muon_pt_26"          : events.Muon.pt > 26,
         "muon_eta_2p4"        : abs(events.Muon.eta) < 2.4,
-        "mediumID"            : events.Muon.mediumId == 1,
+        "muon_ID"             : getattr(events.Muon, f'{muon_wp}Id') == 1,
         "muon_dxy_0p045"      : abs(events.Muon.dxy) < 0.045,
         "muon_dz_0p2"         : abs(events.Muon.dz) < 0.2,
-        #"muon_iso_0p15"       : events.Muon.pfRelIso04_all < 0.15
+        #"muon_iso_0p15"      : events.Muon.pfRelIso04_all < 0.15
     }
     mu_emu_selections = {
         "muon_pt_15"          : events.Muon.pt > 15,
         "muon_eta_2p4"        : abs(events.Muon.eta) < 2.4,
-        "mediumID"            : events.Muon.mediumId == 1,
+        "muon_ID"             : getattr(events.Muon, f'{muon_wp}Id') == 1,
         "muon_dxy_0p045"      : abs(events.Muon.dxy) < 0.045,
         "muon_dz_0p2"         : abs(events.Muon.dz) < 0.2,
 #        "muon_iso_0p2"        : events.Muon.pfRelIso04_all < 0.2, remove the cut, need it to define ABCD regions
@@ -77,13 +76,13 @@ def muon_selection(
     single_veto_selections = {
         "muon_pt_10"          : events.Muon.pt > 10,
         "muon_eta_2p4"        : abs(events.Muon.eta) < 2.4,
-        "mediumID"            : events.Muon.mediumId == 1,
+        "muon_ID"             : getattr(events.Muon, f'{muon_wp}Id') == 1,
         "muon_iso_0p3"        : events.Muon.pfRelIso04_all < 0.3
     }
     second_mu_veto_emu_selections = {
         "muon_pt_10"          : events.Muon.pt > 10,
         "muon_eta_2p4"        : abs(events.Muon.eta) < 2.4,
-        "mediumID"            : events.Muon.mediumId == 1,
+        "muon_ID"             : getattr(events.Muon, f'{muon_wp}Id') == 1,
         "muon_dxy_0p045"      : abs(events.Muon.dxy) < 0.045,
         "muon_dz_0p2"         : abs(events.Muon.dz) < 0.2,
         "muon_iso_0p3"        : events.Muon.pfRelIso04_all < 0.3
