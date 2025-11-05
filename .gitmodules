@@ -1,7 +1,7 @@
 [submodule "modules/columnflow"]
 	path = modules/columnflow
 	url = https://github.com/DesyTau/columnflow.git
-        branch = master
+    branch = master
 [submodule "modules/cmsdb"]
 	path = modules/cmsdb
 	url = https://github.com/DesyTau/cmsdb.git
