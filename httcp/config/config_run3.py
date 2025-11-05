@@ -206,9 +206,9 @@ def add_run3(ana: od.Analysis,
         "wph_htt_cpo","wph_htt_sm","wph_htt_mm","wph_htt_flat",
         "wmh_htt_cpo","wmh_htt_sm","wmh_htt_mm","wmh_htt_flat",
     ]
-        
     for process_name in process_names:
         # add the process
+        #print(f'importing {process_name} for {campaign.name}')
         proc = cfg.add_process(procs.get(process_name))
         #for signal datasets create special tag
         if process_name.startswith("h_"):
@@ -637,7 +637,7 @@ def add_run3(ana: od.Analysis,
         "met_recoil"                    : f"{corr_dir}dy_ptll/DY_pTll_recoil_corrections_{year}{tag}.json.gz",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
-        "fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_22and23_mt{cfg.x.mt_cut_value}_4bins.json", "v2"),
+        "fake_factors"                  : (f"{corr_dir}fake_factors_v1_2025_{channel}_22and23_mt{cfg.x.mt_cut_value}_4bins.json", "v2"),
         "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
         "ml_model_even"                 : f"{corr_dir}signal_classifier/model_EVEN.json",
         "ml_model_odd"                  : f"{corr_dir}signal_classifier/model_ODD.json",
@@ -719,7 +719,6 @@ def add_run3(ana: od.Analysis,
     cfg.add_shift(name="top_pt_up", id=10, type="shape")
     cfg.add_shift(name="top_pt_down", id=11, type="shape")
     add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"})
-
     
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
@@ -834,7 +833,7 @@ def add_run3(ana: od.Analysis,
             },
     },
     "columns" : ['ff_weight_wj','ff_weight_qcd'],
-    "shifts"  : ["up", "nominal", "down"]
+    "shifts"  : ["up", "nom", "down"]
     })
     
     cfg.x.dy_ptll_corrs = DotDict.wrap({

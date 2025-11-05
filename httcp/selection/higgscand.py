@@ -113,7 +113,7 @@ def mask_nans(
         for lep_str in [field for field in hcand.fields if 'lep' in field]:
             lep = hcand[lep_str]
             for field in lep.fields:
-                field_mask = (ak.any(np.isnan(lep[field]),axis=1))
+                field_mask = (ak.any(np.isnan(lep[field]),axis=1)) | (ak.any(ak.is_none(lep[field],axis=1),axis=1))
                 mask = mask | field_mask
                 if ak.any(field_mask):
                     evt_index = events.event[field_mask]

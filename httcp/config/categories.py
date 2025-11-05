@@ -129,29 +129,28 @@ def add_categories(config: od.Config,
                                                "dr_num_qcd"  : "dr_num_qcd",
                                                "dr_den_qcd"  : "dr_den_qcd",
                                                "ar_yields"   : "ar_yields",
-                                               "ar_yields_fakes" : "ar_yields_fakes",
                                                 #categories for closure tests
-                                                #"dr_den_wj_w_ff": "dr_den_wj_w_ff",
+                                                "dr_den_wj_w_ff": "dr_den_wj_w_ff",
                                                 #"dr_den_wj_w_ff_fakes":"dr_den_wj_w_ff_fakes",
-                                                #"dr_den_qcd_w_ff": "dr_den_qcd_w_ff",
+                                                "dr_den_qcd_w_ff": "dr_den_qcd_w_ff",
                                                 #"dr_den_qcd_w_ff_fakes":"dr_den_qcd_w_ff_fakes",
                                                 
                                            },},},
         #categories for jet fakes estimation via classic Fake Factor method 
-        "ar_wj"          : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso", "tau_no_jet_fakes", "os_charge"], 'aux': {'apply_ff': 'wj'}},
-        "dr_num_wj"      : {'selection' : ['mt_inv_cut',  "deep_tau_wp",      "lep_iso", "tau_no_jet_fakes", "ss_charge"],},
-        "dr_den_wj"      : {'selection' : ['mt_inv_cut',  "deep_tau_inv_wp",  "lep_iso", "tau_no_jet_fakes", "ss_charge"],},
+       
+        "dr_num_wj"      : {'selection' : ['mt_inv_cut',  "deep_tau_wp",      "lep_iso", "ss_charge"],},
+        "dr_den_wj"      : {'selection' : ['mt_inv_cut',  "deep_tau_inv_wp",  "lep_iso", "ss_charge"],},
+        "dr_den_wj"      : {'selection' : ['mt_inv_cut',  "deep_tau_inv_wp",  "lep_iso", "ss_charge"],},
+        "dr_den_wj_w_ff"       : {'selection' : ['mt_inv_cut',  "deep_tau_inv_wp",  "lep_iso", "ss_charge"], 'aux':{'apply_ff': 'wj'}},
         
-        "dr_den_wj_w_ff"       : {'selection' : ['mt_inv_cut',  "deep_tau_inv_wp",  "lep_iso", "tau_no_jet_fakes", "ss_charge"], 'aux':{'apply_ff': 'wj'}},
-        "dr_den_wj_w_ff_fakes" : {'selection' : ['mt_inv_cut',  "deep_tau_inv_wp",  "lep_iso", "tau_jet_fakes", "ss_charge"], 'aux': {'apply_ff': 'wj'}},
-        
-        "ar_qcd"                : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso",     "tau_no_jet_fakes", "os_charge"], 'aux': {'apply_ff': 'qcd'}},
-        "dr_num_qcd"            : {'selection' : ['mt_cut',      "deep_tau_wp",      "lep_inv_iso", "tau_no_jet_fakes", "ss_charge"],},
-        "dr_den_qcd"            : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_inv_iso", "tau_no_jet_fakes", "ss_charge"],},
-        "dr_den_qcd_w_ff"       : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_inv_iso", "tau_no_jet_fakes", "ss_charge"], 'aux': {'apply_ff': 'qcd'}},
-        "dr_den_qcd_w_ff_fakes" : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_inv_iso", "tau_jet_fakes",    "ss_charge"], 'aux': {'apply_ff': 'qcd'}},
-        "ar_yields"             : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso",     "tau_no_jet_fakes", "os_charge"],},
-        "ar_yields_fakes"       : {'selection' : ['mt_cut',      "deep_tau_inv_wp" , "lep_iso",     "tau_jet_fakes",    "os_charge"],},
+      
+        "dr_num_qcd"            : {'selection' : ['mt_cut',      "deep_tau_wp",      "lep_inv_iso", "ss_charge"],},
+        "dr_den_qcd"            : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_inv_iso", "ss_charge"],},
+        "dr_den_qcd_w_ff"       : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_inv_iso", "ss_charge"], 'aux': {'apply_ff': 'qcd'}},
+       
+        "ar_yields"             : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso",     "os_charge"],},
+        "ar_wj"          : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso", "os_charge"], 'aux': {'apply_ff': 'wj'}},
+        "ar_qcd"                : {'selection' : ['mt_cut',      "deep_tau_inv_wp",  "lep_iso",     "os_charge"], 'aux': {'apply_ff': 'qcd'}},
         
         # #categories for QCD estimation via classic ABCD method 
         "abcd_ar"       : { 'selection' : ['mt_cut', "deep_tau_wp", "lep_iso", "ss_charge"], 'label' : "same sign region"},
@@ -169,7 +168,13 @@ def add_categories(config: od.Config,
     
     base_cats = add_base_categories(config, channel, category_map, base_selection)
     #Add child categories to base categories
-    bdt_cats_map  = DotDict.wrap({
+    
+    jet_fake_map  = DotDict.wrap({
+        "jet_fakes": {'selection'  : ["tau_jet_fakes"],    'label': f"jet fakes",},
+        "prompt"  : {'selection'   : ["tau_no_jet_fakes"], 'label': f"prompt lep."},
+        })
+    
+    bdt_map  = DotDict.wrap({
         "hig"   : {'selection'  : ["bdt_cat_higgs"], 'label': f"\nbdt cat Higgs",},
         "gtau"  : {'selection'  : ["bdt_cat_gtau"], 
                    'label'      : f"\nbdt cat genuine tau",
@@ -179,7 +184,7 @@ def add_categories(config: od.Config,
                    'aux'        : {'fit_var': 'bdt_raw_score_4bins_fake'},},
         })
 
-    hig_cats_map  = DotDict.wrap({
+    hig_bins_map  = DotDict.wrap({
         "cat0"   : {'selection': ["hig_cat_0"], 'label': f"\nD_H in (0.33,0.5]",},
         "cat1"   : {'selection': ["hig_cat_1"], 'label': f"\nD_H in (0.5,0.7]",},
         "cat2"   : {'selection': ["hig_cat_2"], 'label': f"\nD_H in (0.7,1.0]",},
@@ -207,9 +212,13 @@ def add_categories(config: od.Config,
                         },
         })
     
-    splitted_by_bdt = create_child_categories(config,
+    splitted_by_jet_fake = create_child_categories(config,
                                                  parent_categories=base_cats,
-                                                 child_category_map=bdt_cats_map)
+                                                 child_category_map=jet_fake_map)
+    
+    splitted_by_bdt = create_child_categories(config,
+                                                 parent_categories=splitted_by_jet_fake,
+                                                 child_category_map=bdt_map)
     splitted_by_dm = create_child_categories(config,
                                                  parent_categories=base_cats,
                                                  child_category_map=tau_decays_map)
@@ -218,13 +227,19 @@ def add_categories(config: od.Config,
 
     splitted_by_hig_cats = create_child_categories(config,
                                                  parent_categories=sel_hig_cats,
-                                                 child_category_map=hig_cats_map)
+                                                 child_category_map=hig_bins_map)
 
     splitted_by_dm = create_child_categories(config,
                                               parent_categories=splitted_by_hig_cats,
                                               child_category_map=tau_decays_map)
 
+    sel_abcd_cats = [the_cat for the_cat in splitted_by_dm if (('abcd' in the_cat) and (('jet_fakes' in the_cat) or ('prompt' in the_cat)))]
     #remove intermediate categories that are not required in the analysis
+    
     for the_name in splitted_by_hig_cats:
+        the_cat = config.get_category(the_name)
+        config.remove_category(the_cat)
+        
+    for the_name in sel_abcd_cats:
         the_cat = config.get_category(the_name)
         config.remove_category(the_cat)

@@ -18,6 +18,7 @@ def keep_columns(cfg: od.Config) -> None:
             # TauProds
             "TauProd.*",
             "GenPart.*",
+            "GenVisTau.*",
             "GenZ.*",
             "GenVtx.*",
             # general event info
