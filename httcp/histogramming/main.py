@@ -29,9 +29,9 @@ def httcp_hist_producer(self: HistProducer, events: ak.Array, **kwargs) -> ak.Ar
     for column in self.weight_columns:
             weight = weight * Route(column).apply(events)
     weight_dict = {}
-    weight_dict['nominal'] = weight
-    weight_dict['tf_wj'] = weight * events.ff_weight_wj_nominal
-    weight_dict['tf_qcd'] = weight * events.ff_weight_qcd_nominal
+    weight_dict['no_tf'] = weight
+    weight_dict['tf_wj'] = weight * events.ff_weight_wj_nom
+    weight_dict['tf_qcd'] = weight * events.ff_weight_qcd_nom
     return events, weight_dict
 
 @httcp_hist_producer.init
@@ -74,12 +74,12 @@ def httcp_fill_hist(self: HistProducer, h: dict, data: dict[str, Any], task: law
         cat = self.config_inst.get_category(cat_name)
         fill_data = {}
         if 'apply_ff' not in cat.aux.keys():
-            fill_data['weight'] = data['weight']['nominal']
+            fill_data['weight'] = data['weight']['no_tf']
         elif cat.aux['apply_ff'] == 'wj':
-            print(f'including TF weights: ff_weight_wj_nominal, category: {cat.name}')
+            #print(f'including TF weights: ff_weight_wj_nominal, category: {cat.name}')
             fill_data['weight'] = data['weight']['tf_wj']
         elif cat.aux['apply_ff'] == 'qcd':
-            print(f'applying FF weights: ff_weight_qcd_nominal, category: {cat.name}')
+            #print(f'applying FF weights: ff_weight_qcd_nominal, category: {cat.name}')
             fill_data['weight'] = data['weight']['tf_qcd']
         mask = ak.any(data['category'] == cat.id, axis = 1)
         fill_data['weight'] = fill_data['weight'][mask]

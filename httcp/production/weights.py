@@ -307,6 +307,7 @@ def tau_weight(self: Producer, events: ak.Array, do_syst: bool, **kwargs) -> ak.
                     pt = flat_np_view(tau.pt, axis=1)
                     eta = flat_np_view(abs(tau.eta), axis=1)
                     dm = flat_np_view(tau.decayMode, axis=1)
+                    dm_pnet = flat_np_view(tau.decayModePNet, axis=1)
                     genmatch = flat_np_view(tau.genPartFlav, axis=1)
                     per_ch_sf = np.ones_like(pt, dtype=np.float32)
                     args_vs_e = lambda mask, syst : (eta[mask],
@@ -319,7 +320,7 @@ def tau_weight(self: Producer, events: ak.Array, do_syst: bool, **kwargs) -> ak.
                                                       wp_vs_mu,
                                                       syst)                      
                     args_vs_jet = lambda mask, syst : (pt[mask],
-                                                       dm[mask],
+                                                       dm_pnet[mask],
                                                        genmatch[mask],
                                                        wp_vs_jet,
                                                        wp_vs_e,
@@ -334,16 +335,16 @@ def tau_weight(self: Producer, events: ak.Array, do_syst: bool, **kwargs) -> ak.
                         "tau_had"   : 5
                     }
                     #Calculate scale factors for tau vs electron classifier 
-                    masked_dm = (dm != 5) & (dm != 6)
+                    masked_dm_pnet = (dm_pnet == 0) & (dm_pnet == 1) & (dm_pnet == 2) & (dm_pnet == 10) & (dm_pnet == 11)
+                    masked_dm = (dm == 0) & (dm == 1) & (dm == 10) & (dm == 11)
                     e_mask = ((genmatch == tau_part_flav["prompt_e"]) | (genmatch == tau_part_flav["tau->e"])) & masked_dm
                     per_ch_sf[e_mask] *= self.id_vs_e_corrector.evaluate(*args_vs_e(e_mask,shift))
                     #Calculate scale factors for tau vs muon classifier 
                     mu_mask = ((genmatch == tau_part_flav["prompt_mu"]) | (genmatch == tau_part_flav["tau->mu"])) & masked_dm
                     per_ch_sf[mu_mask] *= self.id_vs_mu_corrector.evaluate(*args_vs_mu(mu_mask,shift)) 
                     #Calculate tau ID scale factors
-                    tau_mask = (genmatch == tau_part_flav["tau_had"]) & masked_dm
+                    tau_mask = (genmatch == tau_part_flav["tau_had"]) & masked_dm_pnet
                     per_ch_sf[tau_mask] *= self.id_vs_jet_corrector.evaluate(*args_vs_jet(tau_mask,shift))
-
                     ch_mask = ak.num(tau, axis=1) > 0
                     shaped_sf = ak.unflatten(per_ch_sf, ak.num(tau.pt, axis=1))
                     sf_values = sf_values * ak.fill_none(ak.firsts(shaped_sf,axis=1), 1.)       
@@ -441,21 +442,17 @@ def fake_factors(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     """
     channel = self.config_inst.channels.names()[0]
     tau = events[f'hcand_{channel}'].lep1 # fake factor method works for nutau/etau channel
-    pt = flat_np_view(tau.pt, axis=1)
+    pt = np.clip(flat_np_view(tau.pt, axis=1), 20,200)#fake factors are estimated for this pt region
     dm = flat_np_view(tau.decayModePNet, axis=1)
-    n_jets = flat_np_view(events.n_jets).copy()
-    n_jets = np.where(n_jets>2,
-                      2*np.ones_like(n_jets),
-                      n_jets)#scale factors are calculated for nj=0,1,>=2 aka 2
-    mask = (pt > 20) & (dm >= 0)
-    fake_factors = {}
+    n_jets = np.clip(flat_np_view(events.n_jets).copy(),0,2).astype(int) 
+    mask = (dm ==0) | (dm==1) | (dm==10) | (dm==11) 
     for the_name in self.config_inst.x.fake_factor_method.columns:
         for the_shift in self.config_inst.x.fake_factor_method.shifts:
             ff_evaluator = self.fake_factor_qcd if 'qcd' in the_name else self.fake_factor_wjets
             args = lambda mask : (pt[mask],
                                   dm[mask],
-                                  n_jets[mask].astype(int),
-            )
+                                  n_jets[mask],
+                                  the_shift)
             ff_vals = np.zeros_like(pt, dtype=np.float32)
             ff_vals[mask] = ff_evaluator(*args(mask))
             events = set_ak_column_f32(events,'_'.join((the_name,the_shift)), ff_vals)

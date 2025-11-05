@@ -60,7 +60,7 @@ def get_mc_hist(hists: dict, remove_wj=False)-> hist.Hist :
                   p, h in hists.items() 
                   if p.is_mc 
                   and not p.has_tag("signal")
-                  and ((remove_wj * ('wj' not in p.name)) or ~remove_wj) ]
+                  and ((remove_wj * ('wj' not in p.name)) or not remove_wj) ]
     if len(data_hists): return sum(data_hists[1:], data_hists[0].copy())
     else: return None
     
@@ -109,7 +109,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                 if qcd not in hists.keys():
                     hists[qcd] = hists[h_donor_name].copy().reset()
                     tmp_arr = hists[qcd].view()
-                if not d['ar'].empty():
+                if 'ar' in d.keys() and not d['ar'].empty():
                     if flat_tf:
                         tf = 1
                         #num = ak.sum(d['dr_num'].values() - mc['dr_num'].values())
@@ -148,6 +148,9 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                             cr_var = 0
                         tmp_arr[find_idxs(hists[qcd], cr_cat, task.shift)].value = cr_val
                         tmp_arr[find_idxs(hists[qcd], cr_cat, task.shift)].variance = cr_var
+                else:
+                    print("*** WARNING: AR data histogam doesn't exist or empty! ***")
+                    
             hists[qcd][...] = tmp_arr
             output[config] = hists
             return output
@@ -196,40 +199,71 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
             output[config] = hists
             return output
     
-    def ff_method_dr_closure_test(task, hists):
-        if not hists:
-            return hists
-        cat_tag = category_inst.name.split('__')
-        if len(cat_tag) > 1:
-            cat_tag = '__' + cat_tag[1] 
-        else:
-            cat_tag = ''
-        sr = task.config_inst.get_category('cat_mutau_sr' + cat_tag)
-        
-        hist_qcd = get_data_hist(hists[sr.aux['ff_regs']['dr_den_qcd_w_ff']])
-        hist_wj  = get_data_hist(hists[sr.aux['ff_regs']['dr_den_wj_w_ff']])
-        
-        hist_qcd_mc = get_mc_hist(hists[sr.aux['ff_regs']['dr_den_qcd_w_ff']])
-        hist_wj_mc  = get_mc_hist(hists[sr.aux['ff_regs']['dr_den_wj_w_ff']])
-
-        fakes_wj  = (hist_wj.values()  - hist_wj_mc.values()) 
-        fakes_qcd = (hist_qcd.values() - hist_qcd_mc.values()) 
-        
-        hists_sr = hists[category_inst.name].copy()
-        tmp_h = list(hists_sr.values())
-        tmp_h = sum(tmp_h[1:],tmp_h[0].copy())
-        #Remove wj histogram from the signal region set
+    def ff_closure_test(task, inputs): #cf0p3
         from cmsdb.processes.qcd import jet_fakes,qcd
-        wj_proc = [p for p in hists_sr.keys() if 'wj' in p.name]
-        if 'wj' in category_inst.name:
-            hists_sr[jet_fakes] = tmp_h.copy().reset()
-            hists_sr[jet_fakes].view().value = fakes_wj
-            del hists_sr[wj_proc[0]]
-        else:
-            hists_sr[qcd] = tmp_h.copy().reset()
-            hists_sr[qcd].view().value = fakes_qcd
+        output = {}
+        for config, hists in inputs.items():
+            dr_num_cats = task.categories
+            for the_cat in dr_num_cats:
+                print(f'Performin closure test for {the_cat}')
+                sr_name = the_cat.replace('dr_num_wj','sr').replace('dr_num_qcd','sr')
+                sr = config.get_category(sr_name)
+                data = get_data_hist(hists)
+                mc = get_mc_hist(hists)
+                locator = lambda reg:  {'category': hist.loc(sr.aux['ff_regs'][reg]),'shift': hist.loc(task.shift)}
+                iter_dict = {'wj': jet_fakes, 'qcd':qcd}
+                h_donor_name  = list(hists.keys())[0]
+                for name, proc in iter_dict.items():
+                    if proc not in hists.keys():
+                        hists[proc] = hists[h_donor_name].copy().reset()
+                        tmp_fakes = hists[proc].view()
+                        h_d = data[locator(f'dr_den_{name}_w_ff')]
+                        h_mc = mc[locator(f'dr_den_{name}_w_ff')]
+                        num = sr.aux['ff_regs'][f'dr_num_{name}']
+                        tmp_fakes[find_idxs(hists[jet_fakes], num, task.shift)].value = np.maximum(h_d.values() - h_mc.values(), 0)
+                        tmp_fakes[find_idxs(hists[jet_fakes], num, task.shift)].variance = h_d.variances() + h_mc.variances()
+                        hists[proc][...] = tmp_fakes
+                    if name == 'wj':
+                        p_list = [p for p in hists.keys() if 'wj' in p.name]
+                        if len(p_list):
+                            del hists[p_list[0]]          
+            output[config] = hists
+            return output
+    
+    # def ff_method_dr_closure_test(task, hists):
+    #     if not hists:
+    #         return hists
+    #     cat_tag = category_inst.name.split('__')
+    #     if len(cat_tag) > 1:
+    #         cat_tag = '__' + cat_tag[1] 
+    #     else:
+    #         cat_tag = ''
+    #     sr = task.config_inst.get_category('cat_mutau_sr' + cat_tag)
+        
+    #     hist_qcd = get_data_hist(hists[sr.aux['ff_regs']['dr_den_qcd_w_ff']])
+    #     hist_wj  = get_data_hist(hists[sr.aux['ff_regs']['dr_den_wj_w_ff']])
+        
+    #     hist_qcd_mc = get_mc_hist(hists[sr.aux['ff_regs']['dr_den_qcd_w_ff']])
+    #     hist_wj_mc  = get_mc_hist(hists[sr.aux['ff_regs']['dr_den_wj_w_ff']])
+
+    #     fakes_wj  = (hist_wj.values()  - hist_wj_mc.values()) 
+    #     fakes_qcd = (hist_qcd.values() - hist_qcd_mc.values()) 
+        
+    #     hists_sr = hists[category_inst.name].copy()
+    #     tmp_h = list(hists_sr.values())
+    #     tmp_h = sum(tmp_h[1:],tmp_h[0].copy())
+    #     #Remove wj histogram from the signal region set
+    #     from cmsdb.processes.qcd import jet_fakes,qcd
+    #     wj_proc = [p for p in hists_sr.keys() if 'wj' in p.name]
+    #     if 'wj' in category_inst.name:
+    #         hists_sr[jet_fakes] = tmp_h.copy().reset()
+    #         hists_sr[jet_fakes].view().value = fakes_wj
+    #         del hists_sr[wj_proc[0]]
+    #     else:
+    #         hists_sr[qcd] = tmp_h.copy().reset()
+    #         hists_sr[qcd].view().value = fakes_qcd
             
-        return hists_sr
+    #     return hists_sr
     
     def flatten_dy(task, hists, category_inst):
         if not hists:
@@ -346,14 +380,27 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         ouputs = {}
         for config, hists in inputs.items():
             incl = 'cat_mutau_sr'
-            subcats = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
+            bkg_type = ['prompt','jet_fakes']
+            hig_cats = ['hig__cat0','hig__cat1', 'hig__cat2'] 
+            decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
             out_h = hists.copy()
             for p, h in hists.items():
                 tmp_arr = h.view()
                 subhists = []
-                for subcat in subcats:
-                    loc_dict = {'category': hist.loc(f'{incl}__{subcat}'),'shift': hist.loc(task.shift)}
-                    subhists.append(h[loc_dict])
+                for bkg in bkg_type:
+                    if p.is_data and bkg=='jet_fakes': 
+                        print('Not adding data second time')
+                        continue #Otherwise we double count data from prompt cats and from the jet_fakes cats
+                    for the_cat in hig_cats:
+                        for the_decay in decay_ch:
+                            cat_name = '__'.join((incl,bkg,the_cat,the_decay))
+                            print(f'Adding :{cat_name} for {p.name} from {config.name}')
+                            loc_dict = {'category': hist.loc(cat_name),
+                                        'shift': hist.loc(task.shift)}
+                            if cat_name in h.axes[0]:
+                                subhists.append(h[loc_dict])
+                            else:
+                                print(f"WARNING: didn't find {cat_name} for {p.name} from {config.name}")
                 incl_h = sum(subhists)
                 tmp_arr[find_idxs(h, incl, task.shift)].value = incl_h.view().value
                 tmp_arr[find_idxs(h, incl, task.shift)].variance = incl_h.view().variance
@@ -386,13 +433,13 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         ouputs = {}
         for config, hists in inputs.items():
             out_hists = {}
-            procs = [p for p in hists.keys() if (p.name != 'qcd') and (p.name != 'dy_z2tautau') and (p.name != 'dy_z2mumu')]
+            procs = [p for p in hists.keys() if (p.name != 'qcd') and (p.name != 'dy_tt_m50') and (p.name != 'dy_ll_m50')]
             qcd = [p for p in hists.keys() if (p.name == 'qcd')]
-            dy_tt = [p for p in hists.keys() if (p.name == 'dy_z2tautau')]
-            dy_mm = [p for p in hists.keys() if (p.name == 'dy_z2mumu')]
+            dy_tt = [p for p in hists.keys() if (p.name == 'dy_tt_m50')]
+            dy_ll = [p for p in hists.keys() if (p.name == 'dy_ll_m50')]
             if len(qcd): out_hists[qcd[0]] = hists[qcd[0]]
             for p in procs: out_hists[p] = hists[p]
-            if len(dy_mm): out_hists[dy_mm[0]] = hists[dy_mm[0]]
+            if len(dy_ll): out_hists[dy_ll[0]] = hists[dy_ll[0]]
             if len(dy_tt): out_hists[dy_tt[0]] = hists[dy_tt[0]]
             ouputs[config] = out_hists
         return ouputs
@@ -403,7 +450,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         "qcd"                       : qcd_estimation,
         "add_qcd_and_wj"            : add_qcd_and_wj,
         "ff_method"                 : ff_method,
-        "ff_method_dr_closure_test" : ff_method_dr_closure_test,
+        "closure_test"              : ff_closure_test,
         "flatten_dy"                : flatten_dy,
         "symmetrize_signal"         : symmetrize_signal,
         "blind_sr"                  : blind_sr,
