@@ -18,14 +18,12 @@ class hcp_model(HCPModelBase):
     add_qcd = False
     add_fakes = True
 
-
     processes: list = []
     config_categories: list = []
     systematics: list = []
     
     def init_proc_map(self) -> None:
         # mapping of process names in the datacard ("combine name") to configs and process names in a dict
-        
         name_map = dict([
             ("ZL",'dy_z2mumu'),
             ("ZTT",'dy_z2tautau'),
@@ -134,6 +132,7 @@ class hcp_model(HCPModelBase):
                 if not dataset_names:
                     print(f"skipping process {proc_name} in inference model {self.cls_name}, no matching datasets ")
                     print(f"found in config {config_inst.name}")
+                        
             self.add_process(
                 name=combine_name,
                 config_process=proc_name, 

@@ -129,8 +129,6 @@ def add_run3(ana: od.Analysis,
         "st_twchannel_tbar_sl",
         "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
-        # signal
-        "h_ggf_htt",
     ]
     signal_masses = [60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 160, 180, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2300, 2600, 2900, 3200, 3500]
     for mass in signal_masses:
@@ -310,7 +308,7 @@ def add_run3(ana: od.Analysis,
         "Summer23BPix" : dataset_names_2023postBPix
     }
     dataset_names = dataset_era[tag]
-    
+  
     for dataset_name in dataset_names:
         # add the dataset
         dataset = cfg.add_dataset(campaign.get_dataset(dataset_name))
@@ -349,27 +347,26 @@ def add_run3(ana: od.Analysis,
     # process groups for conveniently looping over certain processs
     # (used in wrapper_factory and during plotting)
     cfg.x.process_groups = {
-        "signal": ["h_tt_100","h_tt_125","h_tt_1200"],
         "data" : ["data_mu", "data_tau","data_e"],
         "vv"   : ["ww", "wz", "zz"],
         "tt"   : ["tt_sl","tt_dl","tt_fh"],
         "st"   : ["st_tchannel_tbar","st_tchannel_t","st_schannel_tbar_lep","st_schannel_t_lep",
                "st_twchannel_t_fh","st_twchannel_t_sl","st_twchannel_t_dl",
                "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh","st_schannel_t_lep","st_schannel_tbar_lep"],
-    "h_ggf_htt_masses": ["h_gff_tt_60","h_gff_tt_65","h_gff_tt_70",
-                         "h_gff_tt_75","h_gff_tt_80","h_gff_tt_85",
-                         "h_gff_tt_90","h_gff_tt_95","h_gff_tt_100",
-                         "h_gff_tt_105","h_gff_tt_110","h_gff_tt_115",
-                         "h_gff_tt_120","h_gff_tt_125","h_gff_tt_130",
-                         "h_gff_tt_135","h_gff_tt_140","h_gff_tt_160",
-                         "h_gff_tt_180","h_gff_tt_200","h_gff_tt_250",
-                         "h_gff_tt_300","h_gff_tt_350","h_gff_tt_400",
-                         "h_gff_tt_450","h_gff_tt_500","h_gff_tt_600",
-                         "h_gff_tt_700","h_gff_tt_800","h_gff_tt_900",
-                         "h_gff_tt_1000","h_gff_tt_1100","h_gff_tt_1200",
-                         "h_gff_tt_1400","h_gff_tt_1600","h_gff_tt_1800",
-                         "h_gff_tt_2000","h_gff_tt_2300","h_gff_tt_2600",
-                         "h_gff_tt_2900","h_gff_tt_3200","h_gff_tt_3500"],
+    "h_ggf_htt_masses": ["h_ggf_htt_60","h_ggf_htt_65","h_ggf_htt_70",
+                         "h_ggf_htt_75","h_ggf_htt_80","h_ggf_htt_85",
+                         "h_ggf_htt_90","h_ggf_htt_95","h_ggf_htt_100",
+                         "h_ggf_htt_105","h_ggf_htt_110","h_ggf_htt_115",
+                         "h_ggf_htt_120","h_ggf_htt_125","h_ggf_htt_130",
+                         "h_ggf_htt_135","h_ggf_htt_140","h_ggf_htt_160",
+                         "h_ggf_htt_180","h_ggf_htt_200","h_ggf_htt_250",
+                         "h_ggf_htt_300","h_ggf_htt_350","h_ggf_htt_400",
+                         "h_ggf_htt_450","h_ggf_htt_500","h_ggf_htt_600",
+                         "h_ggf_htt_700","h_ggf_htt_800","h_ggf_htt_900",
+                         "h_ggf_htt_1000","h_ggf_htt_1100","h_ggf_htt_1200",
+                         "h_ggf_htt_1400","h_ggf_htt_1600","h_ggf_htt_1800",
+                         "h_ggf_htt_2000","h_ggf_htt_2300","h_ggf_htt_2600",
+                         "h_ggf_htt_2900","h_ggf_htt_3200","h_ggf_htt_3500"],
     }
 
     # dataset groups for conveniently looping over certain datasets
@@ -823,18 +820,18 @@ def add_run3(ana: od.Analysis,
         }
     bdt_eos_path = "/eos/user/j/jmalvaso/SWAN_projects/XGBoost_MSSM/"
 
-    for mass in signal_masses:
-        even_path = f"{bdt_eos_path}M{mass}/bst_model_M{mass}_even.json"
-        odd_path  = f"{bdt_eos_path}M{mass}/bst_model_M{mass}_odd.json"
+    mass = cfg.x.bdt_mass["mass"]
+    even_path = f"{bdt_eos_path}M{mass}/bst_model_M{mass}_even.json"
+    odd_path  = f"{bdt_eos_path}M{mass}/bst_model_M{mass}_odd.json"
 
-        if not Path(even_path).is_file():
-            raise FileNotFoundError(f"Missing model (even) for mass {mass}: {even_path}")
-        if not Path(odd_path).is_file():
-            raise FileNotFoundError(f"Missing model (odd) for mass {mass}: {odd_path}")
+    if not Path(even_path).is_file():
+        raise FileNotFoundError(f"Missing model (even) for mass {mass}: {even_path}")
+    if not Path(odd_path).is_file():
+        raise FileNotFoundError(f"Missing model (odd) for mass {mass}: {odd_path}")
 
-        cfg.x.external_files[f"ml_model_even_{mass}"] = even_path
-        cfg.x.external_files[f"ml_model_odd_{mass}"]  = odd_path
-    
+    cfg.x.external_files[f"ml_model_even_{mass}"] = even_path
+    cfg.x.external_files[f"ml_model_odd_{mass}"]  = odd_path
+
     # --------------------------------------------------------------------------------------------- #
     # electron settings
     # names of electron correction sets and working points

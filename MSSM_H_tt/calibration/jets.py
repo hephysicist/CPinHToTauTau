@@ -6,7 +6,7 @@ Jet energy corrections and jet resolution smearing.
 from pprint import pprint
 
 import functools
-
+import law
 from columnflow.types import Any
 from columnflow.calibration import Calibrator, calibrator
 from MSSM_H_tt.calibration.util import ak_random, propagate_met
@@ -14,9 +14,7 @@ from columnflow.production.util import attach_coffea_behavior
 from columnflow.util import maybe_import, DotDict
 from law.util import InsertableDict
 from columnflow.columnar_util import set_ak_column, layout_ak_array, optional_column as optional
-
-import law
-
+from columnflow.types import Any
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 correctionlib = maybe_import("correctionlib")

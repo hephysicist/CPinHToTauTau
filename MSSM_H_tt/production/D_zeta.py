@@ -34,18 +34,18 @@ def D_zeta(
 
     electron    = events.hcand_emu.lep0
     muon        = events.hcand_emu.lep1
-    
+
     puppi_met_p2 = get_p2(events.PuppiMET)  
     electron_p2 = get_p2(electron)
     muon_p2 = get_p2(muon)
     
     n_mu = muon_p2/muon_p2.rho
     n_e = electron_p2/electron_p2.rho
-
+    
     n_mu_e = (n_mu + n_e)
-
+    
     zeta =  n_mu_e/n_mu_e.rho
-
+    
     sum_electron_muon = electron_p2 + muon_p2
 
     p_zeta_vis = sum_electron_muon.dot(zeta)

@@ -13,7 +13,7 @@ from law.util import InsertableDict
 from columnflow.columnar_util import set_ak_column, flat_np_view
 from columnflow.types import Any
 import law
-
+from columnflow.types import Any
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 

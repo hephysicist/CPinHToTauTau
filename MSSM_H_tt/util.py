@@ -9,12 +9,11 @@ from __future__ import annotations
 
 import law
 import order as od
-from typing import Any
 from columnflow.util import maybe_import
 from columnflow.columnar_util import ArrayFunction, deferred_column
 from columnflow.columnar_util import set_ak_column
 from columnflow.production import Producer, producer
-
+from columnflow.types import Any
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -57,7 +56,8 @@ def get_vec_p3(part,vec_column=None):
     else:
         return ak.zip({f'{var}': part[f'{var}']for var in ['x', 'y', 'z']},
                                    with_name="ThreeVector",
-                                   behavior=coffea.nanoevents.methods.vector.behavior)
+                                   behavior=coffea.nanoevents.methods.vector.behavior)# # lambda function to get 4-vector from the particle objects
+
 # lambda function to get 4-vector of impact parameter from the particle objects
 # Zeroth component of IP vector is set to zero by definition that can be found here: https://www.mdpi.com/2218-1997/8/5/256
 def get_ip_p4(part): return ak.zip({f'{var}': part[f'IP{var}']for var in ['x', 'y', 'z']} | {'t': ak.zeros_like(part.IPx)},
@@ -554,3 +554,4 @@ def find_fields_with_nan(awk_array):
             fields_with_nan.append(field)
     
     return fields_with_nan
+
