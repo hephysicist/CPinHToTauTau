@@ -200,10 +200,19 @@ case $1 in
 ####### 2022preEE #######
 #########################        
 
+    "run3_2022preEE_emu_tt_all")
+      config="run3_2022_preEE_emu"
+      processes='tt'
+      datasets='TTtoLNu2Q'
+	    categories=$categories_emu
+	    variables='D_zeta'
+	    workflow='local'
+    ;;
+
     "run3_2022preEE_emu")
       config="run3_2022_preEE_emu"
-      processes='data,dy_ll,dy_tautau_nj,h_ggf_htt,st,tt,h_vbf_htt,vh_htt,w_lnu,vv,vvv,bbh_htt_100,h_ggf_htt_100,'
-      datasets='data_egamma_C,data_egamma_D,data_singlemu_C,data_mu_C,data_mu_D,DYto2L_M_10to50_amcatnloFXFX,DYto2L_M_50_amcatnloFXFX,DYto2L_M_50_0J_amcatnloFXFX,DYto2L_M_50_1J_amcatnloFXFX,DYto2L_M_50_2J_amcatnloFXFX,DYto2Tau_MLL_50_0J_amcatnloFXFX,DYto2Tau_MLL_50_1J_amcatnloFXFX,DYto2Tau_MLL_50_2J_amcatnloFXFX,GluGluHto2Tau_UncorrelatedDecay_SM_UnFiltered_ProdAndDecay,TbarWplusto4Q,TWminusto4Q,TbarWplusto2L2Nu,TbarWplustoLNu2Q,TWminusto2L2Nu,TWminustoLNu2Q,TTto2L2Nu,TTto4Q,TTtoLNu2Q,VBFHto2Tau_UncorrelatedDecay_UnFiltered,WminusHto2Tau_UncorrelatedDecay_UnFiltered,WplusHto2Tau_UncorrelatedDecay_UnFiltered,WtoLNu_amcatnloFXFX,WW,WZ,ZZ,WWW_4F,WWZ_4F,WZZ,ZZZ,ZHto2Tau_UncorrelatedDecay_UnFiltered,bbh_htt_100,h_ggf_htt_100,'
+      processes='data,dy_lep,dy_tt,h_ggf_htt,st,tt,h_vbf_htt,vh_htt,wj,vv,vvv,bbh_htt_100,h_ggf_htt_100,'
+      datasets='data_egamma_C,data_egamma_D,data_singlemu_C,data_mu_C,data_mu_D,DYto2L_M_10to50_amcatnloFXFX,DYto2L_M_50_amcatnloFXFX,DYto2L_M_50_0J_amcatnloFXFX,DYto2L_M_50_1J_amcatnloFXFX,DYto2L_M_50_2J_amcatnloFXFX,DYto2Tau_MLL_50_0J_amcatnloFXFX,DYto2Tau_MLL_50_1J_amcatnloFXFX,DYto2Tau_MLL_50_2J_amcatnloFXFX,GluGluHto2Tau_UncorrelatedDecay_SM_UnFiltered_ProdAndDecay,TbarWplusto4Q,TWminusto4Q,TbarWplusto2L2Nu,TbarWplustoLNu2Q,TWminusto2L2Nu,TWminustoLNu2Q,TTto2L2Nu,TTto4Q,TTtoLNu2Q,VBFHto2Tau_UncorrelatedDecay_UnFiltered,WminusHto2Tau_UncorrelatedDecay_UnFiltered,WplusHto2Tau_UncorrelatedDecay_UnFiltered,WtoLNu_madgraphMLM,WtoLNu_1J_madgraphMLM,WtoLNu_2J_madgraphMLM,WtoLNu_3J_madgraphMLM,WtoLNu_4J_madgraphMLM,WW,WZ,ZZ,WWW_4F,WWZ_4F,WZZ,ZZZ,ZHto2Tau_UncorrelatedDecay_UnFiltered,bbh_htt_100,h_ggf_htt_100,'
 	    categories=$categories_emu
 	    variables=$variables_emu
 	    workflow='htcondor'

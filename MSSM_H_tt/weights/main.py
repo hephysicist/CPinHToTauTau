@@ -24,7 +24,7 @@ def main(self: WeightProducer, events: ak.Array, **kwargs) -> ak.Array:
     
     weight = ak.Array(np.ones(len(events), dtype=np.float32))
 
-    _stitch_allow = set(self.config_inst.x.stitch_DYto2L_samples)
+    _stitch_allow = set(self.config_inst.x.stitch_samples)
 
     _dataset_name = getattr(self.dataset_inst, "name", "")
 

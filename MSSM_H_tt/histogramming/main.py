@@ -30,7 +30,7 @@ def httcp_hist_producer(self: HistProducer, events: ak.Array, **kwargs) -> ak.Ar
     
     weight = ak.Array(np.ones(len(events), dtype=np.float32))
 
-    _stitch_allow = set(self.config_inst.x.stitch_DYto2L_samples)
+    _stitch_allow = set(self.config_inst.x.stitch_samples)
 
     _dataset_name = getattr(self.dataset_inst, "name", "")
 
@@ -46,11 +46,11 @@ def httcp_hist_producer(self: HistProducer, events: ak.Array, **kwargs) -> ak.Ar
             continue
 
         # NEW: only apply stitching_weights to the selected samples
-        if column == 'stitching_weights' and _dataset_name not in _stitch_allow:
+        if column == 'stitching_weight' and _dataset_name not in _stitch_allow:
             print("===")
             print(weight)
             print(Route(column).apply(events), column)
-            print("Skipping stitching_weights for:", _dataset_name)
+            print("Skipping stitching_weight for:", _dataset_name)
             print(weight)
             print("===")
             continue

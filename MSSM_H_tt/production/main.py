@@ -176,11 +176,11 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
             print("Producing Top pT weights...")
             events = self[top_pt_weight](events, **kwargs)
-        if self.dataset_inst.name in self.config_inst.x.stitch_DYto2L_samples:
+        if self.dataset_inst.name in self.config_inst.x.stitch_samples:
             print("Producing stitching weights...")
             events = self[stitching_weight](events,**kwargs)
         else:
-            events = set_ak_column_f32(events,"stitching_weights",ak.ones_like(events.event, dtype=np.float32))
+            events = set_ak_column_f32(events,"stitching_weight",ak.ones_like(events.event, dtype=np.float32))
             
     return events
     

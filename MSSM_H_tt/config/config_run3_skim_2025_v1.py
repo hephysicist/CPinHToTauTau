@@ -113,22 +113,26 @@ def add_run3(ana: od.Analysis,
         "data_muoneg",
         "data_singlemu",
         # DY->ll
-        "dy_ll",
-        "dy_z2ee",
-        "dy_z2mumu",
-        "dy_z2tautau",
-        "dy_m10to50",
-        "dy_m50toinf_0j",
-        "dy_m50toinf_1j",
-        "dy_m50toinf_2j",
-        "dy_m50toinf",  
+        "dy_lep",
+        "dy_lep_m10to50",
+        "dy_ll_m50_0j",
+        "dy_ll_m50_1j",
+        "dy_ll_m50_2j",
+        "dy_ll_m50",  
         # DY->tautau
-        "dy_tautau_nj",
-        "dy_tautau_m50toinf_0j",
-        "dy_tautau_m50toinf_1j",
-        "dy_tautau_m50toinf_2j",
+        "dy_tt_m50",
+        "dy_tt_m50_0j",
+        "dy_tt_m50_1j",
+        "dy_tt_m50_2j",
         # single top
         "st",
+        #single top t-channel        
+        "st_tchannel_tbar",
+        "st_tchannel_t",
+        #single top s-channel   
+        "st_schannel_t_lep",
+        "st_schannel_tbar_lep",
+        # single top tW channel
         "st_twchannel_tbar_fh",
         "st_twchannel_t_fh",
         "st_twchannel_tbar_dl",
@@ -141,17 +145,19 @@ def add_run3(ana: od.Analysis,
         "tt_fh",
         "tt_sl",
         # SM H->tautau 
-        "h_ggf_htt",
-        "h_vbf_htt",
+        "h_ggf_htt_sm_prod_sm",
+        "h_vbf_htt_sm",
         # vh_htt
         "vh_htt",
-        "zh_htt_UU",
-        "w_plus_h_htt_UU",
-        "w_minus_h_htt_UU",
+        "zh_htt_flat",
+        "wph_htt_flat",
+        "wmh_htt_flat",
         # W + jets
-        "w_lnu",
-        "w_lnu_1j",
-        "w_lnu_2j",
+        "wj",
+        "wj_1j",
+        "wj_2j",
+        "wj_3j",
+        "wj_4j",
         # vv 
         "vv",
         "ww",
@@ -218,15 +224,13 @@ def add_run3(ana: od.Analysis,
         # WH->tautau
         "WminusHto2Tau_UncorrelatedDecay_UnFiltered",
         "WplusHto2Tau_UncorrelatedDecay_UnFiltered",
-        # W+jets             
-        # "WtoLNu_1J_amcatnloFXFX",                
-        # "WtoLNu_2J_amcatnloFXFX",               
-        "WtoLNu_amcatnloFXFX",                  
-        # "WtoLNu_1J_madgraphMLM",
-        # "WtoLNu_2J_madgraphMLM",
-        # "WtoLNu_3J_madgraphMLM",
-        # "WtoLNu_4J_madgraphMLM",
-        # "WtoLNu_madgraphMLM",
+        # W+jets                        
+        # "WtoLNu_amcatnloFXFX",                  
+        "WtoLNu_1J_madgraphMLM",
+        "WtoLNu_2J_madgraphMLM",
+        "WtoLNu_3J_madgraphMLM",
+        "WtoLNu_4J_madgraphMLM",
+        "WtoLNu_madgraphMLM",
         # Diboson
         "WW",
         "WZ",
@@ -283,15 +287,13 @@ def add_run3(ana: od.Analysis,
         # WH->tautau
         "WminusHto2Tau_UncorrelatedDecay_UnFiltered",
         "WplusHto2Tau_UncorrelatedDecay_UnFiltered",
-        # W+jets             
-        # "WtoLNu_1J_amcatnloFXFX",                
-        # "WtoLNu_2J_amcatnloFXFX",               
-        "WtoLNu_amcatnloFXFX",                  
-        # "WtoLNu_1J_madgraphMLM",
-        # "WtoLNu_2J_madgraphMLM",
-        # "WtoLNu_3J_madgraphMLM",
-        # "WtoLNu_4J_madgraphMLM",
-        # "WtoLNu_madgraphMLM",
+        # W+jets                          
+        # "WtoLNu_amcatnloFXFX",                  
+        "WtoLNu_1J_madgraphMLM",
+        "WtoLNu_2J_madgraphMLM",
+        "WtoLNu_3J_madgraphMLM",
+        "WtoLNu_4J_madgraphMLM",
+        "WtoLNu_madgraphMLM",
         # Diboson
         "WW",
         "WZ",
@@ -341,15 +343,13 @@ def add_run3(ana: od.Analysis,
         # WH->tautau
         "WminusHto2Tau_UncorrelatedDecay_UnFiltered",
         "WplusHto2Tau_UncorrelatedDecay_UnFiltered",
-        # W+jets             
-        # "WtoLNu_1J_amcatnloFXFX",                
-        # "WtoLNu_2J_amcatnloFXFX",               
-        "WtoLNu_amcatnloFXFX",                  
-        # "WtoLNu_1J_madgraphMLM",
-        # "WtoLNu_2J_madgraphMLM",
-        # "WtoLNu_3J_madgraphMLM",
-        # "WtoLNu_4J_madgraphMLM",
-        # "WtoLNu_madgraphMLM",
+        # W+jets                          
+        # "WtoLNu_amcatnloFXFX",                  
+        "WtoLNu_1J_madgraphMLM",
+        "WtoLNu_2J_madgraphMLM",
+        "WtoLNu_3J_madgraphMLM",
+        "WtoLNu_4J_madgraphMLM",
+        "WtoLNu_madgraphMLM",
         # Diboson
         "WW",
         "WZ",
@@ -365,9 +365,9 @@ def add_run3(ana: od.Analysis,
     
     dataset_names_2023postBPix = [
         #data
-        "data_egamma_2023_D",
-        "data_muoneg_2023_D",
-        "data_mu_2023_D",
+        "data_egamma_D",
+        "data_muoneg_D",
+        "data_mu_D",
         # DY->ll
         "DYto2L_M_10to50_amcatnloFXFX",
         "DYto2L_M_50_0J_amcatnloFXFX",
@@ -396,15 +396,13 @@ def add_run3(ana: od.Analysis,
         # WH->tautau
         "WminusHto2Tau_UncorrelatedDecay_UnFiltered",
         "WplusHto2Tau_UncorrelatedDecay_UnFiltered",
-        # W+jets             
-        # "WtoLNu_1J_amcatnloFXFX",                
-        # "WtoLNu_2J_amcatnloFXFX",               
-        "WtoLNu_amcatnloFXFX",                  
-        # "WtoLNu_1J_madgraphMLM",
-        # "WtoLNu_2J_madgraphMLM",
-        # "WtoLNu_3J_madgraphMLM",
-        # "WtoLNu_4J_madgraphMLM",
-        # "WtoLNu_madgraphMLM",
+        # W+jets                           
+        # "WtoLNu_amcatnloFXFX",                  
+        "WtoLNu_1J_madgraphMLM",
+        "WtoLNu_2J_madgraphMLM",
+        "WtoLNu_3J_madgraphMLM",
+        "WtoLNu_4J_madgraphMLM",
+        "WtoLNu_madgraphMLM",
         # Diboson
         "WW",
         "WZ",
@@ -434,7 +432,7 @@ def add_run3(ana: od.Analysis,
         "Summer23BPix" : dataset_names_2023postBPix
     }
     dataset_names = dataset_era[tag]
-  
+
     for dataset_name in dataset_names:
         # add the dataset
         dataset = cfg.add_dataset(campaign.get_dataset(dataset_name))
@@ -510,28 +508,32 @@ def add_run3(ana: od.Analysis,
             "TWminustoLNu2Q", 
             ],
         "SM_higgs": [
-            "h_ggf_htt",
-            "h_vbf_htt",
+            "h_ggf_htt_sm_prod_sm",
+            "h_vbf_htt_sm",
             ],
         "vh_htt": [
-            "vh_htt",
-            "zh_htt",
-            "wh_htt",
+            "zh_htt_flat",
+            "wph_htt_flat",
+            "wmh_htt_flat"
             ],
-        "w_lnu": [         
-            "w_lnu",     
+        "wj": [         
+            "wj",
+            "wj_1j",
+            "wj_2j",
+            "wj_3j",
+            "wj_4j",     
             ],
-        "dy_tautau_nj": [
-            "dy_tautau_m50toinf_0j",
-            "dy_tautau_m50toinf_1j",
-            "dy_tautau_m50toinf_2j",
+        "dy_tt_m50": [
+            "dy_tt_m50_0j",
+            "dy_tt_m50_1j",
+            "dy_tt_m50_2j",
             ],
-        "dy_ll": [
-            "dy_m10to50",
-            "dy_m50toinf_0j",
-            "dy_m50toinf_1j",
-            "dy_m50toinf_2j",
-            "dy_m50toinf",  
+        "dy_lep": [
+            "dy_lep_m10to50",
+            "dy_ll_m50_0j",
+            "dy_ll_m50_1j",
+            "dy_ll_m50_2j",
+            "dy_ll_m50",  
             ],
         "h_ggf_htt_masses":["h_ggf_htt_60","h_ggf_htt_65","h_ggf_htt_70",
                             "h_ggf_htt_75","h_ggf_htt_80","h_ggf_htt_85",
@@ -1144,7 +1146,7 @@ def add_run3(ana: od.Analysis,
         "top_pt_weight" : [],       
         "btag_weight_SF_nom": [],
         "Trigger_SF_nom": [],
-        "stitching_weights": [],
+        "stitching_weight": [],
     })
     # thisdir = os.path.dirname(os.path.abspath(__file__))
     
@@ -1244,27 +1246,32 @@ def add_run3(ana: od.Analysis,
                                 "DYto2Tau_MLL_50_2J_amcatnloFXFX": "NLO",
 
                                 # W + jets (MG5 MLM ~ LO)
-                                "WtoLNu_amcatnloFXFX" : "NLO",
-                                # "WtoLNu_1J_madgraphMLM": "LO",
-                                # "WtoLNu_2J_madgraphMLM": "LO",
-                                # "WtoLNu_3J_madgraphMLM": "LO",
-                                # "WtoLNu_4J_madgraphMLM": "LO",
-                                # "WtoLNu_madgraphMLM": "LO",
+                                # "WtoLNu_amcatnloFXFX" : "NLO",
+                                "WtoLNu_1J_madgraphMLM": "LO",
+                                "WtoLNu_2J_madgraphMLM": "LO",
+                                "WtoLNu_3J_madgraphMLM": "LO",
+                                "WtoLNu_4J_madgraphMLM": "LO",
+                                "WtoLNu_madgraphMLM": "LO",
                             })
-    stitch_DYto2L_samples = [
+    stitch_samples = [
             "DYto2L_M_50_amcatnloFXFX",
-            "DYto2L_M_50_amcatnloFXFX_ext1",
+            # "DYto2L_M_50_amcatnloFXFX_ext1",
             "DYto2L_M_50_0J_amcatnloFXFX",
             "DYto2L_M_50_1J_amcatnloFXFX",
             "DYto2L_M_50_2J_amcatnloFXFX",
+            "WtoLNu_1J_madgraphMLM",
+            "WtoLNu_2J_madgraphMLM",
+            "WtoLNu_3J_madgraphMLM",
+            "WtoLNu_4J_madgraphMLM",
+            "WtoLNu_madgraphMLM",
         ]
 
-    cfg.x.stitch_DYto2L_samples = stitch_DYto2L_samples
+    cfg.x.stitch_samples = stitch_samples
     
     bugged_DYto2Tau_samples = [
             "DYto2L_M_10to50_amcatnloFXFX",
             "DYto2L_M_50_amcatnloFXFX",
-            "DYto2L_M_50_amcatnloFXFX_ext1",
+            # "DYto2L_M_50_amcatnloFXFX_ext1",
             "DYto2L_M_50_0J_amcatnloFXFX",
             "DYto2L_M_50_1J_amcatnloFXFX",
             "DYto2L_M_50_2J_amcatnloFXFX",
