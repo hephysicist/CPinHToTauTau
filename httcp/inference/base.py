@@ -77,7 +77,6 @@ class HCPModelBase(InferenceModel):
     def init_cleanup(self) -> None:
         self.cleanup(keep_parameters="")
         
-    
     def format_systematics(self):
         """ Function to format the systematics and prepare the processes_per_* dictionaries
         """
@@ -125,3 +124,4 @@ class HCPModelBase(InferenceModel):
                 f"The following systematics were not considered in the inference model: "
                 f"{', '.join(not_considered)}. Please check your configuration.",
             )
+                    

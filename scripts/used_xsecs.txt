@@ -1,0 +1,144 @@
+process	xsec_13.6TeV_pb	note
+st	330.42	
+st_twchannel_tbar_fh	19.971355099500002	
+st_twchannel_t_fh	19.971355099500002	
+st_twchannel_tbar_dl	3.8	
+st_twchannel_tbar_sl	15.9	
+st_twchannel_t_dl	3.8	
+st_twchannel_t_sl	15.9	
+tt	923.6	
+tt_dl	98.04387875606875	
+tt_fh	419.8071644141188	
+tt_sl	405.74895682981236	
+process	xsec_13.6TeV_pb	note
+h_ggf_htt	3.2758655999999995	
+h_vbf_htt	0.25577216	
+process	xsec_13.6TeV_pb	note
+dy		
+dy_m10to50	19744.92672413793	
+dy_m50toinf_0j	5015.976189060641	
+dy_m50toinf_1j	1120.4219834862383	
+dy_m50toinf_2j	359.6956403669724	
+dy_m50toinf	6275.099999999999	
+w_lnu	63396.0	
+w_lnu_1j		
+w_lnu_2j		
+vv		
+ww	80.22	
+wz	29.17	
+zz	26.2246705107084	
+vvv		
+www	0.2328	
+wwz	0.1851	
+zzz	0.01591	
+process	xsec_13.6TeV_pb	note
+dy_tautau_nj	0.1	
+dy_tautau_m50toinf_0j	1664.684	
+dy_tautau_m50toinf_1j	316.24	
+dy_tautau_m50toinf_2j	116.472	
+process	xsec_13.6TeV_pb	note
+vh_htt	0.1	
+zh_htt_UU	0.0592	
+w_plus_h_htt_UU	0.05575	
+w_minus_h_htt_UU	0.03561	
+process	xsec_13.6TeV_pb	note
+st	330.42	
+st_twchannel_tbar_fh	19.971355099500002	
+st_twchannel_t_fh	19.971355099500002	
+st_twchannel_tbar_dl	3.8	
+st_twchannel_tbar_sl	15.9	
+st_twchannel_t_dl	3.8	
+st_twchannel_t_sl	15.9	
+tt	923.6	
+tt_dl	98.04387875606875	
+tt_fh	419.8071644141188	
+tt_sl	405.74895682981236	
+process	xsec_13.6TeV_pb	note
+h_ggf_htt	3.2758655999999995	
+h_vbf_htt	0.25577216	
+process	xsec_13.6TeV_pb	note
+st	330.42	
+st_twchannel_tbar_fh	19.971355099500002	
+st_twchannel_t_fh	19.971355099500002	
+st_twchannel_tbar_dl	3.8	
+st_twchannel_tbar_sl	15.9	
+st_twchannel_t_dl	3.8	
+st_twchannel_t_sl	15.9	
+tt	923.6	
+tt_dl	98.04387875606875	
+tt_fh	419.8071644141188	
+tt_sl	405.74895682981236	
+process	xsec_13.6TeV_pb	note
+h_ggf_htt	3.2758655999999995	
+h_vbf_htt	0.25577216	
+process	xsec_13.6TeV_pb	note
+dy		
+dy_m10to50	19768.525862068967	
+dy_m50toinf_0j	5021.9712841854935	
+dy_m50toinf_1j	1121.7611119266055	
+dy_m50toinf_2j	360.1255486238532	
+dy_m50toinf	6282.6	
+w_lnu	63396.0	
+w_lnu_1j		
+w_lnu_2j		
+vv		
+ww	80.22	
+wz	29.17	
+zz	26.2246705107084	
+vvv		
+www	0.2328	
+wwz	0.1851	
+zzz	0.01591	
+process	xsec_13.6TeV_pb	note
+dy_tautau_nj	0.1	
+dy_tautau_m50toinf_0j	1664.684	
+dy_tautau_m50toinf_1j	316.24	
+dy_tautau_m50toinf_2j	116.472	
+process	xsec_13.6TeV_pb	note
+vh_htt	0.1	
+zh_htt_UU	0.0592	
+w_plus_h_htt_UU	0.05575	
+w_minus_h_htt_UU	0.03561	
+process	xsec_13.6TeV_pb	note
+st	330.42	
+st_twchannel_tbar_fh	19.971355099500002	
+st_twchannel_t_fh	19.971355099500002	
+st_twchannel_tbar_dl	3.8	
+st_twchannel_tbar_sl	15.9	
+st_twchannel_t_dl	3.8	
+st_twchannel_t_sl	15.9	
+tt	923.6	
+tt_dl	98.04387875606875	
+tt_fh	419.8071644141188	
+tt_sl	405.74895682981236	
+process	xsec_13.6TeV_pb	note
+h_ggf_htt	3.2758655999999995	
+h_vbf_htt	0.25577216	
+process	xsec_13.6TeV_pb	note
+dy		
+dy_m10to50	19768.525862068967	
+dy_m50toinf_0j	5021.9712841854935	
+dy_m50toinf_1j	1121.7611119266055	
+dy_m50toinf_2j	360.1255486238532	
+dy_m50toinf	6282.6	
+w_lnu	63396.0	
+w_lnu_1j		
+w_lnu_2j		
+vv		
+ww	80.22	
+wz	29.17	
+zz	26.2246705107084	
+vvv		
+www	0.2328	
+wwz	0.1851	
+zzz	0.01591	
+process	xsec_13.6TeV_pb	note
+dy_tautau_nj	0.1	
+dy_tautau_m50toinf_0j	1664.684	
+dy_tautau_m50toinf_1j	316.24	
+dy_tautau_m50toinf_2j	116.472	
+process	xsec_13.6TeV_pb	note
+vh_htt	0.1	
+zh_htt_UU	0.0592	
+w_plus_h_htt_UU	0.05575	
+w_minus_h_htt_UU	0.03561	

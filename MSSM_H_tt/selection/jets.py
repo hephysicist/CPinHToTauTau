@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-Selection modules for jets.
+Selection modules for jets.InsertableDict
 """
 
 from __future__ import annotations

@@ -1,16 +1,11 @@
-# coding: utf-8
-
 """
 Definition of categories.
 """
-
 import order as od
 import law
 from columnflow.config_util import add_category
 from columnflow.util import maybe_import, DotDict
 np = maybe_import("numpy")
-
-
 def add_categories(config: od.Config,
                    channel = None) -> None:
     
@@ -105,7 +100,6 @@ def add_categories(config: od.Config,
             id=2,
             selection=["cat_tautau"],
             label=r"$\mu\tau$ inclusive",)  
-
     if channel=='etau':
         add_category(
             config,
@@ -113,7 +107,6 @@ def add_categories(config: od.Config,
             id=3,
             selection=["cat_etau"],
             label=r"$e\tau$ inclusive")
-
     if channel=='emu':
         add_category(
             config,

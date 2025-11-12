@@ -161,6 +161,13 @@ def met_recoil(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = set_ak_column_f32(events, "PuppiMET", masked_met)
     return events
 
+# @met_recoil.requires
+# def met_recoil_requires(self: Producer, reqs: dict) -> None:
+#     if "external_files" in reqs:
+#         return
+    
+#     from columnflow.tasks.external import BundleExternalFiles
+#     reqs["external_files"] = BundleExternalFiles.req(self.task)
 @met_recoil.requires
 def met_recoil_requires(
     self: Producer,
@@ -174,6 +181,9 @@ def met_recoil_requires(
     from columnflow.tasks.external import BundleExternalFiles
     reqs["external_files"] = BundleExternalFiles.req(task)
 
+    from columnflow.tasks.external import BundleExternalFiles
+    reqs["external_files"] = BundleExternalFiles.req(task)
+    
 @met_recoil.setup
 def met_recoil_setup(
     self: Producer,

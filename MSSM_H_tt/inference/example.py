@@ -102,7 +102,7 @@ def example(self):
     #find_datasets = functools.partial(get_datasets_from_process, self.config_inst, strategy="all")
 
     for process_name, dataset_names in process_vs_dataset_names.items():
- 
+
         is_signal = False
         data_driven = False
 
@@ -113,7 +113,6 @@ def example(self):
         if process_name == "qcd": #or process_name == "jet_fakes": 
             data_driven = True
             
-
         self.add_process(
             process_name,
             config_process=process_name, 
@@ -145,3 +144,4 @@ def example_no_shapes(self):
     for category_name, process_name, parameter in self.iter_parameters():
         if parameter.type.is_shape or any(trafo.from_shape for trafo in parameter.transformations):
             self.remove_parameter(parameter.name, process=process_name, category=category_name)
+        

@@ -6,7 +6,7 @@ Definition of MET filter flags.
 
 import order as od
 
-from columnflow.util import DotDict
+from law.util import DotDict
 
 
 def add_met_filters(config: od.Config) -> None:

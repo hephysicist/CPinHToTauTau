@@ -108,7 +108,7 @@ def electron_smearing_scaling_setup(
     inputs: dict[str, Any],
     reader_targets: law.util.InsertableDict,
     **kwargs,
-) -> None:
+    ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
     correctionlib.highlevel.Correction.__call__ = correctionlib.highlevel.Correction.evaluate

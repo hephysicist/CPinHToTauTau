@@ -1,8 +1,7 @@
 import functools
 from columnflow.production import Producer, producer
 from columnflow.util import maybe_import
-from columnflow.columnar_util import set_ak_column, EMPTY_FLOAT, Route, optional_column as optional
-from columnflow.production.util import attach_coffea_behavior
+from columnflow.columnar_util import set_ak_column, EMPTY_FLOAT
 from httcp.util import get_lep_p4
 ak = maybe_import("awkward")
 np = maybe_import("numpy")

@@ -12,12 +12,15 @@ import order as od
 import os
 from scinum import Number
 
-from columnflow.util import DotDict, maybe_import, dev_sandbox
+from columnflow.util import maybe_import, dev_sandbox
+from law.util import DotDict
 from columnflow.config_util import (
     get_root_processes_from_campaign, 
     add_category, add_shift_aliases,
     verify_config_processes,get_shifts_from_sources
 )
+from columnflow.calibration.cms.tau import TECConfig
+from columnflow.calibration.cms.egamma import EGammaCorrectionConfig
 
 ak = maybe_import("awkward")
 
@@ -37,6 +40,7 @@ def add_run3(ana: od.Analysis,
                         id    = config_id)
 
     # gather campaign data
+    
     cfg.x.year = campaign.x.year
     cfg.x.tag = campaign.x.tag
     year = cfg.x.year
@@ -94,7 +98,8 @@ def add_run3(ana: od.Analysis,
             "e_sf_tag"              : "2022Re-recoBCD",
             "e_scale_corrector"     : "2022Re-recoBCD_ScaleJSON",
             "e_smearing_corrector"  : "2022Re-recoBCD_SmearingJSON",
-            "jerc_postfix"         : "",
+            "jerc_postfix"          : "",
+            "cat_tag"               : "Run3-22CDSep23-Summer22-NanoAODv12",
             },
         "postEE"    : {
             "short_tag"             : "EE",
@@ -104,6 +109,7 @@ def add_run3(ana: od.Analysis,
             "e_scale_corrector"     : "2022Re-recoE+PromptFG_ScaleJSON",
             "e_smearing_corrector"  : "2022Re-recoE+PromptFG_SmearingJSON",
             "jerc_postfix"          : "EE",
+            "cat_tag"               : "Run3-22EFGSep23-Summer22EE-NanoAODv12",
             },
         "preBPix"   : {
             "short_tag"             : "",
@@ -113,6 +119,7 @@ def add_run3(ana: od.Analysis,
             "e_scale_corrector"     : "2022Re-recoE+PromptFG_ScaleJSON",
             "e_smearing_corrector"  : "2022Re-recoE+PromptFG_SmearingJSON",
             "jerc_postfix"          : "",
+            "cat_tag"               : "Run3-23CSep23-Summer23-NanoAODv12",
             },
         "postBPix"  : {
             "short_tag"             : "BPix",
@@ -122,6 +129,7 @@ def add_run3(ana: od.Analysis,
             "e_scale_corrector"     : "2022Re-recoE+PromptFG_ScaleJSON",
             "e_smearing_corrector"  : "2022Re-recoE+PromptFG_SmearingJSON",
             "jerc_postfix"          : "BPix",
+            "cat_tag"               : "Run3-23DSep23-Summer23BPix-NanoAODv12",
             },
         ""  : { #Default values in case tag is empty
             "short_tag"             : "",
@@ -146,12 +154,18 @@ def add_run3(ana: od.Analysis,
         "data_singlemu",
         #Drell-Yan
         "dy_lep",
-        "dy_z2ee",
-        "dy_z2mumu",
-        "dy_z2tautau",
+        #"dy_z2ee",
+        #"dy_z2mumu",
+        #"dy_z2tautau",
+        "dy_ll_m50",
+        "dy_tt_m50",
         # "dy_lep_m10to50",
         #W + jets
         "wj",
+        "wj_1j",
+        "wj_2j",
+        "wj_3j",
+        "wj_4j",
         #diboson + single top
         "vvt",
         #diboson
@@ -173,221 +187,41 @@ def add_run3(ana: od.Analysis,
         "st_schannel_t_lep",
         "st_schannel_tbar_lep",
         # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        "st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
-        "st_twchannel_tbar_fh",
+        "st_twchannel_t_fh","st_twchannel_t_sl","st_twchannel_t_dl",
+        "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh",
         #ggF signal
-        "h_ggf_htt",
-        "h_ggf_htt_cpo",
-        "h_ggf_htt_mm",
         "h_ggf_htt_sm",
+        "h_ggf_htt_sm_prod_sm","h_ggf_htt_sm_prod_mm","h_ggf_htt_sm_prod_cpo",
+        "h_ggf_htt_mm",
+        "h_ggf_htt_mm_prod_sm","h_ggf_htt_mm_prod_mm","h_ggf_htt_mm_prod_cpo",
+        "h_ggf_htt_cpo",
+        "h_ggf_htt_cpo_prod_sm","h_ggf_htt_cpo_prod_mm","h_ggf_htt_cpo_prod_cpo",
+        "h_ggf_htt_flat",
+        "h_ggf_htt_flat_prod_sm","h_ggf_htt_flat_prod_mm","h_ggf_htt_flat_prod_cpo", 
         #VBF signal
-        'h_vbf_htt',
-        'h_vbf_htt_mm',
-        'h_vbf_htt_sm',
-        'h_vbf_htt_cpo',
+        "h_vbf_htt_cpo","h_vbf_htt_sm","h_vbf_htt_mm","h_vbf_htt_flat",
+        #VH signal
+        "zh_htt_cpo","zh_htt_sm","zh_htt_mm","zh_htt_flat",
+        "wh_htt_cpo","wh_htt_sm","wh_htt_mm","wh_htt_flat",
+        "wph_htt_cpo","wph_htt_sm","wph_htt_mm","wph_htt_flat",
+        "wmh_htt_cpo","wmh_htt_sm","wmh_htt_mm","wmh_htt_flat",
     ]
-        
     for process_name in process_names:
         # add the process
+        #print(f'importing {process_name} for {campaign.name}')
         proc = cfg.add_process(procs.get(process_name))
         #for signal datasets create special tag
         if process_name.startswith("h_"):
             proc.add_tag("signal")
            
     # add datasets we need to study
-
-    dataset_names_2022preEE = [
-        #data
-        "data_egamma_C",
-        "data_egamma_D",
-        "data_muoneg_C",
-        "data_muoneg_D",
-        "data_singlemu_C",
-        "data_mu_C",
-        "data_mu_D",
-        "data_tau_C",
-        "data_tau_D",
-        #Drell-Yan
-        "dy_lep_madgraph",
-        # "dy_lep_m10to50",
-        #W+jets
-        "wj_incl_madgraph",
-        #Diboson
-        "ww",
-        "wz",
-        "zz",
-        #ttbar
-        "tt_sl",
-        "tt_dl",
-        "tt_fh",
-        #single top t-channel
-        "st_tchannel_tbar",
-        "st_tchannel_t",
-        #single top s-channel
-        "st_schannel_tbar_lep",
-        "st_schannel_t_lep",
-        # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        "st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
-        "st_twchannel_tbar_fh",
-        #SM Higgs signal
-        "h_ggf_htt_cpo_filtered",
-        "h_ggf_htt_mm_filtered",
-        "h_ggf_htt_sm_filtered",
-        #higgs signal vbf
-        "h_vbf_htt_filtered",
-        "h_vbf_htt_cpo_filtered",
-        "h_vbf_htt_mm_filtered",
-        "h_vbf_htt_sm_filtered",
-        ]
-
-    dataset_names_2022postEE = [
-        #data
-        "data_egamma_E",
-        "data_egamma_F",
-        "data_egamma_G",
-        "data_muoneg_E",
-        "data_muoneg_F",
-        "data_muoneg_G",
-        "data_mu_E",
-        "data_mu_F",
-        "data_mu_G",
-        "data_tau_E",
-        "data_tau_F",
-        "data_tau_G",
-        #Drell-Yan
-        "dy_lep_madgraph",
-        # "dy_lep_m10to50",
-        #W+jets
-        "wj_incl_madgraph",
-        #Diboson
-        "ww",
-        "wz",
-        "zz",
-        #ttbar
-        "tt_sl",
-        "tt_dl",
-        "tt_fh",
-        #single top t-channel
-        "st_tchannel_tbar",
-        "st_tchannel_t",
-        #single top s-channel
-        "st_schannel_tbar_lep",
-        "st_schannel_t_lep",
-        # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        #"st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
-        "st_twchannel_tbar_fh",
-        #higgs signal ggf
-        "h_ggf_htt_cpo_filtered",
-        "h_ggf_htt_mm_filtered",
-        "h_ggf_htt_sm_filtered",
-        #higgs signal vbf
-        "h_vbf_htt_cpo_filtered",
-        "h_vbf_htt_mm_filtered",
-        "h_vbf_htt_sm_filtered",
-        ]
-
-    dataset_names_2023preBPix = [
-        #data
-        "data_egamma_Cv123",
-        "data_egamma_Cv4",
-        "data_muoneg_Cv123",
-        "data_muoneg_Cv4",
-        "data_mu_Cv123",
-        "data_mu_Cv4",
-        #Drell-Yan
-        "dy_lep_madgraph",
-        # "dy_lep_m10to50",
-        #W+jets
-        "wj_incl_madgraph",
-        #Diboson
-        "ww",
-        "wz",
-        "zz",
-        #ttbar
-        "tt_sl",
-        "tt_dl",
-        "tt_fh",
-        #single top t-channel
-        "st_tchannel_tbar",
-        "st_tchannel_t",
-        #single top s-channel
-        "st_schannel_tbar_lep",
-        "st_schannel_t_lep",
-        # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        "st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
-        "st_twchannel_tbar_fh",
-        #higgs signal ggf
-        "h_ggf_htt_sm_filtered",
-        "h_ggf_htt_cpo_filtered",
-        "h_ggf_htt_mm_filtered",
-        #higgs signal vbf
-        "h_vbf_htt_cpo_filtered",
-        "h_vbf_htt_mm_filtered",
-        "h_vbf_htt_sm_filtered",
-        ]
-
-    dataset_names_2023postBPix = [
-        #data
-        "data_egamma_D",
-        "data_muoneg_D",
-        "data_mu_D",
-        #Drell-Yan
-        "dy_lep_madgraph",
-        # "dy_lep_m10to50",
-        #W+jets
-        "wj_incl_madgraph",
-        #Diboson
-        "ww",
-        "wz",
-        "zz",
-        #ttbar
-        "tt_sl",
-        "tt_dl",
-        "tt_fh",
-        #single top t-channel
-        "st_tchannel_tbar",
-        "st_tchannel_t",
-        #single top s-channel
-        "st_schannel_tbar_lep",
-        "st_schannel_t_lep",
-        # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        "st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
-        "st_twchannel_tbar_fh",
-        #higgs signal ggf
-        "h_ggf_htt_sm_filtered",
-        "h_ggf_htt_cpo_filtered",
-        "h_ggf_htt_mm_filtered",
-        #higgs signal vbf
-        "h_vbf_htt_cpo_filtered",
-        "h_vbf_htt_mm_filtered",
-        "h_vbf_htt_sm_filtered",
-        ]
-
+    from httcp.config.datasets import add_datasets_2025_skim_v2,add_datasets_2024_skim_v1
+    datasets = add_datasets_2025_skim_v2()
     #Simultaneously select the dataset list depending on the year,campaign tag, and iterate over the constituents
-    for dataset_name in eval(f"dataset_names_{year}{tag}"):
+    for dataset_name in datasets[f"{year}{tag}"]:
         # add the dataset
         dataset = cfg.add_dataset(campaign.get_dataset(dataset_name))
-        if dataset_name.startswith("h_"):
+        if dataset_name.startswith("h_") or dataset_name.startswith("zh_") or dataset_name.startswith("wh_"):
             dataset.add_tag("signal")   
         if dataset.name.startswith("tt_"):
             dataset.add_tag({"has_top", "ttbar", "tt"})    
@@ -395,9 +229,20 @@ def add_run3(ana: od.Analysis,
         for info in dataset.info.values():
             if limit_dataset_files:
                 info.n_files = min(info.n_files, limit_dataset_files) #<<< REMOVE THIS FOR THE FULL DATASET
-
     # verify that the root process of all datasets is part of any of the registered processes
     verify_config_processes(cfg, warn=True)
+    
+    cfg.x.stitch_samples = cfg.x.datasets2apply_tau_veto = [
+        'DYto2L_M_50_amcatnloFXFX',
+        'DYto2L_M_50_0J_amcatnloFXFX',
+        'DYto2L_M_50_1J_amcatnloFXFX',
+        'DYto2L_M_50_2J_amcatnloFXFX',
+        "WtoLNu_1J_madgraphMLM",
+        "WtoLNu_2J_madgraphMLM",
+        "WtoLNu_3J_madgraphMLM",
+        "WtoLNu_4J_madgraphMLM",
+        "WtoLNu_madgraphMLM",
+    ]
 
     #Adding the triggers 
     from httcp.config.triggers import add_triggers_run3
@@ -409,8 +254,9 @@ def add_run3(ana: od.Analysis,
     # default objects, such as calibrator, selector, producer, ml model, inference model, etc
     cfg.x.default_calibrator = "main"
     cfg.x.default_selector = "main"
+    cfg.x.default_reducer = "cf_default"
     cfg.x.default_producer = "main"
-    cfg.x.default_weight_producer = "main"
+    cfg.x.default_hist_producer = "httcp_hist_producer"
     cfg.x.default_ml_model = None
     cfg.x.default_inference_model = "hcp_model"
     cfg.x.default_categories = ("incl",)
@@ -447,22 +293,10 @@ def add_run3(ana: od.Analysis,
     cfg.x.selector_step_groups = {
         "default": ["json", "met_filter", "dl_res_veto", "trigger", "lepton", "jet"],
     }
-    #  cfg.x.selector_step_labels = {"Initial":0, 
-    #                                "Trigger": , "Muon"}
      
     # whether to validate the number of obtained LFNs in GetDatasetLFNs
     # (currently set to false because the number of files per dataset is truncated to 2)
     cfg.x.validate_dataset_lfns = False
-    
-    # jec configuration  !!! moved to tags dict !!!
-    # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC?rev=201
-    # jerc_postfix = ""
-    # if year == 2016 and campaign.x.vfp == "post":
-    #     jerc_postfix = "APV"
-    # elif year == 2022 and campaign.x.tag == "postEE":
-    #     jerc_postfix = "EE"
-    # elif year == 2023 and campaign.x.tag == "postBPix":
-    #     jerc_postfix = "BPix"
 
     jet_type = "AK4PFPuppi"
     if year < 2022:
@@ -477,6 +311,7 @@ def add_run3(ana: od.Analysis,
         "campaign": jerc_campaign,
         "version": {2016: "V7", 2017: "V5", 2018: "V5", 2022: "V2", 2023:"V1"}[year],
         "jet_type": jet_type,
+        "levels": ["L1L2L3Res"], #"L2Relative", "L2L3Residual", "L3Absolute", "L1L2L3Res" 
         "levels_DATA": ["L1L2L3Res"], #"L2Relative", "L2L3Residual", "L3Absolute", "L1L2L3Res" 
         "levels_MC": ["L1L2L3Res"], 
         "levels_for_type1_met": ["L1L2L3Res"], 
@@ -711,22 +546,37 @@ def add_run3(ana: od.Analysis,
                 
         },
     )
+            
+    cfg.x.tec = TECConfig(
+            tagger=cfg.x.deep_tau.tagger,
+            corrector_kwargs={"wp": getattr(cfg.x.deep_tau.vs_jet, channel), "wp_VSe": getattr(cfg.x.deep_tau.vs_e, channel)},
+            )
     
+    cfg.x.eec = EGammaCorrectionConfig(
+                correction_set=f"EGMSmearAndSyst_ElePTsplit_{str(year)}{campaign.x.tag}",
+                value_type="scale",
+                uncertainty_type="escale",
+                compound=True,
+            )
     
+    cfg.x.eer = EGammaCorrectionConfig(
+                correction_set=f"EGMSmearAndSyst_ElePTsplit_{str(year)}{campaign.x.tag}",
+                value_type="smear",
+                uncertainty_type="esmear",
+    )
     ##########################
     ###### mT cut value ######
     ##########################
     
-    cfg.x.mt_cut_value = 70
+    cfg.x.mt_cut_value = 65
     
     ##########################
     ##########################
     ##########################
     
-    jsonpog_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_latest/POG/"
-    jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
+    jsonpog_dir = "/eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_latest/POG/"
+    jsonpog_tau_dir = "//eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
     corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/"
-
     ml_dir = "/eos/user/s/stzakhar/TauTheDifference/Training/models/"
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
@@ -735,8 +585,10 @@ def add_run3(ana: od.Analysis,
     
     pog_tag = tags['pog_tag']
     short_tag = tags['short_tag']
+    cfg.x.long_tag = long_tag = tags['long_tag']
     ch_short = channel.replace('mu','m').replace('tau','t')
-    cfg.x.external_files = DotDict.wrap({
+    
+    jsons_2024_v1 = DotDict.wrap({
         "lumi": {
             "golden": (golden_ls[year], "v1"),
             "normtag": ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json", "v1"), #/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags
@@ -750,18 +602,54 @@ def add_run3(ana: od.Analysis,
         "electron_idiso"                : f"{jsonpog_dir}EGM/{year}_{pog_tag}/electron.json.gz",
         "electron_trigger"              : f"{jsonpog_dir}EGM/{year}_{pog_tag}/electronHlt.json.gz",
         "tau_correction"                : f"{jsonpog_tau_dir}TAU/{year}_{tag}/tau_DeepTau2018v2p5_{year}_{tag}.json.gz",
-        "zpt_weight"                    : f"{corr_dir}zpt_reweighting_LO_2022.root",
+        "zpt_weight"                    : f"{corr_dir}/dy_ptll/DY_pTll_recoil_corrections_{year}{long_tag}.json.gz",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
-        "fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_2022_postEE_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
-        #"fake_factors"                 : (f"{corr_dir}fake_factors_{channel}_{year}_{campaign.x.tag}_mt{cfg.x.mt_cut_value}_exp_and_pol2_jvm_fix.json", "v2"),
+        "fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_22and23_mt{cfg.x.mt_cut_value}_4bins.json", "v2"),
         "met_recoil"                    : (f"{corr_dir}hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{tag}_v2.json.gz", "v2"),
         #"met_phi_corr": (f"{jsonpog_dir}JME/{cfg.x.year}{pog_tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
         "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
         "ml_model_even"                 : f"{ml_dir}{ch_short}/EVEN/model_{ch_short}_EVEN.json",
         "ml_model_odd"                  : f"{ml_dir}{ch_short}/ODD/model_{ch_short}_ODD.json",
+        "filter_eff"                    : f"{corr_dir}/filter_eff/2024_v2/Run3_{year}{short_tag}.yaml",
     })
-    # --------------------------------------------------------------------------------------------- #
+    
+    
+    cat_path = "/cvmfs/cms-griddata.cern.ch/cat/metadata"
+    cat_tag = tags['cat_tag']
+    
+    jsons_2025_v2 = DotDict.wrap({
+        "lumi": {
+            "golden": (golden_ls[year], "v1"),
+            "normtag": ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json", "v1"), #/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags
+        },
+        "pu_sf"                         : (f"{jsonpog_dir}LUM/{year}_{pog_tag}/puWeights.json.gz", "v1"),
+        "muon_correction"               : f"{jsonpog_dir}MUO/{year}_{pog_tag}/muon_Z.json.gz",
+        "cross_mutau_mu_leg"            : f"{corr_dir}hleprare/TriggerScaleFactors/{year}{tag}/CrossMuTauHlt_MuLeg_v1.json",
+        "electron_scaling_smearing"     : f"{jsonpog_dir}EGM/{year}_{pog_tag}/electronSS.json.gz",
+        "electron_idiso"                : f"{jsonpog_dir}EGM/{year}_{pog_tag}/electron.json.gz",
+        "electron_trigger"              : f"{jsonpog_dir}EGM/{year}_{pog_tag}/electronHlt.json.gz",
+        "tau_correction"                : f"{cat_path}/TAU/{cat_tag}/2025-10-01/tau_DeepTau2018v2p5_{year}_{tag}.json.gz",
+        "tes"                           : (f"{corr_dir}measured_by_ic/tes/tau_es_dm_DeepTau2018v2p5_{year}_{tag}.json.gz", "v1"),
+        "tau_sf"                        : f"{corr_dir}measured_by_ic/tau_sf/tau_sf_pt-dm_DeepTau2018v2p5VSjet_{year}_{tag}.json.gz",
+        "tau_trigger_sf"                : f"{corr_dir}measured_by_ic/tau_trigger_sf/tau_trigger_DeepTau2018v2p5_{year}_{tag}.json.gz",
+        "zpt_weight"                    : f"{corr_dir}dy_ptll/DY_pTll_weights_{year}{tag}.json.gz",
+        "met_recoil"                    : f"{corr_dir}dy_ptll/DY_pTll_recoil_corrections_{year}{tag}.json.gz",
+        "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
+        "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
+        "fake_factors"                  : (f"{corr_dir}fake_factors_v1_2025_{channel}_22and23_mt{cfg.x.mt_cut_value}_4bins.json", "v2"),
+        "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
+        "ml_model_even"                 : f"{corr_dir}signal_classifier/model_EVEN.json",
+        "ml_model_odd"                  : f"{corr_dir}signal_classifier/model_ODD.json",
+        "filter_eff"                    : f"{corr_dir}filter_eff/2025_v1/Run3_{year}{short_tag}.yaml",
+        "stitching"                     : f"{corr_dir}stitching_weights.json",
+
+    })
+    
+    
+    
+    cfg.x.external_files = jsons_2025_v2
+    #--------------------------------------------------------------------------------------------- #
     # electron settings
     # names of electron correction sets and working points
     # (used in the electron_sf producer)
@@ -785,30 +673,20 @@ def add_run3(ana: od.Analysis,
     # names of muon correction sets and working points
     # (used in the muon producer)
     # --------------------------------------------------------------------------------------------- #
-
+    cfg.x.muon_id_wp = 'Medium'
     cfg.x.muon_sf = DotDict.wrap({ 
                                   
-        'ID': {'corrector': "NUM_MediumID_DEN_TrackerMuons",
-               'year': f"{year}_{pog_tag}"},
+        'ID': {'corrector': f"NUM_{cfg.x.muon_id_wp}ID_DEN_TrackerMuons",
+               },
         
-        'iso': {'corrector': "NUM_TightPFIso_DEN_MediumID",
-                'year': f"{year}_{pog_tag}"},
+        'iso': {'corrector': f"NUM_TightPFIso_DEN_{cfg.x.muon_id_wp}ID",
+                },
         
-        'trig': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
-                 'year': f"{year}_{pog_tag}"},
+        'trig': {'corrector': f"NUM_IsoMu24_DEN_CutBasedId{cfg.x.muon_id_wp}_and_PFIsoMedium", #TODO Worging points for trig and iso does not match!
+                 },
         
-        'trig_data_eff': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_MCeff",
-                 'year': f"{year}_{pog_tag}"},
-        
-        'trig_mc_eff': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff",
-                 'year': f"{year}_{pog_tag}"},
-        
-        'xtrig': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight",
-                  'year': f"{year}_{pog_tag}"},
-        
-        'MC_eff_mutau': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_MCeff"},
-        
-        'Data_eff_mutau': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff"},
+        'xtrig': {'corrector': f"NUM_IsoMu20_DEN_CutBasedId{cfg.x.muon_id_wp}_and_PFIsoMedium", 
+                  },
     })
     
     # target file size after MergeReducedEvents in MB
@@ -841,11 +719,27 @@ def add_run3(ana: od.Analysis,
     cfg.add_shift(name="top_pt_up", id=10, type="shape")
     cfg.add_shift(name="top_pt_down", id=11, type="shape")
     add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"})
-
     
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
-
+ 
+    cfg.x.event_weights = DotDict({
+        "normalization_weight": [],
+        "filter_weight": [],
+        #"mc_weight":[],
+        "tau_weight_nom": get_shifts("tau"),
+        "pu_weight": [],
+        "tauspinner_weight": [],
+        "zpt_weight":[],
+        "muon_weight_nom": get_shifts("mu"),
+        #"electron_weight_nom": get_shifts("electron"), 
+        "top_pt_weight" : [],       
+        "trigger_weight_mutau_nom": [],
+        "stitching_weight": [],
+    })
+    for dataset in cfg.datasets:
+        if dataset.has_tag("ttbar"):
+            dataset.x.event_weights = {"top_pt_weight": get_shifts("top_pt")} 
     # thisdir = os.path.dirname(os.path.abspath(__file__))
     
     # with open(os.path.join(thisdir, "jec_sources.yaml"), "r") as f:
@@ -926,25 +820,39 @@ def add_run3(ana: od.Analysis,
     })
     cfg.x.fake_factor_method = DotDict.wrap({
     "axes": {'tau_pt': {
-                'var_route': [f'hcand_{channel}', 'lep1', 'pt'],
-                'ax_str'  : 'Variable([20,30,40,60,80,200], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
+                'var_route' : [f'hcand_{channel}', 'lep1', 'pt'],
+                'ax_str'    : 'Variable([20,30,40,60,200], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
                 },
              'tau_dm_pnet': {
                 'var_route' : [f'hcand_{channel}', 'lep1', 'decayModePNet'],
-                'ax_str'   :'IntCategory([0,1,2,10,11], name="tau_dm_pnet", label="Tau PNet decayMode")',
+                'ax_str'    : 'IntCategory([0,1,2,10,11], name="tau_dm_pnet", label="Tau PNet decayMode")',
              },
              "n_jets": {
                 'var_route' : ['n_jets'],
-                'ax_str'   : 'Integer(0, 3, name="n_jets", label="Number of jets",underflow=False, overflow=False)',
+                'ax_str'    : 'Integer(0, 3, name="n_jets", label="Number of jets",underflow=False, overflow=False)',
             },
     },
     "columns" : ['ff_weight_wj','ff_weight_qcd'],
-    "shifts"  : ["up", "nominal", "down"]
+    "shifts"  : ["up", "nom", "down"]
     })
     
-    cfg.x.met_recoil = DotDict.wrap({
-        'datasets' : {'dy_lep_madgraph'  : "LO",
-                      'wj_incl_madgraph' : "LO"},
+    cfg.x.dy_ptll_corrs = DotDict.wrap({
+        'datasets' : {
+            "DYto2L_M_50_0J_amcatnloFXFX": "NLO",
+            "DYto2L_M_50_1J_amcatnloFXFX": "NLO",
+            "DYto2L_M_50_2J_amcatnloFXFX": "NLO",
+            "DYto2L_M_50_amcatnloFXFX": "NLO",
+            # DY->tautau
+            "DYto2Tau_MLL_50_0J_amcatnloFXFX": "NLO",
+            "DYto2Tau_MLL_50_1J_amcatnloFXFX": "NLO",
+            "DYto2Tau_MLL_50_2J_amcatnloFXFX": "NLO",
+            
+            "WtoLNu_amcatnloFXFX": "NLO",
+            },
+       
+       
+        # 'datasets' : {'dy_lep_madgraph'  : "LO",
+        #               'wj_incl_madgraph' : "LO"},
     })
     
     if cfg.campaign.x("custom").get("creator") == "desy":  
@@ -981,8 +889,7 @@ def add_run3(ana: od.Analysis,
     add_variables(cfg)
     
     from data_driven.hist_hooks import add_hist_hooks
-    add_hist_hooks(cfg)
-
-
+    add_hist_hooks(ana)
     
-    
+    from httcp.config.styles import setup_plot_styles
+    setup_plot_styles(cfg)

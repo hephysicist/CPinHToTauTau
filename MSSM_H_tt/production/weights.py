@@ -196,7 +196,7 @@ def muon_weight_requires(
     ) -> None:
     if "external_files" in reqs:
         return
-    
+
     from columnflow.tasks.external import BundleExternalFiles
     reqs["external_files"] = BundleExternalFiles.req(task)
 
@@ -346,7 +346,6 @@ def electron_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) 
     return events
 
 @electron_weight.requires
-
 def electron_weight_requires(
     self: Producer,
     task: law.Task,
@@ -359,6 +358,9 @@ def electron_weight_requires(
     from columnflow.tasks.external import BundleExternalFiles
     reqs["external_files"] = BundleExternalFiles.req(task)
 
+    from columnflow.tasks.external import BundleExternalFiles
+    reqs["external_files"] = BundleExternalFiles.req(task)
+    
 @electron_weight.setup
 def electron_weight_setup(
     self: Producer,
@@ -576,7 +578,6 @@ https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/849c6a6efef907f403
     return events
 
 @tau_weight.requires
-
 def tau_weight_requires(
     self: Producer,
     task: law.Task,
@@ -585,7 +586,7 @@ def tau_weight_requires(
     ) -> None:
     if "external_files" in reqs:
         return
-    
+
     from columnflow.tasks.external import BundleExternalFiles
     reqs["external_files"] = BundleExternalFiles.req(task)
 

@@ -4,17 +4,15 @@
 Prepare h-Candidate from SelectionResult: selected lepton indices & channel_id [trigger matched] 
 """
 import copy
-from typing import Optional
+
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.selection.util import create_collections_from_masks
 from columnflow.util import maybe_import
-from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 from httcp.util import get_lep_p4
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 coffea = maybe_import("coffea")
-maybe_import("coffea.nanoevents.methods.nanoaod")
+#maybe_import("coffea.nanoevents.methods.nanoaod") #I don't remember why it's needed
 
 def select_best_pair(
         lep0: ak.Array,

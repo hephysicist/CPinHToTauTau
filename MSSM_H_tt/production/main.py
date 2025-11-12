@@ -3,7 +3,6 @@ Column production methods related to higher-level features.
 """
 import functools
 
-from typing import Optional
 from columnflow.production import Producer, producer
 from columnflow.production.categories import category_ids
 from columnflow.production.normalization import normalization_weights
@@ -22,7 +21,7 @@ from MSSM_H_tt.production.generatorZ import generatorZ
 from MSSM_H_tt.production.dilepton_features import hcand_fields,hcand_mt
 from MSSM_H_tt.production.z_pt_reweighting import zpt_weight
 from MSSM_H_tt.production.aux_columns import jet_pt_def,jets_taggable,number_b_jet
-from MSSM_H_tt.production.btag_SF import btag_weight_SF
+from columnflow.production.cms.btag import btag_weights
 from MSSM_H_tt.production.top_pt_weight import top_pt_weight, gen_parton_top
 from MSSM_H_tt.production.D_zeta import D_zeta
 from MSSM_H_tt.production.met_recoil_correction import gen_boson, met_recoil
@@ -60,7 +59,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         number_b_jet,
         jet_pt_def,
         jets_taggable,
-        btag_weight_SF,
+        btag_weights,
         gen_parton_top,
         top_pt_weight,
         D_zeta,
@@ -92,7 +91,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         number_b_jet,
         jet_pt_def,
         jets_taggable,
-        btag_weight_SF,
+        btag_weights,
         gen_parton_top,
         top_pt_weight,
         D_zeta,
@@ -166,7 +165,11 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         print("Producing Tau weights...")
         events = self[tau_weight](events,do_syst = True, **kwargs)
         print("Producing btag weights...")
-        events = self[btag_weight_SF](events,do_syst = True,**kwargs)
+        jet_mask = ((events.Jet.pt >= 20) & 
+                    (abs(events.Jet.eta) < 2.5) & 
+                    (events.Jet.jetId & 0b10 == 0b10))
+        events = self[btag_weights](events,jet_mask= jet_mask,**kwargs)
+        # events = self[btag_weight_SF](events,do_syst = True,**kwargs)
         print("Producing GenPartonTop...")
         events = self[gen_parton_top](events, **kwargs)
         top_pt_weight_dummy = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)

@@ -28,8 +28,7 @@ from columnflow.util import DotDict, InsertableDict
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column, flat_np_view
 from columnflow.columnar_util import optional_column as optional
 
-# FastMTT implementation (precompiled C++ backend wrapped for Python)
-from modules.ClassicsSVfit.python.FastMTT import FastMTT
+from httcp.util import get_lep_p4
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -76,11 +75,11 @@ def fastMTT(
     hcand = events[f'hcand_{ch_str}']
     met = events.PuppiMET
 
-    print('Running fastMTT (be patient)')
+    print('Running fastMTT')
 
 
     # Steering Parameters for the FastMTT algorithm
-    verbosity = True
+    verbosity = False # True = prints fastMTT infos in terminal
     delta = 1.0/1.15 # regularization parameter delta
     reg_order = 6.0  # regularization parameter order
     mX = 125.10 # Higgs mass
@@ -134,6 +133,14 @@ def fastMTT(
     # Extract reconstructed MTT Higgs mass and decay products properties
     hcand_features = ['pt', 'eta', 'phi'] #no 'px', 'py', 'pz', in lep so far (put can be used in apply_fastMTT.py)
     leptons_corrected = {}
+    
+    # Replace possible NaNs in lep0 mass with SM values
+    lep0_mass_defaults = {
+        'mutau': 0.10566,   # muon mass in GeV
+        'etau': 0.000511,   # electron mass in GeV
+        'tautau': 1.77686   # tau mass in GeV 
+        }
+    lep0_mass_threshold = 1e-7
 
     for lep_str in ['lep0', 'lep1']:
         lep = getattr(hcand, lep_str)
@@ -146,6 +153,22 @@ def fastMTT(
         for hcand_feature in hcand_features:
             lep_dict[hcand_feature] = getattr(lep, hcand_feature) / modifier
 
+        # Handle mass separately, as it is not a Lorentz vector component
+        lep_p4 = get_lep_p4(lep) # visible ['pt', 'eta', 'phi', 'mass']
+        lep_energy = lep_p4.energy
+        lep_dict['energy'] = lep_energy / modifier
+
+        lep_p4_mtt = ak.zip(lep_dict,
+                    with_name="PtEtaPhiELorentzVector",
+                    behavior=coffea.nanoevents.methods.vector.behavior)
+
+        if lep_str == 'lep0':
+            lep_dict['mass'] = ak.where(lep_p4_mtt.mass < lep0_mass_threshold,
+                                            lep0_mass_defaults.get(ch_str, 0.0),
+                                            lep_p4_mtt.mass)
+        else:
+            lep_dict['mass'] = lep_p4_mtt.mass
+            
         # Prepare the reconstructed tau leptons into new hcand columns | part 1/2
         leptons_corrected[lep_str] = ak.zip(lep_dict)
 

@@ -3,23 +3,20 @@ Column production methods related to higher-level features.
 """
 import functools
 
-from typing import Optional
 from columnflow.production import Producer, producer
 from columnflow.production.categories import category_ids
 from columnflow.production.normalization import normalization_weights
 from columnflow.production.cms.pileup import pu_weight
 from columnflow.production.cms.seeds import deterministic_seeds
-from columnflow.selection.util import create_collections_from_masks
+from columnflow.reduction.util import create_collections_from_masks
 from columnflow.util import maybe_import
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
-from columnflow.columnar_util import optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
-#from httcp.production.PhiCPNeutralPion import PhiCPNPMethod
-from httcp.production.ReArrangeHcandProds import reArrangeDecayProducts, reArrangeGenDecayProducts
-from httcp.production.PhiCP_Producer import ProduceDetPhiCP, ProduceGenPhiCP
 
-from httcp.production.weights import muon_weight, tau_weight, get_mc_weight, tauspinner_weight, zpt_weight, electron_weight,fake_factors, trigger_weight_mutau
-from httcp.production.sample_split import split_dy
+from httcp.production.weights import (muon_weight, tau_weight, get_mc_weight, tauspinner_weight, 
+                                      zpt_weight, electron_weight,fake_factors, trigger_weight_mutau,
+                                      filter_weight)
+#from httcp.production.sample_split import split_dy
 from httcp.production.generatorZ import genZ
 from httcp.production.met_recoil import gen_boson, met_recoil
 from httcp.production.dilepton_features import hcand_fields
@@ -30,8 +27,8 @@ from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet,
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
 from httcp.production.ip_corrector import ip_correction
 from httcp.production.bdt_score import hcp_bdt_score
-#from httcp.production.fast_mtt import fast_mtt
 from httcp.production.fastMTT import fastMTT
+from httcp.production.stitching_weights import stitching_weight
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -46,7 +43,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
     uses={
         attach_coffea_behavior,
         normalization_weights,
-        split_dy,
+        #split_dy,
         pu_weight,
         trigger_weight_mutau,
         muon_weight,
@@ -73,13 +70,14 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_lep_fields,
         ip_correction,
         hcp_bdt_score,
-        #fast_mtt,
         fastMTT,
+        filter_weight,
+        stitching_weight,
         },
     produces={
         attach_coffea_behavior,
         normalization_weights,
-        split_dy,
+        #split_dy,
         pu_weight,
         trigger_weight_mutau,
         muon_weight,
@@ -101,19 +99,18 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         jet_pt_def,
         jets_taggable,
         number_b_jet,
-        "Jet.jec_no_jec_diff",
         pion_energy_split,
         gen_lep_fields,
         ip_correction,
         hcp_bdt_score,
-        #fast_mtt,
         fastMTT,
+        filter_weight,
+        stitching_weight,
     },
     # whether weight producers should be added and called
     produce_weights=True,
 )
 def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
-    
     # ensure coffea behaviors are loaded
     events = self[attach_coffea_behavior](events, **kwargs)
     if self.dataset_inst.is_mc:
@@ -123,10 +120,6 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     
     print("Producing pion energy split...")
     events = self[pion_energy_split](events, **kwargs)
-    
-    print("Producing Jet features...")
-    events = set_ak_column_f32(events, "Jet.jec_no_jec_diff", (events.Jet.pt - events.Jet.pt_no_jec))
-    
     print("Producing jet variables for plotting...") 
     events = self[jet_pt_def](events, **kwargs)
     events = self[jets_taggable](events, **kwargs)   
@@ -140,19 +133,24 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = self[gen_boson](events, **kwargs)
         
     events = self[met_recoil](events,**kwargs)
-    #events = self[fast_mtt](events,**kwargs)
     events = self[fastMTT](events,**kwargs)
-   
     if self.dataset_inst.is_mc:
         
         print("Producing Gen weights...")    
         events = self[get_mc_weight](events, **kwargs)
+        print("Producing filter weights...")
+        events = self[filter_weight](events, **kwargs)
+        print("Producing stitching weights...")
+        events = self[stitching_weight](events,**kwargs)
+            
         print("Producing Normalization weights...")
         events = self[normalization_weights](events, **kwargs)
+        
         processes = self.dataset_inst.processes.names()
-        if ak.any(['dy' in proc for proc in processes]):
-            print("Splitting Drell-Yan dataset...")
-            events = self[split_dy](events,**kwargs)
+        # if ak.any(['dy' in proc for proc in processes]):
+        #     print("Splitting Drell-Yan dataset...")
+        #     events = self[split_dy](events,**kwargs)
+        
         print("Z pt reweighting...")
         events = self[genZ](events, **kwargs)
         events = self[zpt_weight](events,**kwargs)
@@ -177,16 +175,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         
         print("Producing GenPartonTop...")
         events = self[gen_parton_top](events, **kwargs)
-        top_pt_weight_dummy = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)
-        top_pt_weight_dummy = ak.ones_like(top_pt_weight_dummy)
-        for variation in ("", "_up", "_down"):
-            events = set_ak_column(events, f"top_pt_weight{variation}", top_pt_weight_dummy)
-        if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
-            print("Producing Top pT weights...")
-            events = self[top_pt_weight](events, **kwargs)
-            
-        #print("Producing fastMTT...")
-        #events = self[apply_fastMTT](events, **kwargs)
+        events = self[top_pt_weight](events, **kwargs)
     
     
     #Assume that the corrections are done, now we can evaluate bdt scores and produce parameters of interest
@@ -201,90 +190,85 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     events = self[phi_cp](events, **kwargs)
     return events
         
-@producer(
-    uses={
-        normalization_weights,
-        split_dy,
-        pu_weight,
-        muon_weight,
-        tau_weight,
-        electron_weight,
-        genZ,
-        zpt_weight,
-        gen_boson,
-        met_recoil,
-        get_mc_weight,
-        hcand_fields,
-        tauspinner_weight,
-        category_ids,
-        gen_parton_top,
-        top_pt_weight,
-        jet_pt_def,
-        pion_energy_split,
-        },
-    produces={
-        normalization_weights,
-        split_dy,
-        pu_weight,
-        muon_weight,
-        get_mc_weight,
-        tau_weight,
-        electron_weight,
-        genZ,
-        zpt_weight,
-        gen_boson,
-        met_recoil,
-        hcand_fields,
-        tauspinner_weight,
-        category_ids,
-        gen_parton_top,
-        top_pt_weight,
-        jet_pt_def,
-        pion_energy_split,
-    },
-)
-def ff_method(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
-    print("Producing pion energy split...")
-    events = self[pion_energy_split](events, **kwargs)
-    print("Producing jet variables...") 
-    events = self[jet_pt_def](events, **kwargs)
-    print("Producing Hcand features...")
-    events = self[hcand_fields](events, **kwargs)
-    if self.dataset_inst.is_mc:
-        events = self[gen_boson](events, **kwargs)
-    events = self[met_recoil](events,**kwargs)  
-    events = self[category_ids](events, **kwargs)
-    if self.dataset_inst.is_mc:
-        events = self[get_mc_weight](events, **kwargs)
-        print("Producing Normalization weights...")
-        events = self[normalization_weights](events, **kwargs)
-        processes = self.dataset_inst.processes.names()
-        if ak.any(['dy' in proc for proc in processes]):
-            print("Splitting Drell-Yan dataset...")
-            events = self[split_dy](events,**kwargs)
-        events = self[genZ](events, **kwargs)
-        print("Z pt reweighting...")
-        events = self[zpt_weight](events,**kwargs)
-        print("Producing PU weights...")          
-        events = self[pu_weight](events, **kwargs)
-        print("Producing Muon weights...")
-        events = self[muon_weight](events,do_syst = True, **kwargs)
-        print("Producing Electron weights...")
-        events = self[electron_weight](events,do_syst = True, **kwargs)
-        print("Producing Tau weights...")
-        events = self[tau_weight](events,do_syst = True, **kwargs)
-        print("Producing Tauspinner weights...")
-        events = self[tauspinner_weight](events, **kwargs)
-        print("Producing GenPartonTop...")
-        events = self[gen_parton_top](events, **kwargs)
-        top_pt_weight_dummy = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)
-        top_pt_weight_dummy = ak.ones_like(top_pt_weight_dummy)
-        for variation in ("", "_up", "_down"):
-            events = set_ak_column(events, f"top_pt_weight{variation}", top_pt_weight_dummy)
-        if self.dataset_inst.has_tag("ttbar"):
-            print("Producing Top pT weights...")
-            events = self[top_pt_weight](events, **kwargs)
-    return events
+# @producer(
+#     uses={
+#         normalization_weights,
+#         split_dy,
+#         pu_weight,
+#         muon_weight,
+#         tau_weight,
+#         electron_weight,
+#         genZ,
+#         zpt_weight,
+#         gen_boson,
+#         met_recoil,
+#         get_mc_weight,
+#         hcand_fields,
+#         tauspinner_weight,
+#         category_ids,
+#         gen_parton_top,
+#         top_pt_weight,
+#         jet_pt_def,
+#         pion_energy_split,
+#         },
+#     produces={
+#         normalization_weights,
+#         split_dy,
+#         pu_weight,
+#         muon_weight,
+#         get_mc_weight,
+#         tau_weight,
+#         electron_weight,
+#         genZ,
+#         zpt_weight,
+#         gen_boson,
+#         met_recoil,
+#         hcand_fields,
+#         tauspinner_weight,
+#         category_ids,
+#         gen_parton_top,
+#         top_pt_weight,
+#         jet_pt_def,
+#         pion_energy_split,
+#     },
+# )
+# def ff_method(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
+#     print("Producing pion energy split...")
+#     events = self[pion_energy_split](events, **kwargs)
+#     print("Producing jet variables...") 
+#     events = self[jet_pt_def](events, **kwargs)
+#     print("Producing Hcand features...")
+#     events = self[hcand_fields](events, **kwargs)
+#     if self.dataset_inst.is_mc:
+#         events = self[gen_boson](events, **kwargs)
+#     events = self[met_recoil](events,**kwargs)  
+#     events = self[category_ids](events, **kwargs)
+#     if self.dataset_inst.is_mc:
+#         events = self[get_mc_weight](events, **kwargs)
+#         print("Producing Normalization weights...")
+#         events = self[normalization_weights](events, **kwargs)
+#         processes = self.dataset_inst.processes.names()
+#         if ak.any(['dy' in proc for proc in processes]):
+#             print("Splitting Drell-Yan dataset...")
+#             events = self[split_dy](events,**kwargs)
+#         events = self[genZ](events, **kwargs)
+#         print("Z pt reweighting...")
+#         events = self[zpt_weight](events,**kwargs)
+#         print("Producing PU weights...")          
+#         events = self[pu_weight](events, **kwargs)
+#         print("Producing Muon weights...")
+#         events = self[muon_weight](events,do_syst = True, **kwargs)
+#         print("Producing Electron weights...")
+#         events = self[electron_weight](events,do_syst = True, **kwargs)
+#         print("Producing Tau weights...")
+#         events = self[tau_weight](events,do_syst = True, **kwargs)
+#         print("Producing Tauspinner weights...")
+#         events = self[tauspinner_weight](events, **kwargs)
+#         print("Producing GenPartonTop...")
+#         events = self[gen_parton_top](events, **kwargs)
+#         print("Producing Top pT weights...")
+#         events = self[top_pt_weight](events, **kwargs)
+#     return events
 
 
 

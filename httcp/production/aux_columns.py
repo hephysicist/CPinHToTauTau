@@ -6,7 +6,8 @@ import law
 from columnflow.production import Producer, producer
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.columnar_util import set_ak_column, EMPTY_FLOAT
-from columnflow.util import maybe_import, DotDict
+from columnflow.util import maybe_import
+from law.util import DotDict
 from httcp.util import get_lep_p4, get_vec_p3, to_pt_eta_phi_m
 
 np = maybe_import("numpy")
@@ -589,13 +590,14 @@ def gen_lep_fields(
         # Get the gen object itself
         gen_lep = events.GenPart[gen_lep_idx]
         # Get secondary vertex of tau->lep decay
+        
         gen_sv = get_vec_p3(gen_lep, 'v')
         gen_lep_vec = get_lep_p4(gen_lep).to_3D().to_pxpypz()
         # Coffea unit method does not work, so I implemented my own method
         def unit(v): return ak.where(v.mag > 0, v/v.mag, v/1.)
         gen_lep_dir = unit(gen_lep_vec)
         # Estimate tau trajectory by substracting coordinates of primary vertex from secondary vertex
-        tau_trajectory = gen_pv - gen_sv
+        tau_trajectory = gen_sv - gen_pv
         # Calculate component of tau 3-vector, that is parallel to the decay product direction
         tau_proj = tau_trajectory.dot(gen_lep_dir)
         # Calculate Impact parameter vector as the normal component of the tau trajectory to the decay product flight direction

@@ -544,4 +544,3 @@ def jec_setup(
 # custom jec calibrator that only runs nominal correction
 jec_nominal = jec.derive("jec_nominal", cls_dict={"uncertainty_sources": []})
 
-

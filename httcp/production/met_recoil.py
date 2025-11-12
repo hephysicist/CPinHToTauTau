@@ -1,11 +1,12 @@
 import functools
 
 from columnflow.production import Producer, producer
-from columnflow.util import maybe_import, safe_div, InsertableDict
-from columnflow.columnar_util import set_ak_column, has_ak_column, EMPTY_FLOAT, Route, flat_np_view, optional_column as optional
+from columnflow.util import maybe_import, safe_div
+from law.util import InsertableDict
+from columnflow.columnar_util import (sorted_indices_from_mask, set_ak_column, has_ak_column, 
+                                      EMPTY_FLOAT, Route, flat_np_view, optional_column as optional)
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.selection.util import sorted_indices_from_mask
-
+import law
 from httcp.util import get_lep_p4
 
 ak     = maybe_import("awkward")
@@ -111,10 +112,10 @@ def gen_boson(
     },
 )
 def met_recoil(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
-    met_recoil_dict = self.config_inst.x.met_recoil.datasets
-    dataset_name = self.dataset_inst.name
-    if dataset_name in met_recoil_dict.keys():
-        print(f"Applying MET recoil correction for {dataset_name}")
+    met_recoil_dict = self.config_inst.x.dy_ptll_corrs.datasets
+    dataset = self.dataset_inst.name
+    if dataset in met_recoil_dict.keys():
+        print(f"Applying MET recoil correction for {dataset}")
         boson_p4     = events.gen_boson.sum(axis=1)
         boson_p4_vis = events.gen_boson_vis.sum(axis=1)
         zeros_arr = ak.zeros_like(events.PuppiMET.pt)
@@ -136,7 +137,7 @@ def met_recoil(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         ch_str = self.config_inst.channels.names()[0]
         hcand = events[f'hcand_{ch_str}']
         
-        order      = met_recoil_dict[dataset_name]
+        order      = met_recoil_dict[dataset]
         njet       = events.n_jets 
         ptll       = flat_np_view(hcand.pt_vis)
         
@@ -174,7 +175,7 @@ def met_recoil(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = set_ak_column_f32(events, "PuppiMET.pt", met_p4_corr.pt)
         events = set_ak_column_f32(events, "PuppiMET.phi", met_p4_corr.phi)
     else:
-        print(f"NOT applying MET recoil correction for {dataset_name}")
+        print(f"NOT applying MET recoil correction for {dataset}")
         events = set_ak_column_f32(events, "PuppiMET.pt_no_recoil", events.PuppiMET.pt)
         events = set_ak_column_f32(events, "PuppiMET.phi_no_recoil", events.PuppiMET.phi)
         events = set_ak_column_f32(events, "PuppiMET.pt_recoil_effect", ak.zeros_like(events.PuppiMET.pt))
@@ -195,19 +196,20 @@ def met_recoil(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     return events
 
 @met_recoil.requires
-def met_recoil_requires(self: Producer, reqs: dict) -> None:
+def met_recoil_requires(self: Producer, task: law.Task, reqs: dict) -> None:
     if "external_files" in reqs:
         return
     
     from columnflow.tasks.external import BundleExternalFiles
-    reqs["external_files"] = BundleExternalFiles.req(self.task)
+    reqs["external_files"] = BundleExternalFiles.req(task)
 
 @met_recoil.setup
 def met_recoil_setup(
     self: Producer,
+    task: law.Task,
     reqs: dict,
     inputs: dict,
-    reader_targets: InsertableDict,
+    reader_targets: law.util.InsertableDict,
 ) -> None:
     bundle = reqs["external_files"]
     import correctionlib
@@ -218,83 +220,6 @@ def met_recoil_setup(
     )
     self.QuantileHistCorr = correction_set["Recoil_correction_QuantileMapHist"]
     
-    
-
-# def correct_met_recoil(met: awkward.Array, pairs: awkward.Array, era: str, isLO: bool) -> awkward.Array:
-
-#     met_pt = met.pt
-#     met_phi = met.phi
-#     gen_boson_pt = pairs.gen_boson_pT
-#     gen_boson_phi = pairs.gen_boson_phi
-#     gen_boson_visible_pt = pairs.gen_boson_visible_pT
-#     gen_boson_visible_phi = pairs.gen_boson_visible_phi
-
-#     met_x = met_pt * np.cos(met_phi)
-#     met_y = met_pt * np.sin(met_phi)
-#     gen_boson_x = gen_boson_pt * np.cos(gen_boson_phi)
-#     gen_boson_y = gen_boson_pt * np.sin(gen_boson_phi)
-#     gen_boson_visible_x = gen_boson_visible_pt * np.cos(gen_boson_visible_phi)
-#     gen_boson_visible_y = gen_boson_visible_pt * np.sin(gen_boson_visible_phi)
-
-#     U_x = met_x + gen_boson_visible_x - gen_boson_x
-#     U_y = met_y + gen_boson_visible_y - gen_boson_y
-
-#     U_pt = np.sqrt(U_x**2 + U_y**2)
-#     U_phi = np.arctan2(U_y, U_x)
-
-#     Upara = U_pt * np.cos(U_phi - gen_boson_phi)
-#     Uperp = U_pt * np.sin(U_phi - gen_boson_phi)
-
-#     higgs_dna_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-#     path_to_json = os.path.join(higgs_dna_path, "systematics/ditau/JSONs/MET_Recoil/Recoil_corrections.json.gz")
-#     evaluator = correctionlib.CorrectionSet.from_file(path_to_json)["Recoil_correction_QuantileMapHist"]
-
-#     n_jets = awkward.to_numpy(pairs.n_jets_recoil).astype(float)
-
-#     if isLO:
-#         Upara_corr = evaluator.evaluate(era, "LO", n_jets, pairs.gen_boson_pT, "Upara", Upara)
-#         Uperp_corr = evaluator.evaluate(era, "LO", n_jets, pairs.gen_boson_pT, "Uperp", Uperp)
-#     else:
-#         Upara_corr = evaluator.evaluate(era, "NLO", n_jets, pairs.gen_boson_pT, "Upara", Upara)
-#         Uperp_corr = evaluator.evaluate(era, "NLO", n_jets, pairs.gen_boson_pT, "Uperp", Uperp)
-
-#     U_pt_corr = np.sqrt(Upara_corr**2 + Uperp_corr**2)
-#     U_phi_corr = np.arctan2(Uperp_corr, Upara_corr) + gen_boson_phi
-#     U_x_corr = U_pt_corr * np.cos(U_phi_corr)
-#     U_y_corr = U_pt_corr * np.sin(U_phi_corr)
-#     met_x_corr = U_x_corr - gen_boson_visible_x + gen_boson_x
-#     met_y_corr = U_y_corr - gen_boson_visible_y + gen_boson_y
-
-#     met_pt_corr = np.sqrt(met_x_corr**2 + met_y_corr**2)
-#     met_phi_corr = np.arctan2(met_y_corr, met_x_corr)
-
-#     met["pt"] = met_pt_corr
-#     met["phi"] = met_phi_corr
-
-#     return met
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # # "name": "Recoil_correction_Uncertainty",
 # #    "description": "Various values needed to recompute the PuppiMET of single-boson processes like DY. The values were derived from a mu-mu control region, while validation and uncertainties are obtained from e-e control region. 'Recoil_correction_Uncertainty' gives uncertainties which are to be applies in addition to the nominal corrections. Note that a different input is required. The uncertainties were derived based on corrections applied with the QuantileMapHist method.",
 # #    "version": 1,

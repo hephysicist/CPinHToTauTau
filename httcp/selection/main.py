@@ -4,11 +4,10 @@
 Exemplary selection methods.
 """
 
-from typing import Optional
 from operator import and_
 from functools import reduce
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.selection.stats import increment_stats
@@ -19,20 +18,20 @@ from columnflow.production.processes import process_ids
 from columnflow.production.cms.mc_weight import mc_weight
 from columnflow.production.util import attach_coffea_behavior
 
-from columnflow.util import maybe_import, DotDict
-from columnflow.columnar_util import optional_column as optional
-from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
+from columnflow.util import maybe_import
+from law.util import DotDict
+from columnflow.columnar_util import set_ak_column
 #from columnflow.production.cms.top_pt_weight import gen_parton_top
 
 from httcp.selection.physics_objects import jet_selection, muon_selection, electron_selection, tau_selection
 from httcp.selection.trigger import trigger_selection
 from httcp.selection.lepton_pair import pair_selection
 from httcp.selection.match_trigobj import match_trigobj
-from httcp.selection.lepton_veto import double_lepton_veto, extra_lepton_veto
+from httcp.selection.lepton_veto import double_lepton_veto, extra_lepton_veto,tau_veto
 from httcp.selection.higgscand import new_higgscand, mask_nans
 
 from httcp.production.aux_columns import channel_id, create_jetID_masks, jet_veto, add_tau_prods
-from httcp.selection.jets import jet_veto_map
+from columnflow.selection.cms.jets import jet_veto_map
 from httcp.selection.met_filters_aux import met_filters_aux
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -68,6 +67,7 @@ coffea = maybe_import("coffea")
         jet_veto_map,
         create_jetID_masks,
         met_filters_aux,
+        tau_veto,
     },
     produces={
         # selectors / producers whose newly created columns should be kept
@@ -94,6 +94,7 @@ coffea = maybe_import("coffea")
         jet_veto_map,
         create_jetID_masks,
         met_filters_aux,
+        tau_veto,
         "category_ids",
     },
     exposed=True,
@@ -213,7 +214,11 @@ def main(
     if self.has_dep(jet_veto_map):
         events, jet_veto_map_result = self[jet_veto_map](events, **kwargs)
         results += jet_veto_map_result
-    
+    #veto tau leptons in the DY datasets where taus are bagged 
+    if self.dataset_inst.name in self.config_inst.x.datasets2apply_tau_veto:
+        events, tau_veto_results = self[tau_veto](events)
+        results+=tau_veto_results
+        
     # combined event selection after all steps
     event_sel = reduce(and_, results.steps.values())
     results.event = event_sel

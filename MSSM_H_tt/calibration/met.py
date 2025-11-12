@@ -5,7 +5,7 @@ PuppiMET corrections.
 """
 
 from columnflow.calibration import Calibrator, calibrator
-from columnflow.util import maybe_import
+from columnflow.util import maybe_import, DotDict
 from columnflow.columnar_util import set_ak_column
 
 np = maybe_import("numpy")

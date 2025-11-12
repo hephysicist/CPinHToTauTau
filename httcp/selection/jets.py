@@ -4,15 +4,12 @@
 Selection modules for jets.
 """
 
-from __future__ import annotations
-
 import law
-import math
 
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.util import maybe_import, InsertableDict
-from columnflow.columnar_util import set_ak_column, flat_np_view, optional_column as optional
-from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
+from columnflow.util import maybe_import
+from law.util import InsertableDict
+from columnflow.columnar_util import set_ak_column, optional_column as optional
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 

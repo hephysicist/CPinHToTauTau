@@ -7,8 +7,8 @@ http://cms.cern.ch/iCMS/jsp/openfile.jsp?tp=draft&files=AN2019_192_v15.pdf
 """
 
 from columnflow.selection import Selector, SelectionResult, selector
-from columnflow.columnar_util import set_ak_column
-from columnflow.util import maybe_import, DotDict
+from columnflow.util import maybe_import
+from law.util import DotDict
 
 
 
@@ -105,3 +105,16 @@ def double_lepton_veto(
 
     return events, SelectionResult(steps={"dilepton_veto": dl_veto})
     
+@selector(
+    uses={
+        "LHEPart.pdgId",
+    },
+    exposed=False,
+)
+def tau_veto(
+        self: Selector,
+        events: ak.Array,
+        **kwargs,
+) -> tuple[ak.Array, SelectionResult]:
+    n_taus = ak.sum(abs(events.LHEPart.pdgId) == 15, axis=-1)
+    return events, SelectionResult(steps={"tau_veto": (n_taus == 0)})

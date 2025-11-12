@@ -29,7 +29,11 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
     },
     mc_only=True,
 )
-def tau_energy_scale(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
+def tau_energy_scale(
+    self: Calibrator, 
+    events: ak.Array, 
+    **kwargs,
+    ) -> ak.Array:
     # fail when running on data
     if self.dataset_inst.is_data:
         raise ValueError("attempt to apply tau energy corrections in data")
