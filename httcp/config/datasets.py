@@ -210,7 +210,7 @@ def add_datasets_2025_skim_v2():
         "data_tau_C",
         "data_tau_D",
         # DY->ll
-        #"DYto2L_M_10to50_amcatnloFXFX",
+        "DYto2L_M_10to50_amcatnloFXFX",
         "DYto2L_M_50_0J_amcatnloFXFX",
         "DYto2L_M_50_1J_amcatnloFXFX",
         "DYto2L_M_50_2J_amcatnloFXFX",
@@ -243,6 +243,17 @@ def add_datasets_2025_skim_v2():
         "WW",
         "WZ",
         "ZZ",
+        # ggH signal
+        "h_ggf_htt_sm_prod_sm_filtered","h_ggf_htt_sm_prod_mm_filtered","h_ggf_htt_sm_prod_cpo_filtered",
+        "h_ggf_htt_mm_prod_sm_filtered","h_ggf_htt_mm_prod_mm_filtered","h_ggf_htt_mm_prod_cpo_filtered",
+        "h_ggf_htt_cpo_prod_sm_filtered","h_ggf_htt_cpo_prod_mm_filtered","h_ggf_htt_cpo_prod_cpo_filtered",
+        "h_ggf_htt_flat_prod_sm_filtered","h_ggf_htt_flat_prod_mm_filtered","h_ggf_htt_flat_prod_cpo_filtered", 
+        #higgs signal vbf
+        "h_vbf_htt_cpo_filtered","h_vbf_htt_mm_filtered","h_vbf_htt_sm_filtered","h_vbf_htt_flat_filtered",
+        #higgs signal vh
+        "zh_htt_cpo_filtered","zh_htt_mm_filtered","zh_htt_sm_filtered","zh_htt_flat_filtered",
+        "wph_htt_sm_filtered","wph_htt_cpo_filtered","wph_htt_mm_filtered","wph_htt_flat_filtered",
+        "wmh_htt_sm_filtered","wmh_htt_cpo_filtered","wmh_htt_mm_filtered","wmh_htt_flat_filtered",
         ]
     
     datasets['2022postEE'] = [
@@ -260,7 +271,7 @@ def add_datasets_2025_skim_v2():
         "data_tau_F",
         "data_tau_G",
         # DY->ll
-        #"DYto2L_M_10to50_amcatnloFXFX",
+        "DYto2L_M_10to50_amcatnloFXFX",
         "DYto2L_M_50_0J_amcatnloFXFX",
         "DYto2L_M_50_1J_amcatnloFXFX",
         "DYto2L_M_50_2J_amcatnloFXFX",
@@ -311,6 +322,7 @@ def add_datasets_2025_skim_v2():
         "data_mu_Cv123",
         "data_mu_Cv4",
         # DY->ll
+        "DYto2L_M_10to50_amcatnloFXFX",
         "DYto2L_M_50_0J_amcatnloFXFX",
         "DYto2L_M_50_1J_amcatnloFXFX",
         "DYto2L_M_50_2J_amcatnloFXFX",
@@ -356,6 +368,7 @@ def add_datasets_2025_skim_v2():
         #data
         "data_mu_D",
         # DY->ll
+        "DYto2L_M_10to50_amcatnloFXFX",
         "DYto2L_M_50_0J_amcatnloFXFX",
         "DYto2L_M_50_1J_amcatnloFXFX",
         "DYto2L_M_50_2J_amcatnloFXFX",

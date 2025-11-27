@@ -6,6 +6,7 @@ Configuration of the higgs_cp analysis.
 """
 
 import functools
+import itertools
 import yaml
 import law
 import order as od
@@ -157,6 +158,7 @@ def add_run3(ana: od.Analysis,
         #"dy_z2ee",
         #"dy_z2mumu",
         #"dy_z2tautau",
+        "dy_ll_m10to50",
         "dy_ll_m50",
         "dy_tt_m50",
         # "dy_lep_m10to50",
@@ -381,6 +383,7 @@ def add_run3(ana: od.Analysis,
 
     # name of the MET phi correction set
     # (used in the met_phi calibrator)
+    cfg.x.met_name = 'PuppiMET'
     #cfg.x.met_phi_correction_set = r"{variable}_metphicorr_pfmet_{data_source}"
     
     ###############################################################################################
@@ -637,7 +640,7 @@ def add_run3(ana: od.Analysis,
         "met_recoil"                    : f"{corr_dir}dy_ptll/DY_pTll_recoil_corrections_{year}{tag}.json.gz",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
-        "fake_factors"                  : (f"{corr_dir}fake_factors_v1_2025_{channel}_22and23_mt{cfg.x.mt_cut_value}_4bins.json", "v2"),
+        "fake_factors"                  : (f"{corr_dir}fake_factors_v1_2025_{channel}_22and23_mt{cfg.x.mt_cut_value}_dr_iso0p05_mt70.json", "v2"),
         "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
         "ml_model_even"                 : f"{corr_dir}signal_classifier/model_EVEN.json",
         "ml_model_odd"                  : f"{corr_dir}signal_classifier/model_ODD.json",
@@ -700,6 +703,21 @@ def add_run3(ana: od.Analysis,
  
     cfg.add_shift(name="nominal", id=0)
 
+   
+    for i, (match, dm) in enumerate(itertools.product(["jet", "e"], [0, 1, 2, 10, 11])):
+        cfg.add_shift(name=f"tec_{match}_dm{dm}_up", id=20 + 2 * i, type="shape", tags={"tec"})
+        cfg.add_shift(name=f"tec_{match}_dm{dm}_down", id=21 + 2 * i, type="shape", tags={"tec"})
+        add_shift_aliases(
+            cfg,
+            f"tec_{match}_dm{dm}",
+            {
+                "Tau.pt": "Tau.pt_{name}",
+                "Tau.mass": "Tau.mass_{name}",
+                f"{cfg.x.met_name}.pt": f"{cfg.x.met_name}.pt_{{name}}",
+                f"{cfg.x.met_name}.phi": f"{cfg.x.met_name}.phi_{{name}}",
+            },
+        )
+        
     cfg.add_shift(name="tau_up", id=1, type="shape")
     cfg.add_shift(name="tau_down", id=2, type="shape")
     add_shift_aliases(cfg, "tau", {"tau_weight": "tau_weight_{direction}"})
@@ -708,13 +726,13 @@ def add_run3(ana: od.Analysis,
     cfg.add_shift(name="mu_down", id=4, type="shape")
     add_shift_aliases(cfg, "mu", {"muon_weight": "muon_weight_{direction}"})
     
-    cfg.add_shift(name="ts_up", id=5, type="shape") #cp-even
-    cfg.add_shift(name="ts_down", id=7, type="shape") #cp-odd
-    add_shift_aliases(cfg, "ts", {"tauspinner_weight": "tauspinner_weight_{direction}"})
+    # cfg.add_shift(name="ts_up", id=5, type="shape") #cp-even
+    # cfg.add_shift(name="ts_down", id=7, type="shape") #cp-odd
+    # add_shift_aliases(cfg, "ts", {"tauspinner_weight": "tauspinner_weight_{direction}"})
     
-    cfg.add_shift(name="electron_up", id=8, type="shape")
-    cfg.add_shift(name="electron_down", id=9, type="shape")
-    add_shift_aliases(cfg, "electron", {"electron_weight": "electron_weight_{direction}"})
+    # cfg.add_shift(name="electron_up", id=8, type="shape")
+    # cfg.add_shift(name="electron_down", id=9, type="shape")
+    # add_shift_aliases(cfg, "electron", {"electron_weight": "electron_weight_{direction}"})
     
     cfg.add_shift(name="top_pt_up", id=10, type="shape")
     cfg.add_shift(name="top_pt_down", id=11, type="shape")
@@ -838,6 +856,7 @@ def add_run3(ana: od.Analysis,
     
     cfg.x.dy_ptll_corrs = DotDict.wrap({
         'datasets' : {
+            "DYto2L_M_10to50_amcatnloFXFX": "NLO",
             "DYto2L_M_50_0J_amcatnloFXFX": "NLO",
             "DYto2L_M_50_1J_amcatnloFXFX": "NLO",
             "DYto2L_M_50_2J_amcatnloFXFX": "NLO",
