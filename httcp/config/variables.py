@@ -407,6 +407,7 @@ def add_highlevel_features(cfg: od.Config) -> None:
     """
     Adds MET and other high-level features
     """
+    bin_factor = 1/2
     cfg.add_variable(
         name="met",
         expression="MET.pt",
@@ -433,7 +434,7 @@ def add_highlevel_features(cfg: od.Config) -> None:
         name="puppi_met_pt",
         expression="PuppiMET.pt",
         null_value=EMPTY_FLOAT,
-        binning=(50, 0,100),
+        binning=(bin_factor*50, 0,100),
         unit="GeV",
         x_title=r"PUPPI MET $p_T$",
     )
@@ -441,7 +442,7 @@ def add_highlevel_features(cfg: od.Config) -> None:
         name="puppi_met_phi",
         expression="PuppiMET.phi",
         null_value=EMPTY_FLOAT,
-        binning=(32, -3.2,3.2),
+        binning=(bin_factor*32, -3.2,3.2),
         x_title=r"PUPPI MET $\phi$",
     ) 
     cfg.add_variable(
@@ -554,13 +555,13 @@ def phi_cp_variables(cfg: od.Config) -> None:
     binning=(n_bins_phi_cp, 0, 2*np.pi),
     x_title=rf"$\varphi_{{CP}} (rad)",
     )
-    for the_ch in ['mu_pi', 'mu_rho', "mu_a1_3pr", 'mu_a1_3pr_dp', 'mu_a1_3pr_pv']:
+    for the_ch in ['mu_pi','mu_rho','mu_a1_3pr_dp_reco','mu_a1_3pr_pv_reco','mu_a1_3pr_pv_mtt','mu_a1_3pr_pv_gef']:
         spitted_str = the_ch.split('_')
         if 'a1' in the_ch: 
-            title_str = "\\" + spitted_str[0] + fr" a_1, {spitted_str[2]}"
+            title_str = "\\" + spitted_str[0] + fr" a_1, {spitted_str[2]}" + fr"({spitted_str[3]} {spitted_str[4]})"
         else:
              title_str = "\\" + spitted_str[0] + "\\" + spitted_str[1]
-        if the_ch =='mu_rho' or the_ch == 'mu_a1_3pr':
+        if the_ch == 'mu_rho' or the_ch.startswith('mu_a1_3pr'):
             n_bins_phi_cp = 10
         else: 
             n_bins_phi_cp = 8
@@ -616,6 +617,7 @@ def phi_cp_variables(cfg: od.Config) -> None:
         # )
 
 def add_dilepton_features(cfg: od.Config) -> None:
+    bin_factor = 1/2
     channels = cfg.channels.names()
     ch_objects = DotDict.wrap({
         'etau'  : {'lep0':'Electron',
@@ -628,7 +630,6 @@ def add_dilepton_features(cfg: od.Config) -> None:
                    'lep1':'Tau'    },
     })
     bin_split_factor = 4 #Used to define histograms for kinematic variables with finer binning
-    
     for ch_str in channels:
         lep0_str = ch_str.replace('tau','')
         
@@ -636,7 +637,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 name=f"{ch_str}_mvis",
                 expression=f"hcand_{ch_str}.mass",
                 null_value=EMPTY_FLOAT,
-                binning=(40, 0.0, 200.0),
+                binning=(bin_factor*40, 0.0, 200.0),
                 unit="GeV",
                 x_title=r"$m_{vis}$",
             )
@@ -647,14 +648,6 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 binning=(115, 15, 130),
                 unit="GeV",
                 x_title=r"$m_{vis}$",
-            )
-        cfg.add_variable(
-                name=f"{ch_str}_fastMTT_mass",
-                expression=f"hcand_{ch_str}.fastMTT.mass",
-                null_value=EMPTY_FLOAT,
-                binning=(40, 0.0, 200.0),
-                unit="GeV",
-                x_title=r"$m_{FastMTT}$",
             )
         if ch_str != 'tautau':
             cfg.add_variable(
@@ -718,7 +711,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
             name=f"{ch_str}_delta_r",
             expression=f"hcand_{ch_str}.delta_r",
             null_value=EMPTY_FLOAT,
-            binning=(40, 0, 4),
+            binning=(bin_factor*40, 0, 4),
             x_title=r"$\Delta R(\ell,\ell)$",
         )
         cfg.add_variable(
@@ -728,14 +721,13 @@ def add_dilepton_features(cfg: od.Config) -> None:
             binning=(40, -5, 5),
             x_title=r"$\Delta \eta(\ell,\ell)$",
         )
-        
         cfg.add_variable(
-                name=f"{ch_str}_pt",
-                expression=f"hcand_{ch_str}.pt",
-                null_value=EMPTY_FLOAT,
-                binning=(40, 0.0, 200.0),
-                unit="GeV/c",
-                x_title=r"$p_{T}(\ell\ell)$",
+            name=f"{ch_str}_pt",
+            expression=f"hcand_{ch_str}.pt",
+            null_value=EMPTY_FLOAT,
+            binning=(bin_factor*40, 0.0, 200.0),
+            unit="GeV/c",
+            x_title=r"$p_{T}(\ell\ell)$",
         )
         cfg.add_variable(
             name=f"{ch_str}_delta_phi_0_met",
@@ -766,7 +758,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 name=f"{ch_str}_{lep}_pt",
                 expression=f"hcand_{ch_str}.{lep}.pt",
                 null_value=EMPTY_FLOAT,
-                binning=(40, 20, 100.),
+                binning=(bin_factor*40, 20, 100.),
                 unit="GeV",
                 x_title= rf"{lep_str} $p_{{T}}$",
             )
@@ -788,7 +780,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 name=f"{ch_str}_{lep}_mass",
                 expression=f"hcand_{ch_str}.{lep}.mass",
                 null_value=EMPTY_FLOAT,
-                binning=(30, 0, 3),
+                binning=(bin_factor*30, 0, 3),
                 unit="GeV",
                 x_title=f"{lep_str} mass",
             )
@@ -900,63 +892,109 @@ def add_dilepton_features(cfg: od.Config) -> None:
             )
             
             ## FastMTT variables
+            pretty_label = {
+                "": "unconstrained",
+                "BW": "mass-window",
+                "cons": "Breit Wigner",
+            }
+            for prefix in ['', '_BW', '_cons']:
+                key = prefix.strip("_")
+                label = pretty_label[key]
+
+                cfg.add_variable(
+                    name=f"hcand_{ch_str}_fastMTT{prefix}_{lep}_px",
+                    expression=f"hcand_{ch_str}.fastMTT{prefix}.{lep}.px",
+                    null_value=EMPTY_FLOAT,
+                    binning=(42, -10., 200.),
+                    unit="GeV",
+                    x_title=f"{lep} " + rf"$p_{{x}}$ (fastMTT: {label})"
+                )
+                cfg.add_variable(
+                    name=f"hcand_{ch_str}_fastMTT{prefix}_{lep}_py",
+                    expression=f"hcand_{ch_str}.fastMTT{prefix}.{lep}.py",
+                    null_value=EMPTY_FLOAT,
+                    binning=(42, -10., 200.),
+                    unit="GeV",
+                    x_title=f"{lep} " + rf"$p_{{y}}$ (fastMTT: {label})"
+                )
+                cfg.add_variable(
+                    name=f"hcand_{ch_str}_fastMTT{prefix}_{lep}_pz",
+                    expression=f"hcand_{ch_str}.fastMTT{prefix}.{lep}.pz",
+                    null_value=EMPTY_FLOAT,
+                    binning=(42, -10., 200.),
+                    unit="GeV",
+                    x_title=f"{lep} " + rf"$p_{{z}}$ (fastMTT: {label})"
+                )
+                cfg.add_variable(
+                    name=f"hcand_{ch_str}_fastMTT{prefix}_{lep}_pt",
+                    expression=f"hcand_{ch_str}.fastMTT{prefix}.{lep}.pt",
+                    null_value=EMPTY_FLOAT,
+                    binning=(bin_factor*40, 0., 200.),
+                    unit="GeV",
+                    x_title=f"{lep} " + rf"$p_{{T}}$ (fastMTT: {label})"
+                )
+                cfg.add_variable(
+                    name=f"hcand_{ch_str}_fastMTT{prefix}_{lep}_eta",
+                    expression=f"hcand_{ch_str}.fastMTT{prefix}.{lep}.eta",
+                    null_value=EMPTY_FLOAT,
+                    binning=(25, -3.0, 3.0),
+                    unit="GeV",
+                    x_title=f"{lep} " + rf"$\eta$ (fastMTT: {label})"
+                )
+                cfg.add_variable(
+                    name=f"hcand_{ch_str}_fastMTT{prefix}_{lep}_phi",
+                    expression=f"hcand_{ch_str}.fastMTT{prefix}.{lep}.phi",
+                    null_value=EMPTY_FLOAT,
+                    binning=(32, -3.2, 3.2),
+                    unit="GeV",
+                    x_title=f"{lep} " + rf"$\phi$ (fastMTT: {label})"
+                )
+                cfg.add_variable(
+                    name=f"hcand_{ch_str}_fastMTT{prefix}_{lep}_mass",
+                    expression=f"hcand_{ch_str}.fastMTT{prefix}.{lep}.mass",
+                    null_value=EMPTY_FLOAT,
+                    binning=(50, 0.01, 3.0),
+                    unit="GeV",
+                    x_title=f"{lep} " + rf"$m$ (fastMTT: {label})"
+               )
+        pretty_label = {
+                "": "unconstrained",
+                "BW": "mass-window",
+                "cons": "Breit Wigner",
+            }
+        for prefix in ['', '_BW', '_cons']:
+            key = prefix.strip("_")
+            label = pretty_label[key]
 
             cfg.add_variable(
-                name=f"hcand_{ch_str}_fastMTT_{lep}_px",
-                expression=f"hcand_{ch_str}.fastMTT.{lep}.px",
-                null_value=EMPTY_FLOAT,
-                binning=(42, -10., 200.),
-                unit="GeV",
-                x_title=f"{lep} " + r"$p_{x}^{fastMTT}$",
+               name=f"hcand_{ch_str}_fastMTT{prefix}_mass",
+               expression=f"hcand_{ch_str}.fastMTT{prefix}.mass",
+               null_value=EMPTY_FLOAT,
+               binning=(bin_factor*40, 0.0, 200.0),
+               unit="GeV",
+               x_title=rf"$m_{{\text{{fastMTT}}}}$ ({label})",
             )
-            cfg.add_variable(
-                name=f"hcand_{ch_str}_fastMTT_{lep}_py",
-                expression=f"hcand_{ch_str}.fastMTT.{lep}.py",
-                null_value=EMPTY_FLOAT,
-                binning=(42, -10., 200.),
-                unit="GeV",
-                x_title=f"{lep} " + r"$p_{y}^{fastMTT}$",
-            )
-            cfg.add_variable(
-                name=f"hcand_{ch_str}_fastMTT_{lep}_pz",
-                expression=f"hcand_{ch_str}.fastMTT.{lep}.pz",
-                null_value=EMPTY_FLOAT,
-                binning=(42, -10., 200.),
-                unit="GeV",
-                x_title=f"{lep} " + r"$p_{z}^{fastMTT}$",
-            )
-            cfg.add_variable(
-                name=f"hcand_{ch_str}_fastMTT_{lep}_pt",
-                expression=f"hcand_{ch_str}.fastMTT.{lep}.pt",
-                null_value=EMPTY_FLOAT,
-                binning=(40, 0., 200.),
-                unit="GeV",
-                x_title=f"{lep} " + r"$p_{T}^{fastMTT}$",
-            )
-            cfg.add_variable(
-                name=f"hcand_{ch_str}_fastMTT_{lep}_eta",
-                expression=f"hcand_{ch_str}.fastMTT.{lep}.eta",
-                null_value=EMPTY_FLOAT,
-                binning=(25, -3.0, 3.0),
-                unit="GeV",
-                x_title=f"{lep} " + r"$\eta^{fastMTT}$",
-            )
-            cfg.add_variable(
-                name=f"hcand_{ch_str}_fastMTT_{lep}_phi",
-                expression=f"hcand_{ch_str}.fastMTT.{lep}.phi",
-                null_value=EMPTY_FLOAT,
-                binning=(32, -3.2, 3.2),
-                unit="GeV",
-                x_title=f"{lep} " + r"$\phi^{fastMTT}$",
-            )
-            cfg.add_variable(
-                name=f"hcand_{ch_str}_fastMTT_{lep}_mass",
-                expression=f"hcand_{ch_str}.fastMTT.{lep}.mass",
-                null_value=EMPTY_FLOAT,
-                binning=(50, 0.01, 3.0),
-                unit="GeV",
-                x_title=f"{lep} " + r"$m^{fastMTT}$",
-            )
+        cfg.add_variable(
+            name=f"theta_gj_mu_a1_3pr_pv_gef",
+            expression=f"theta_gj_mu_a1_3pr_pv_gef",
+            null_value=EMPTY_FLOAT,
+            binning=(40, 0, 0.0005),
+            x_title=r"$\theta_{GJ}$",
+        )
+        cfg.add_variable(
+            name=f"theta_max_mu_a1_3pr_pv_gef",
+            expression=f"theta_max_mu_a1_3pr_pv_gef",
+            null_value=EMPTY_FLOAT,
+            binning=(40, 0, 0.05),
+            x_title=r"$\theta_{GJ}^{max}$",
+        )
+        cfg.add_variable(
+            name=f"theta_rot_mu_a1_3pr_pv_gef",
+            expression=f"theta_rot_mu_a1_3pr_pv_gef",
+            null_value=EMPTY_FLOAT,
+            binning=(40, 0, 0.0005),
+            x_title=r"$\theta_{GJ}^{rotated}$",
+        )
 
 def add_ff_variables(cfg: od.Config) -> None:
     for the_name, ax in cfg.x.fake_factor_method.axes.items():
