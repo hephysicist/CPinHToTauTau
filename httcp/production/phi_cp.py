@@ -91,7 +91,7 @@ def cartesian_to_pt_eta_phi_mass(vector_cartesian):
     }, with_name="PtEtaPhiMLorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
 
 
-def rotate_to_gj_max(tau_vis, tau_mtt):
+def rotate_to_gj_max(vis, mtt):
     """
     Compute the Gottfried-Jackson angle theta_GJ using 3-vector kinematics.
     Rotate the tau momentum if theta_GJ exceeds the maximal allowed angle theta_max.
@@ -101,25 +101,21 @@ def rotate_to_gj_max(tau_vis, tau_mtt):
     - To preserve small-angle precision, vectors are not fully normalised until the final rotation step.
     """
 
-    # --- 4-vectors ---
-    vis = get_lep_p4(tau_vis)   # visible decay product
-    mtt = get_lep_p4(tau_mtt)   # FastMTT reconstructed tau
-
-    # --- 3-vectors explicitly from pt/eta/phi ---
+    # --- 3-vectors explicitly ---
     vis3 = ak.zip({
         "px": vis.pt * np.cos(vis.phi),
         "py": vis.pt * np.sin(vis.phi),
-        "pz": vis.pt * np.sinh(vis.eta),
-    })
+        "pz": vis.pt * np.sinh(vis.eta),}, 
+        with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
     mtt3 = ak.zip({
         "px": mtt.pt * np.cos(mtt.phi),
         "py": mtt.pt * np.sin(mtt.phi),
-        "pz": mtt.pt * np.sinh(mtt.eta),
-    })
+        "pz": mtt.pt * np.sinh(mtt.eta),}, 
+        with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
 
     # --- magnitudes ---
-    vis_mag = np.sqrt(vis3.px**2 + vis3.py**2 + vis3.pz**2)
-    mtt_mag = np.sqrt(mtt3.px**2 + mtt3.py**2 + mtt3.pz**2)
+    vis_mag = vis3.mag
+    mtt_mag = mtt3.mag
 
     # --- kinematic theta_GJ via dot product ---
     # Compute theta_GJ preserving small opening angles.
@@ -157,8 +153,8 @@ def rotate_to_gj_max(tau_vis, tau_mtt):
     }))
     raw_mag = np.sqrt(n3_raw.px**2 + n3_raw.py**2 + n3_raw.pz**2)
     fallback = cross(n1, ak.zip({"px": ak.ones_like(n1.px),
-                                 "py": 0*n1.px,
-                                 "pz": 0*n1.px}))
+                                    "py": 0*n1.px,
+                                    "pz": 0*n1.px}))
     n3 = ak.where(raw_mag > eps, n3_raw, fallback)
     n3 = ak.zip({
         "px": n3.px / np.sqrt(n3.px**2 + n3.py**2 + n3.pz**2),
@@ -276,12 +272,11 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
 
         # Select tau four-momentum based on the reconstruction method
         if pair_decay_ch == "mu_a1_3pr_pv_reco":
-            tau_p4 = tau
+            tau_p4 = get_lep_p4(tau)
         elif pair_decay_ch == "mu_a1_3pr_pv_mtt":
-            tau_p4 = tau_MTT
+            tau_p4 = get_lep_p4(tau_MTT)
         elif pair_decay_ch == "mu_a1_3pr_pv_gef":
-            # rotate tau to maximise GJ angle
-            tau_p4, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau, tau_MTT)
+            tau_p4 = get_lep_p4(tau_MTT)
 
         # Select charged pions from the tau decay
         charged_pion = ak.drop_none(ak.mask(tauprod, pion_mask(tauprod)))
@@ -305,6 +300,13 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         tau_p4  = ak.drop_none(ak.mask(tau_p4, valid_mask))
         ss_pi1  = ak.drop_none(ak.mask(ss_pi1, valid_mask))
         ss_pi2  = ak.drop_none(ak.mask(ss_pi2, valid_mask))
+        tau_charge = ak.drop_none(ak.mask(ak.firsts(tau.charge), valid_mask))
+
+        if pair_decay_ch == "mu_a1_3pr_pv_gef":
+            tau_vis = os_pi + ss_pi1 + ss_pi2
+            tau_MTT = ak.drop_none(ak.mask(get_lep_p4(tau_MTT), valid_mask))
+            # rotate tau to max GJ angle if kinematic limit is exceeded
+            tau_p4, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis, tau_MTT)
 
         # Collect vectors for boosting and GJ rotation
         vecs_p4 = {
@@ -313,19 +315,34 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
             'ss1': ss_pi1,
             'ss2': ss_pi2
         }
-
+        
         # Boost vectors to zero-momentum frame of the system
-        zmf_vars = make_boost(vecs_p4)
+        zmf_vars = make_boost(vecs_p4, boostvec_=tau_p4.boostvec)
 
         # Construct polarimetric A1 object
         a1_pv = PolarimetricA1(zmf_vars['P2'],
-                               zmf_vars['P1'],
-                               zmf_vars['SS1'],
-                               zmf_vars['SS2'],
-                               ak.firsts(tau.charge))
+                                zmf_vars['P1'],
+                                zmf_vars['SS1'],
+                                zmf_vars['SS2'],
+                                tau_charge)
 
         # Reconstruct the tau impact-parameter in boosted frame
-        r2 = a1_pv.PVC().boostCM_of_p4(-(vecs_p4['p1'] + vecs_p4['p2']))
+        pv = - a1_pv.PVC().pvec #tau rest frame
+        pv = ak.zip({
+            "px": pv.px,
+            "py": pv.py,
+            "pz": pv.pz,
+            "t": ak.zeros_like(pv.px)}, 
+            with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
+
+        # -> spherical fields ['rho', 'phi', 'eta'] for tau_p4.boostvec
+        tau_boost_cart = ak.zip({
+            "x": tau_p4.boostvec.rho * np.cos(tau_p4.boostvec.phi),
+            "y": tau_p4.boostvec.rho * np.sin(tau_p4.boostvec.phi),
+            "z": tau_p4.boostvec.rho * np.sinh(tau_p4.boostvec.eta)}, 
+            with_name="ThreeVector", behavior=coffea.nanoevents.methods.vector.behavior)
+
+        r2 = pv.boost(tau_boost_cart)
         p2 = tau_p4  # final corrected tau vector
 
     final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]   
@@ -346,12 +363,17 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         vecs_p4[var] = eval(var)
     return vecs_p4, do_phase_shift, ch1, theta_gj, theta_max, theta_rot
 
-def make_boost(vecs_p4):
+def make_boost(vecs_p4, boostvec_=None):
     # Create a dictionary to store boosted variables (they are defined with upper case names)
     zmf_vars = {}
-    boostvec_ =vecs_p4['p1'].add(vecs_p4['p2'])
-    for var in vecs_p4.keys():
-        zmf_vars[var.upper()] = vecs_p4[var].boostCM_of_p4(boostvec_)
+    if boostvec_ is None:
+        boostvec_ = vecs_p4['p1'].add(vecs_p4['p2'])
+        for var in vecs_p4.keys():
+            zmf_vars[var.upper()] = vecs_p4[var].boostCM_of_p4(boostvec_)
+    else:
+        for var in vecs_p4.keys():
+            zmf_vars[var.upper()] = vecs_p4[var].boost(boostvec_.negative())
+    
     return zmf_vars
 
 
