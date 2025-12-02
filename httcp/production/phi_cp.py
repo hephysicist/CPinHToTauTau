@@ -29,66 +29,17 @@ def pion_mask(tauprod): return np.abs(tauprod.pdgId) == 211
 def get_single_part(array: ak.Array, idx: int) -> ak.Array:
     return ak.firsts(array[:,idx:idx+1])
 
-## helper function for the PV theta_GJ rotation
-def cross(a, b):
-    return ak.zip({
-        "px": a.py * b.pz - a.pz * b.py,
-        "py": a.pz * b.px - a.px * b.pz,
-        "pz": a.px * b.py - a.py * b.px
-    })
-
-def unit_3vec(v):
-    mag = np.sqrt(v.px**2 + v.py**2 + v.pz**2)
-    return ak.zip({
-        "px": ak.where(mag > 0, v.px / mag, 0),
-        "py": ak.where(mag > 0, v.py / mag, 0),
-        "pz": ak.where(mag > 0, v.pz / mag, 0),
-    })
-
-def dot_3vec(v1, v2):
-    return v1.px * v2.px + v1.py * v2.py + v1.pz * v2.pz
-
-def scale_vec(v, s):
-    return ak.zip({
-        "px": v.px * s,
-        "py": v.py * s,
-        "pz": v.pz * s,
-    })
-
-def add_vec(v1, v2):
-    return ak.zip({
-        "px": v1.px + v2.px,
-        "py": v1.py + v2.py,
-        "pz": v1.pz + v2.pz,
-    })
-
-def cartesian_to_pt_eta_phi_mass(vector_cartesian):
-    """
-    Convert an Awkward array with fields (x, y, z, t) representing
-    a Lorentz vector in Cartesian coords into a PtEtaPhiMLorentzVectorArray.
-    """
-    px = vector_cartesian.x
-    py = vector_cartesian.y
-    pz = vector_cartesian.z
-    energy = vector_cartesian.t
-
-    pt = np.sqrt(px**2 + py**2)
-    p = np.sqrt(px**2 + py**2 + pz**2)
-
-    epsilon = 1e-12
-    eta = 0.5 * np.log((p + pz) / (p - pz + epsilon))
-    phi = np.arctan2(py, px)
-
-    mass2 = energy**2 - p**2
-    mass2 = ak.where(mass2 > 0, mass2, 0)
-    mass = np.sqrt(mass2)
+# helper functions for the unit vectors and the method is buggy
+def unit(v, eps=1e-9):
+    v3 = v.to_3D()
+    mag = v3.mag
 
     return ak.zip({
-        "pt": pt,
-        "eta": eta,
-        "phi": phi,
-        "mass": mass,
-    }, with_name="PtEtaPhiMLorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
+            "x": ak.where(mag > eps, v3.x / mag, 1.0),
+            "y": ak.where(mag > eps, v3.y / mag, 1.0),
+            "z": ak.where(mag > eps, v3.z / mag, 1.0),},
+        with_name="Vector3D",
+        behavior=coffea.nanoevents.methods.vector.behavior)
 
 
 def rotate_to_gj_max(vis, mtt):
@@ -97,22 +48,13 @@ def rotate_to_gj_max(vis, mtt):
     Rotate the tau momentum if theta_GJ exceeds the maximal allowed angle theta_max.
 
     Notes :
-    - Angular calculations are performed explicitly without helper functions to correctly handle the array structures.
+    - All angular and cross-product operations are performed purely in 3-space to maintain numerical stability. 
+      Only the tau energy is carried through from the original four-vector for the final reconstruction.
     - To preserve small-angle precision, vectors are not fully normalised until the final rotation step.
     """
-
-    # --- 3-vectors explicitly ---
-    vis3 = ak.zip({
-        "px": vis.pt * np.cos(vis.phi),
-        "py": vis.pt * np.sin(vis.phi),
-        "pz": vis.pt * np.sinh(vis.eta),}, 
-        with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
-    mtt3 = ak.zip({
-        "px": mtt.pt * np.cos(mtt.phi),
-        "py": mtt.pt * np.sin(mtt.phi),
-        "pz": mtt.pt * np.sinh(mtt.eta),}, 
-        with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
-
+    
+    vis3 = vis.to_3D()
+    mtt3 = mtt.to_3D()
     # --- magnitudes ---
     vis_mag = vis3.mag
     mtt_mag = mtt3.mag
@@ -120,7 +62,7 @@ def rotate_to_gj_max(vis, mtt):
     # --- kinematic theta_GJ via dot product ---
     # Compute theta_GJ preserving small opening angles.
     # Normalizing vectors would erase tiny deviations, giving theta_gj=0 for nearly parallel vectors.
-    cos_theta_gj = (vis3.px * mtt3.px + vis3.py * mtt3.py + vis3.pz * mtt3.pz) / (vis_mag * mtt_mag)
+    cos_theta_gj = vis3.dot(mtt3) / (vis_mag * mtt_mag)
     cos_theta_gj = ak.where(cos_theta_gj > 1.0, 1.0,
                             ak.where(cos_theta_gj < -1.0, -1.0, cos_theta_gj))
     theta_gj = np.arccos(cos_theta_gj)
@@ -141,54 +83,60 @@ def rotate_to_gj_max(vis, mtt):
     # --- rotation basis ---
     # Use original 3-vectors to define orthonormal basis
     eps = 1e-9
-    n1 = ak.zip({
-        "px": ak.where(vis_mag > eps, vis3.px / vis_mag, 0.0),
-        "py": ak.where(vis_mag > eps, vis3.py / vis_mag, 0.0),
-        "pz": ak.where(vis_mag > eps, vis3.pz / vis_mag, 0.0),
-    })
-    n3_raw = cross(n1, ak.zip({
-        "px": ak.where(mtt_mag > eps, mtt3.px / mtt_mag, 0.0),
-        "py": ak.where(mtt_mag > eps, mtt3.py / mtt_mag, 0.0),
-        "pz": ak.where(mtt_mag > eps, mtt3.pz / mtt_mag, 0.0),
-    }))
-    raw_mag = np.sqrt(n3_raw.px**2 + n3_raw.py**2 + n3_raw.pz**2)
-    fallback = cross(n1, ak.zip({"px": ak.ones_like(n1.px),
-                                    "py": 0*n1.px,
-                                    "pz": 0*n1.px}))
-    n3 = ak.where(raw_mag > eps, n3_raw, fallback)
-    n3 = ak.zip({
-        "px": n3.px / np.sqrt(n3.px**2 + n3.py**2 + n3.pz**2),
-        "py": n3.py / np.sqrt(n3.px**2 + n3.py**2 + n3.pz**2),
-        "pz": n3.pz / np.sqrt(n3.px**2 + n3.py**2 + n3.pz**2),
-    })
-    n2 = unit_3vec(cross(n3, n1))
+    n1 = unit(vis3)
 
+    # normal vector (perpendicular to decay plane)
+    mtt_unit = unit(mtt3)
+    n3_raw = n1.cross(mtt_unit)
+    n3_mag = n3_raw.mag
 
-    # --- component decomposition along new basis ---
-    Porth = dot_3vec(mtt3, n3)
-    mtt_p = mtt_mag
-    Ppar = np.sqrt(ak.where(mtt_p**2 - Porth**2 > 0, mtt_p**2 - Porth**2, 0.0))
+    # fallback direction if cross-product vanishes, if n1 is aligned with z-axis, choose x-axis as fallback
+    unit_z = ak.zip({"x": 0*n1.x, "y": 0*n1.x, "z": 1*n1.x}, 
+        with_name="Vector3D", behavior=coffea.nanoevents.methods.vector.behavior)
+    fallback = ak.where(abs(n1.z) < 0.99, n1.cross(unit_z), 
+        n1.cross(ak.zip({"x": 1*n1.x,"y":0*n1.x,"z":0*n1.x}, 
+        with_name="Vector3D", behavior=coffea.nanoevents.methods.vector.behavior)))
+
+    n3 = unit(ak.where(n3_mag > eps, n3_raw, fallback))
+
+    # in-plane direction
+    n2 = unit(n3.cross(n1))
+
+    # --- decompose tau momentum in this basis ---
+    Porth = mtt3.dot(n3)
+    Ppar = np.sqrt(ak.where(mtt_mag**2 - Porth**2 > 0,
+                            mtt_mag**2 - Porth**2, 0))
 
     cosT = np.cos(theta_max)
     sinT = np.sin(theta_max)
-    par = unit_3vec(add_vec(scale_vec(n1, cosT), scale_vec(n2, sinT)))
 
-    new_dir = add_vec(scale_vec(par, Ppar), scale_vec(n3, Porth))
-    new_dir = unit_3vec(new_dir)
+    # target direction within decay plane
+    par_dir = unit(n1 * cosT + n2 * sinT)
 
-    # --- rotated 4-vector ---
-    rot_cart = ak.zip({
-        "x": new_dir.px * mtt_p,
-        "y": new_dir.py * mtt_p,
-        "z": new_dir.pz * mtt_p,
-        "t": mtt.energy,
-    })
-    rotated = cartesian_to_pt_eta_phi_mass(rot_cart)
+    # new spatial direction after enforcing GJ limit
+    new_dir = unit(par_dir * Ppar + n3 * Porth)
+    new_p = new_dir * mtt_mag
+    E_new = np.sqrt(mtt_mag**2 + tau_mass**2)
+
+    # --- rebuild 4-vector using original energy ---
+    tau_rot_cart = ak.zip({
+            "x": new_p.x,
+            "y": new_p.y,
+            "z": new_p.z,
+            "energy": E_new,},
+        with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior,)
+
+    tau_rot = ak.zip({
+            "pt": tau_rot_cart.pt,
+            "eta": tau_rot_cart.eta,
+            "phi": tau_rot_cart.phi,
+            "mass": tau_rot_cart.mass,},
+        with_name="PtEtaPhiMLorentzVector",behavior=coffea.nanoevents.methods.vector.behavior,)
+
     theta_rot = ak.where(need_rot, theta_max, theta_gj)
-    rotated_tau = ak.where(need_rot, rotated, mtt)
 
-    return rotated_tau, theta_gj, theta_max, theta_rot
-
+    return tau_rot, theta_gj, theta_max, theta_rot
+    
 
 def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     tau     = events.hcand_mutau.lep1 
@@ -293,57 +241,61 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         ss_pi1 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, :1]), mask_3pr))
         ss_pi2 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, 1:2]), mask_3pr))
 
-        # Drop events with missing inputs
+        # Drop events with missing inputs ## same mask as above
         valid_mask = ((ak.num(os_pi) == 1) & (ak.num(tau_p4) == 1) &
-                      (ak.num(ss_pi1) == 1) & (ak.num(ss_pi2) == 1))[..., np.newaxis]
+                        (ak.num(ss_pi1) == 1) & (ak.num(ss_pi2) == 1))[..., np.newaxis]
         os_pi   = ak.drop_none(ak.mask(os_pi, valid_mask))
         tau_p4  = ak.drop_none(ak.mask(tau_p4, valid_mask))
         ss_pi1  = ak.drop_none(ak.mask(ss_pi1, valid_mask))
         ss_pi2  = ak.drop_none(ak.mask(ss_pi2, valid_mask))
         tau_charge = ak.drop_none(ak.mask(ak.firsts(tau.charge), valid_mask))
 
+        # GJ rotation and boost in Higgs rest frame
         if pair_decay_ch == "mu_a1_3pr_pv_gef":
             tau_vis = os_pi + ss_pi1 + ss_pi2
-            tau_MTT = ak.drop_none(ak.mask(get_lep_p4(tau_MTT), valid_mask))
+
+            # Boost to Higgs rest frame
+            muon = get_lep_p4(muon)
+            muon = ak.drop_none(ak.mask(muon, valid_mask))
+            higgs_p4 = muon + tau_p4
+            beta_H = higgs_p4.boostvec
+            #beta_H = tau_p4.boostvec
+            tau_vis_H = tau_vis.boost(-beta_H)
+            tau_p4_H   = tau_p4.boost(-beta_H)
+
             # rotate tau to max GJ angle if kinematic limit is exceeded
-            tau_p4, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis, tau_MTT)
+            tau_p4_H_rot, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis_H, tau_p4_H)
 
-        # Collect vectors for boosting and GJ rotation
-        vecs_p4 = {
-            'p1': os_pi,
-            'p2': tau_p4,
-            'ss1': ss_pi1,
-            'ss2': ss_pi2
-        }
+            # boost back to lab frame
+            tau_p4 = tau_p4_H_rot.boost(beta_H)
         
-        # Boost vectors to zero-momentum frame of the system
-        zmf_vars = make_boost(vecs_p4, boostvec_=tau_p4.boostvec)
+        # Collect vectors for boosting into tau rest frame
+        beta_tau = tau_p4.boostvec
+        vecs_pv = {
+            'p1': os_pi.boost(-beta_tau),
+            'p2': tau_p4.boost(-beta_tau),
+            'ss1': ss_pi1.boost(-beta_tau),
+            'ss2': ss_pi2.boost(-beta_tau)
+        }
 
-        # Construct polarimetric A1 object
-        a1_pv = PolarimetricA1(zmf_vars['P2'],
-                                zmf_vars['P1'],
-                                zmf_vars['SS1'],
-                                zmf_vars['SS2'],
-                                tau_charge)
+        a1_pol = PolarimetricA1(vecs_pv['p2'], vecs_pv['p1'], vecs_pv["ss1"], vecs_pv["ss2"], tau_charge)
 
         # Reconstruct the tau impact-parameter in boosted frame
-        pv = - a1_pv.PVC().pvec #tau rest frame
+        pv = -a1_pol.PVC().pvec #tau rest frame
+
         pv = ak.zip({
-            "px": pv.px,
-            "py": pv.py,
-            "pz": pv.pz,
-            "t": ak.zeros_like(pv.px)}, 
-            with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
+            "x": pv.x, 
+            "y": pv.y, 
+            "z": pv.z, 
+            "t": ak.zeros_like(pv.x)}, with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
+        r2 = pv.boost(beta_tau)
 
-        # -> spherical fields ['rho', 'phi', 'eta'] for tau_p4.boostvec
-        tau_boost_cart = ak.zip({
-            "x": tau_p4.boostvec.rho * np.cos(tau_p4.boostvec.phi),
-            "y": tau_p4.boostvec.rho * np.sin(tau_p4.boostvec.phi),
-            "z": tau_p4.boostvec.rho * np.sinh(tau_p4.boostvec.eta)}, 
-            with_name="ThreeVector", behavior=coffea.nanoevents.methods.vector.behavior)
-
-        r2 = pv.boost(tau_boost_cart)
-        p2 = tau_p4  # final corrected tau vector
+        p2 = tau_p4.boost(-beta_tau)
+        p2 = ak.zip({
+            "pt": p2.pt,
+            "eta": p2.eta,
+            "phi": p2.phi,
+            "mass": p2.mass,},with_name="PtEtaPhiMLorentzVector", behavior=coffea.nanoevents.methods.vector.behavior,)
 
     final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]   
     p1 = ak.drop_none(ak.mask(p1, final_mask))
@@ -352,12 +304,30 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     r2 = ak.drop_none(ak.mask(r2, final_mask))
     ip2 = ak.drop_none(ak.mask(ip2, final_mask))
     ch1 = ak.drop_none(ak.mask(ch1, final_mask))
-    
+
     if pair_decay_ch == "mu_pi":
         do_phase_shift = ak.zeros_like(r1.energy, dtype=np.bool_) 
+
+    elif pair_decay_ch.startswith('mu_a1_3pr') and 'gen' not in pair_decay_ch:
+        h1 = unit(r1.to_3D())
+        h2 = unit(r2.to_3D())
+        n1 = unit(p1.pvec)
+        n2 = unit(p2.pvec)
+
+        k1 = unit(h1.cross(n1))
+        k2 = unit(h2.cross(n2))
+
+        k1_cross_k2_abs = k1.cross(k2).mag
+        k1_dot_k2 = k1.dot(k2)
+
+        angle = np.arctan2(k1_cross_k2_abs, k1_dot_k2)
+        sign = h1.cross(h2).dot(n1)
+        # Decide shift based on O^*
+        do_phase_shift = ak.where(sign <= 0, angle, 2 * np.pi - angle)
+
     else:
         do_phase_shift = ((p2.energy - r2.energy)/(p2.energy + r2.energy)) < 0
-    
+
     vecs_p4 = {}
     for var in ['p1', 'p2', 'r1', 'r2', 'ip2']:
         vecs_p4[var] = eval(var)
@@ -370,56 +340,69 @@ def make_boost(vecs_p4, boostvec_=None):
         boostvec_ = vecs_p4['p1'].add(vecs_p4['p2'])
         for var in vecs_p4.keys():
             zmf_vars[var.upper()] = vecs_p4[var].boostCM_of_p4(boostvec_)
-    else:
-        for var in vecs_p4.keys():
-            zmf_vars[var.upper()] = vecs_p4[var].boost(boostvec_.negative())
-    
     return zmf_vars
 
 
-def get_acop_angle(vecs_p4, do_phase_shift, ch1):
-    # Create 4 3-vectors from the vecs_p4 dict
-    
-    v3 = {}
-    for var in vecs_p4.keys():
-        v3[var] = vecs_p4[var].to_3D()
-    unit = lambda v: ak.where(v.mag > 0, v/v.mag, v/1.)
-    for var in v3.keys():
-        v3[var] = unit(v3[var])
-        
-    R1_tan = unit(v3['R1'].add((v3['P1'].multiply(v3['R1'].dot(v3['P1']))).negative()))
-    R2_tan = unit(v3['R2'].add((v3['P2'].multiply(v3['R2'].dot(v3['P2']))).negative()))
+def get_acop_angle(vecs_p4, do_phase_shift, ch1, eps=1e-9):
+
+    v3 = {k: vecs_p4[k].to_3D() for k in vecs_p4}
+    v3 = {k: unit(v) for k, v in v3.items()}
+
+    # v3_new = {}
+    # for k, v in v3.items():
+    #     mag = v.mag
+    #     mask = mag > eps
+    #     n_removed = ak.sum(~mask)
+    #     print(f"{k}: {n_removed} vectors set to zero due to small magnitude")
+    #     # setze kleine Vektoren auf 0
+    #     v3_new[k] = ak.zip({
+    #         "x": ak.where(mask, v.x/mag, 0.0),
+    #         "y": ak.where(mask, v.y/mag, 0.0),
+    #         "z": ak.where(mask, v.z/mag, 0.0),
+    #     }, with_name="Vector3D", behavior=v.behavior)
+
+    # v3 = v3_new
+
+
+    R1_tan = unit(v3['R1'] - v3['P1'] * v3['R1'].dot(v3['P1']))
+    R2_tan = unit(v3['R2'] - v3['P2'] * v3['R2'].dot(v3['P2']))
     
     Pminus = ak.where(ch1 < 0, v3['P1'], v3['P2'])
     Rminus = ak.where(ch1 < 0, R1_tan, R2_tan)
     Rplus  = ak.where(ch1 < 0, R2_tan, R1_tan)
     
+    # Compute orientation via scalar triple product: O = Pminus · (Rplus × Rminus)
+    # determines the sign of the angle
     O = Pminus.dot(Rplus.cross(Rminus))
     
-    raw_phi = np.acos(Rplus.dot(Rminus))
+    # Compute angle between Rplus and Rminus
+    # Clip cosine to [-1, 1] to prevent arccos(x) with |x| > 1 due to floating point errors
+    cos_angle = Rplus.dot(Rminus)
+    cos_angle = ak.where(cos_angle > 1.0, 1.0, ak.where(cos_angle < -1.0, -1.0, cos_angle))
+    raw_phi = np.arccos(cos_angle)
     
-    raw_phi = ak.nan_to_none(raw_phi)
-    phi_cp = ak.where(O > 0, raw_phi, 2 * np.pi - raw_phi)
+    # Apply orientation correction: use raw_phi if O > 0, otherwise use 2π - raw_phi
+    phi_cp = ak.where(O > 0, raw_phi, 2.0 * np.pi - raw_phi)
+    
+    # Apply optional phase shift of π
     phi_cp = ak.where(do_phase_shift, phi_cp + np.pi, phi_cp)
-    # Map  angles into [0,2pi) interval
-    phi_cp = ak.where(phi_cp > 2.*np.pi, phi_cp - 2. * np.pi, phi_cp)
-    phi_cp = ak.where(phi_cp < 0, phi_cp + 2. * np.pi, phi_cp)
+    
+    # Normalize angle to [0, 2π) interval
+    phi_cp = ak.where(phi_cp >= 2.0 * np.pi, phi_cp - 2.0 * np.pi, phi_cp)
+    phi_cp = ak.where(phi_cp < 0.0, phi_cp + 2.0 * np.pi, phi_cp)
+    
     return phi_cp
 
 
 def produce_alpha(vecs_p4) -> ak.Array:
     
-    v3 = {}
-    for var in vecs_p4.keys():
-        v3[var] = vecs_p4[var].to_3D()
-    unit = lambda v: ak.where(v.mag > 0, v/v.mag, v/1.)
-    for var in v3.keys():
-        v3[var] = unit(v3[var])
+    v3 = {key: unit(vecs_p4[key]) for key in vecs_p4}
 
     P = v3['p2']
     R = v3['ip2']
-    z = ak.zeros_like(P)
-    z['z'] = 1
+    #z = ak.zeros_like(P)
+    z = ak.zip({"x": 0*P.x, "y": 0*P.x, "z": 1 + 0*P.x},
+                with_name="Vector3D", behavior=coffea.nanoevents.methods.vector.behavior)
     vec1 = unit(z.cross(P))
     vec2 = unit(R.cross(P))
     
@@ -456,6 +439,8 @@ def phi_cp(
         phi_cp = get_acop_angle(zmf_vecs_p4, do_phase_shift, ch1)
         phi_cp = ak.fill_none(ak.firsts(phi_cp,axis=1), EMPTY_FLOAT)
         print(f'Found {ak.sum(phi_cp==EMPTY_FLOAT)}/{len(phi_cp)} phi_cp values that are EMPTY_FLOAT')
+        print(f"{ak.sum(~np.isfinite(phi_cp))}/{len(phi_cp)} phi_cp values were non-finite and replaced with EMPTY_FLOAT")
+        phi_cp = ak.where(np.isfinite(phi_cp), phi_cp, EMPTY_FLOAT)
         events = set_ak_column_f32(events, f"phi_cp_{the_ch}",phi_cp)
 
         if the_ch == "mu_a1_3pr_pv_gef":
@@ -481,5 +466,5 @@ def phi_cp(
 
         # events = set_ak_column_f32(events, f'alpha_{the_ch}', alpha_per_ch)
         # events = set_ak_column_f32(events, "phi_cp_incl", phi_cp)
-       
+
     return events
