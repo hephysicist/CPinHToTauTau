@@ -216,7 +216,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         p2 = os_pi #charge of this pion is the same as the charge of tau
         r2 = sel_ss_pi #charge of this pion is opposite to the charge of tau
 
-    elif pair_decay_ch.startswith('mu_a1_3pr') and 'gen' not in pair_decay_ch:
+    elif pair_decay_ch.startswith('mu_a1_3pr_pv') and 'gen' not in pair_decay_ch:
 
         # Select tau four-momentum based on the reconstruction method
         if pair_decay_ch == "mu_a1_3pr_pv_reco":
@@ -308,23 +308,6 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     if pair_decay_ch == "mu_pi":
         do_phase_shift = ak.zeros_like(r1.energy, dtype=np.bool_) 
 
-    elif pair_decay_ch.startswith('mu_a1_3pr') and 'gen' not in pair_decay_ch:
-        h1 = unit(r1.to_3D())
-        h2 = unit(r2.to_3D())
-        n1 = unit(p1.pvec)
-        n2 = unit(p2.pvec)
-
-        k1 = unit(h1.cross(n1))
-        k2 = unit(h2.cross(n2))
-
-        k1_cross_k2_abs = k1.cross(k2).mag
-        k1_dot_k2 = k1.dot(k2)
-
-        angle = np.arctan2(k1_cross_k2_abs, k1_dot_k2)
-        sign = h1.cross(h2).dot(n1)
-        # Decide shift based on O^*
-        do_phase_shift = ak.where(sign <= 0, angle, 2 * np.pi - angle)
-
     else:
         do_phase_shift = ((p2.energy - r2.energy)/(p2.energy + r2.energy)) < 0
 
@@ -347,7 +330,6 @@ def get_acop_angle(vecs_p4, do_phase_shift, ch1, eps=1e-9):
 
     v3 = {k: vecs_p4[k].to_3D() for k in vecs_p4}
     v3 = {k: unit(v) for k, v in v3.items()}
-
     # v3_new = {}
     # for k, v in v3.items():
     #     mag = v.mag
@@ -360,9 +342,7 @@ def get_acop_angle(vecs_p4, do_phase_shift, ch1, eps=1e-9):
     #         "y": ak.where(mask, v.y/mag, 0.0),
     #         "z": ak.where(mask, v.z/mag, 0.0),
     #     }, with_name="Vector3D", behavior=v.behavior)
-
     # v3 = v3_new
-
 
     R1_tan = unit(v3['R1'] - v3['P1'] * v3['R1'].dot(v3['P1']))
     R2_tan = unit(v3['R2'] - v3['P2'] * v3['R2'].dot(v3['P2']))
@@ -439,7 +419,7 @@ def phi_cp(
         phi_cp = get_acop_angle(zmf_vecs_p4, do_phase_shift, ch1)
         phi_cp = ak.fill_none(ak.firsts(phi_cp,axis=1), EMPTY_FLOAT)
         print(f'Found {ak.sum(phi_cp==EMPTY_FLOAT)}/{len(phi_cp)} phi_cp values that are EMPTY_FLOAT')
-        print(f"{ak.sum(~np.isfinite(phi_cp))}/{len(phi_cp)} phi_cp values were non-finite and replaced with EMPTY_FLOAT")
+        print(f"Found {ak.sum(~np.isfinite(phi_cp))}/{len(phi_cp)} phi_cp values were non-finite and replaced with EMPTY_FLOAT")
         phi_cp = ak.where(np.isfinite(phi_cp), phi_cp, EMPTY_FLOAT)
         events = set_ak_column_f32(events, f"phi_cp_{the_ch}",phi_cp)
 
