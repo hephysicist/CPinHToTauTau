@@ -407,7 +407,7 @@ def add_highlevel_features(cfg: od.Config) -> None:
     """
     Adds MET and other high-level features
     """
-    bin_factor = 1/2
+    bin_factor = 1 # set to 1/2 for broader bins
     cfg.add_variable(
         name="met",
         expression="MET.pt",
@@ -978,21 +978,21 @@ def add_dilepton_features(cfg: od.Config) -> None:
             name=f"theta_gj_mu_a1_3pr_pv_gef",
             expression=f"theta_gj_mu_a1_3pr_pv_gef",
             null_value=EMPTY_FLOAT,
-            binning=(40, 0, 0.0005),
+            binning=(40, 0, 0.2),
             x_title=r"$\theta_{GJ}$",
         )
         cfg.add_variable(
             name=f"theta_max_mu_a1_3pr_pv_gef",
             expression=f"theta_max_mu_a1_3pr_pv_gef",
             null_value=EMPTY_FLOAT,
-            binning=(40, 0, 0.05),
+            binning=(40, 0, 0.4),
             x_title=r"$\theta_{GJ}^{max}$",
         )
         cfg.add_variable(
             name=f"theta_rot_mu_a1_3pr_pv_gef",
             expression=f"theta_rot_mu_a1_3pr_pv_gef",
             null_value=EMPTY_FLOAT,
-            binning=(40, 0, 0.0005),
+            binning=(40, 0, 0.4),
             x_title=r"$\theta_{GJ}^{rotated}$",
         )
 
