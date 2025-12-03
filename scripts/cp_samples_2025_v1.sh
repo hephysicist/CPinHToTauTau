@@ -71,7 +71,7 @@ case $1 in
 ##############################
 ####### 2022preEE ############
 ##############################
-"22_preee_mt")
+"22pre_mt")
         config="run3_2022_preEE_mutau"
         bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal"
         datasets="$data_mu_2022preEE${bkgs}"
@@ -93,7 +93,7 @@ case $1 in
 ###############################
 ######## 2022postEE ###########
 ###############################
-"22_postee_mt")
+"22post_mt")
         config="run3_2022_postEE_mutau"
         bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal"
         datasets="$data_mu_2022postEE${bkgs}"
@@ -109,7 +109,7 @@ case $1 in
 ##############################
 ####### 2023preBPix ##########
 ##############################
-"23_prebpix_mt")
+"23pre_mt")
         config="run3_2023_preBPix_mutau"
         bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal"
         datasets="$data_mu_2023preBPix${bkgs}"
@@ -125,7 +125,7 @@ case $1 in
 # ##############################
 # ####### 2023postBPix #########
 # ##############################
-"22_postbpix_mt")
+"23post_mt")
         config="run3_2023_postBPix_mutau"
         bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal"
         datasets="$data_mu_2023postBPix${bkgs}"
