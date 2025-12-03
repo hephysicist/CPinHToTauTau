@@ -7,6 +7,10 @@ coffea = maybe_import("coffea")
 
 from httcp.production.TComplex import TComplex
 
+def multiplyLorentz(a: ak.Array, b: ak.Array) -> ak.Array:
+    result = a.t * b.t - a.x * b.x - a.y * b.y - a.z * b.z
+    return result
+
 
 class PolarimetricA1:
     def __init__(self,
@@ -24,7 +28,7 @@ class PolarimetricA1:
         self.p4_os_pi       =  p4_os_pi     # os-pion
         self.p4_ss1_pi      =  p4_ss1_pi    # ss1-pion
         self.p4_ss2_pi      =  p4_ss2_pi    # ss2-pion
-        
+
         self.mpi            =  0.13957018   # GeV
         self.mpi0           =  0.1349766    # GeV
         self.mtau           =  1.776        # GeV
@@ -57,21 +61,18 @@ class PolarimetricA1:
         q2 = self.p4_ss2_pi
         q3 = self.p4_os_pi
 
-        a1 = q1+q2+q3
+        a1 = q1 + q2 + q3
 
         N = P.subtract(a1)
 
-        s1 = (q2+q3).mass2
-        s2 = (q1+q3).mass2
-        s3 = (q1+q2).mass2
+        s1 = (q2.add(q3)).mass2
+        s2 = (q1.add(q3)).mass2
+        s3 = (q1.add(q2)).mass2
 
-        # Three Lorentzvector: Why??? : No idea!!!
-        getvec = lambda a,b,c: b - c - a*(a.dot((b - c))*(1/a.mass2))
+        vec1 = q2 - q3 - a1.multiply((multiplyLorentz(a1,(q2-q3))/a1.mass2))
+        vec2 = q3 - q1 - a1.multiply((multiplyLorentz(a1,(q3-q1))/a1.mass2))
+        vec3 = q1 - q2 - a1.multiply((multiplyLorentz(a1,(q1-q2))/a1.mass2))
 
-        vec1 = getvec(a1, q2, q3)
-        vec2 = getvec(a1, q3, q1)
-        vec3 = getvec(a1, q1, q2)
-        
         F1 = TComplex(self.COEF1)*self.F3PI(1, a1.mass2, s1, s2)
         F2 = TComplex(self.COEF2)*self.F3PI(2, a1.mass2, s2, s1)
         F3 = TComplex(self.COEF3)*self.F3PI(3, a1.mass2, s3, s1)
@@ -88,17 +89,12 @@ class PolarimetricA1:
         CLV = self.CLVEC(HADCUR, HADCURC, N)
         CLA = self.CLAXI(HADCUR, HADCURC, N)
 
-        pclv    = P.dot(CLV)
-        pcla    = P.dot(CLA)
-        omega   = pclv - pcla
-        A       = (P.mass)**2
-        CLAmCLV = CLA.subtract(CLV)
-        
-        out = ((P.mass)*(P.mass)*(CLA-CLV) - P*(P.dot(CLA) - P.dot(CLV)))*(1/omega/P.mass)
+        omega   = multiplyLorentz(P,CLV) - multiplyLorentz(P,CLA)
+        out = (P.mass**2 * (CLA-CLV) - P*(multiplyLorentz(P,CLA) - multiplyLorentz(P,CLV)))*(1/omega/P.mass)
 
         return out
 
-    
+
     def F3PI(self,
              IFORM: float,
              QQ: ak.Array,
@@ -138,8 +134,8 @@ class PolarimetricA1:
         M1SQ = M1*M1
         M2SQ = M2*M2
         M3SQ = M3*M3
-        
-        
+
+
         # parameter varioation for
         # systematics from https://arxiv.org/pdf/hep-ex/9902022.pdf
         db2, dph2 = 0.094, 0.253
@@ -155,7 +151,7 @@ class PolarimetricA1:
                 scale = 1
             elif self.systType == "DOWN":
                 scale = -1
-                
+
         # Breit-Wigner functions with isotropic decay angular distribution
         # Real part must be equal to one, stupid polar implemenation in root
         BT1 = TComplex(1., 0.)
@@ -167,18 +163,18 @@ class PolarimetricA1:
         BT7 = TComplex(0.77  + scale*db7, 0.) * TComplex(1, (-0.54  +  scale*dph7)*np.pi, True)
 
         F3PIFactor = None
-        
+
         if IDK == 2:
             if IFORM == 1 or IFORM == 2:
                 S1 = SA
-                S2 = SB 
+                S2 = SB
                 S3 = QQ - SA - SB + M1SQ + M2SQ + M3SQ
 
                 F134 = -(1 / 3.) * ((S3 - M3SQ) - (S1 - M1SQ))
                 F15A = -(1 / 2.) * ((S2 - M2SQ) - (S3 - M3SQ))
                 F15B = -(1 / 18.) * (QQ - M2SQ + S2) * (2 * M1SQ + 2 * M3SQ - S2) / S2
                 F167 = -(2 / 3.)
-    
+
                 # Breit Wigners for all the contributions:
                 FRO1 = self.BWIGML(S1, MRO, GRO, M2, M3, 1)
                 FRP1 = self.BWIGML(S1, MRP, GRP, M2, M3, 1)
@@ -199,7 +195,7 @@ class PolarimetricA1:
                            - BT7*TComplex(F167, 0.)*FF02
 
             elif IFORM == 3:
-                S3 = SA 
+                S3 = SA
                 S1 = SB
                 S2 = QQ - SA - SB + M1SQ + M2SQ + M3SQ
 
@@ -229,7 +225,7 @@ class PolarimetricA1:
 
         if IDK == 1:
             if IFORM == 1 or IFORM == 2:
-                S1 = SA 
+                S1 = SA
                 S2 = SB
                 S3 = QQ - SA - SB + M1SQ + M2SQ + M3SQ
 
@@ -248,7 +244,7 @@ class PolarimetricA1:
                 FSG3 = self.BWIGML(S3, MSG, GSG, M1, M2, 0)
                 FF03 = self.BWIGML(S3, MF0, GF0, M1, M2, 0)
 
-                
+
                 F3PIFactor = BT1*FRO1 \
                            + BT2*FRP1 \
                            + BT3*TComplex(F134)*FRO2 \
@@ -256,10 +252,10 @@ class PolarimetricA1:
                            + BT5*TComplex(F150)*FF23 \
                            + BT6*TComplex(F167)*FSG3 \
                            + BT7*TComplex(F167)*FF03
-                
+
             elif IFORM == 3:
                 S3 = SA
-                S1 = SB 
+                S1 = SB
                 S2 = QQ - SA - SB + M1SQ + M2SQ + M3SQ
 
                 F34A = (1 / 3.) * ((S2 - M2SQ) - (S3 - M3SQ)) # array
@@ -270,7 +266,7 @@ class PolarimetricA1:
                 FRP1 = self.BWIGML(S1, MRP, GRP, M2, M3, 1)
                 FRO2 = self.BWIGML(S2, MRO, GRO, M3, M1, 1)
                 FRP2 = self.BWIGML(S2, MRP, GRP, M3, M1, 1)
-                FF23 = self.BWIGML(S3, MF2, GF2, M1, M2, 2)                    
+                FF23 = self.BWIGML(S3, MF2, GF2, M1, M2, 2)
 
                 F3PIFactor = BT3*(TComplex(F34A)*FRO1 + TComplex(F34B)*FRO2) \
                            + BT4*(TComplex(F34A)*FRP1 + TComplex(F34B)*FRP2) \
@@ -298,7 +294,7 @@ class PolarimetricA1:
         W = np.sqrt(S)    # array
 
         # Prepare a WGS array
-        # use ak.where 
+        # use ak.where
         wgs = self.GetWGS(S, MP, MM, MSQ, L, G, W, M)
         dummy = ak.zeros_like(wgs)
         mask = (W > m1+m2)
@@ -306,12 +302,12 @@ class PolarimetricA1:
 
         num = TComplex(MSQ, 0)
         den = TComplex((MSQ - S), -WGS)
-        
+
         out = num/den
 
         return out
 
-    
+
     def GetWGS(self, S: ak.Array, MP: float, MM: float, MSQ: float, L: int,
                G: float, W: ak.Array, M: float):
 
@@ -322,7 +318,7 @@ class PolarimetricA1:
 
         return WGS
 
-    
+
     def FA1A1P(self, XMSQ: ak.Array) -> TComplex:
         XM1 = 1.275000
         XG1 = 0.700
@@ -338,7 +334,7 @@ class PolarimetricA1:
         GF = self.WGA1(XMSQ) # array
         FG1 = GG1*GF
         FG2 = GG2*GF
-          
+
         F1 = TComplex(-XM1SQ)/TComplex(XMSQ - XM1SQ, FG1)
         F2 = TComplex(-XM2SQ)/TComplex(XMSQ - XM2SQ, FG2)
         FA1A1P = F1 + (BET*F2)
@@ -364,7 +360,7 @@ class PolarimetricA1:
         S = QQ
         WG3PIC = self.WGA1C(S)
         WG3PIN = self.WGA1N(S)
-            
+
         # C Contribution to M*Gamma(m(3pi)^2) from S-wave K*K, if above threshold
         #GKST = 0.0
         mask = S > MK1SQ
@@ -379,14 +375,14 @@ class PolarimetricA1:
 
 
     def WGA1C(self, S: ak.Array):
-        STH = 0.1753 
+        STH = 0.1753
         Q0  = 5.80900
-        Q1  = -3.00980 
-        Q2  = 4.57920 
-        P0  = -13.91400 
-        P1  = 27.67900 
-        P2  = -13.39300 
-        P3  = 3.19240 
+        Q1  = -3.00980
+        Q2  = 4.57920
+        P0  = -13.91400
+        P1  = 27.67900
+        P2  = -13.39300
+        P3  = 3.19240
         P4  = -0.10487
 
         mask1 = S < STH
@@ -395,7 +391,7 @@ class PolarimetricA1:
         dummy = ak.zeros_like(S)
         ifmask2 = Q0 * ((S - STH)*(S - STH)*(S - STH)) * (1.0 + Q1 * (S - STH) + Q2 * (S - STH)*(S - STH))
         elsemask2 = P0 + P1*S + P2*S*S + P3*S*S*S + P4*S*S*S*S
-        
+
         G1_IM = ak.where(
             mask1,
             dummy,
@@ -406,7 +402,7 @@ class PolarimetricA1:
 
         return G1_IM
 
-    
+
     def WGA1N(self, S: ak.Array):
         Q0 = 6.28450
         Q1 = -2.95950
@@ -424,7 +420,7 @@ class PolarimetricA1:
         dummy = ak.zeros_like(S)
         ifmask2 = Q0 * ((S - STH)*(S - STH)*(S - STH)) * (1.0 + Q1 * (S - STH) + Q2 * (S - STH)*(S - STH))
         elsemask2 = P0 + P1*S + P2*S*S + P3*S*S*S + P4*S*S*S*S
-        
+
         G1_IM = ak.where(
             mask1,
             dummy,
@@ -435,7 +431,7 @@ class PolarimetricA1:
 
         return G1_IM
 
-        
+
     def CLVEC(self, H: list, HC: list, N: ak.Array) -> ak.Array:
         HN  = H[0]*N.energy - H[1]*N.px - H[2]*N.py - H[3]*N.pz        # TComplex
         HCN = HC[0]*N.energy - HC[1]*N.px - HC[2]*N.py - HC[3]*N.pz    # TComplex
@@ -458,8 +454,7 @@ class PolarimetricA1:
         )
 
         return out
-     
-    
+
     def CLAXI(self, H: list, HC: list, N: ak.Array) -> ak.Array:
         a1 = HC[1]
         a2 = HC[2]
@@ -474,8 +469,8 @@ class PolarimetricA1:
         c1 = N.px
         c2 = N.py
         c3 = N.pz
-        c4 = N.energy   
-        
+        c4 = N.energy
+
         d34 = (a3*b4 - a4*b3).Im()
         d24 = (a2*b4 - a4*b2).Im()
         d23 = (a2*b3 - a3*b2).Im()
@@ -487,7 +482,7 @@ class PolarimetricA1:
         PIAX1 = self.SIGN*2*(c2*d34 - c3*d24 + c4*d23)
         PIAX2 = self.SIGN*2*(-c1*d34 + c3*d14 - c4*d13)
         PIAX3 = self.SIGN*2*(c1*d24 - c2*d14 + c4*d12)
-        
+
         out = ak.zip(
             {
                 "x": PIAX1,
