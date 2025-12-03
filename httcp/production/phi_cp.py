@@ -290,7 +290,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         r2 = pv.boost(beta_tau)
 
         p2 = tau_p4
-        
+
     final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]   
     p1 = ak.drop_none(ak.mask(p1, final_mask))
     p2 = ak.drop_none(ak.mask(p2, final_mask))
@@ -339,8 +339,8 @@ def get_acop_angle(vecs_p4, do_phase_shift, ch1):
     #     }, with_name="Vector3D", behavior=v.behavior)
     # v3 = v3_new
 
-    R1_tan = v3['R1'] - v3['P1'] * v3['R1'].dot(unit(v3['P1']))
-    R2_tan = v3['R2'] - v3['P2'] * v3['R2'].dot(unit(v3['P2']))
+    R1_tan = unit(v3['R1'] - v3['P1'] * v3['R1'].dot(v3['P1']))
+    R2_tan = unit(v3['R2'] - v3['P2'] * v3['R2'].dot(v3['P2']))
     
     Pminus = ak.where(ch1 < 0, v3['P1'], v3['P2'])
     Rminus = ak.where(ch1 < 0, R1_tan, R2_tan)
