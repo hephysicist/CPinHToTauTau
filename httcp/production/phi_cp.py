@@ -198,9 +198,13 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         ss_pions = ak.drop_none(ak.mask(charged_pion, charged_pion.charge == ss_ch))
         os_pion  = ak.drop_none(ak.mask(charged_pion, charged_pion.charge == -1*ss_ch))
         
-        mask_3pr = ((ak.num(ss_pions,axis=1)==2) & (ak.num(os_pion,axis=1)==1))[..., np.newaxis]
-        os_pi  = ak.drop_none(ak.mask(get_lep_p4(os_pion),mask_3pr))
-        ss_pi1 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:,  :1]),mask_3pr))
+        mask_3pr = ((ak.num(ss_pions,axis=1)>=2) & (ak.num(os_pion,axis=1)>=1))[..., np.newaxis]
+        ss_sorted_idx = ak.argsort(ss_pions.pt, axis=1, ascending=False)
+        ss_pions      = ss_pions[ss_sorted_idx]
+        os_sorted_idx = ak.argsort(os_pion.pt, axis=1, ascending=False)
+        os_pion       = os_pion[os_sorted_idx]
+        os_pi  = ak.drop_none(ak.mask(get_lep_p4(os_pion[:, 0:1]),mask_3pr))
+        ss_pi1 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:,  0:1]),mask_3pr))
         ss_pi2 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, 1:2]),mask_3pr)) 
 
         m1 = (os_pi + ss_pi1).mass
@@ -235,12 +239,16 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         os_pion  = ak.drop_none(ak.mask(charged_pion, charged_pion.charge == -ss_charge))
 
         # Require exactly 2 SS pions and 1 OS pion
-        mask_3pr = ((ak.num(ss_pions, axis=1) == 2) & (ak.num(os_pion, axis=1) == 1))[..., np.newaxis]
-        os_pi  = ak.drop_none(ak.mask(get_lep_p4(os_pion), mask_3pr))
+        mask_3pr = ((ak.num(ss_pions, axis=1) >= 2) & (ak.num(os_pion, axis=1) >= 1))[..., np.newaxis]
+        ss_sorted_idx = ak.argsort(ss_pions.pt, axis=1, ascending=False)
+        ss_pions      = ss_pions[ss_sorted_idx]
+        os_sorted_idx = ak.argsort(os_pion.pt, axis=1, ascending=False)
+        os_pion       = os_pion[os_sorted_idx]
+        os_pi  = ak.drop_none(ak.mask(get_lep_p4(os_pion[:, 0:1]), mask_3pr))
         tau_p4 = ak.drop_none(ak.mask(tau_p4, mask_3pr))
-        ss_pi1 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, :1]), mask_3pr))
+        ss_pi1 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, 0:1]), mask_3pr))
         ss_pi2 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, 1:2]), mask_3pr))
-
+        
         # Drop events with missing inputs ## same mask as above
         valid_mask = ((ak.num(os_pi) == 1) & (ak.num(tau_p4) == 1) &
                         (ak.num(ss_pi1) == 1) & (ak.num(ss_pi2) == 1))[..., np.newaxis]
