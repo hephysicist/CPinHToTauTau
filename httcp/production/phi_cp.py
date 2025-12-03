@@ -237,7 +237,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         # Require exactly 2 SS pions and 1 OS pion
         mask_3pr = ((ak.num(ss_pions, axis=1) == 2) & (ak.num(os_pion, axis=1) == 1))[..., np.newaxis]
         os_pi  = ak.drop_none(ak.mask(get_lep_p4(os_pion), mask_3pr))
-        tau_p4 = ak.drop_none(ak.mask(get_lep_p4(tau_p4), mask_3pr))
+        tau_p4 = ak.drop_none(ak.mask(tau_p4, mask_3pr))
         ss_pi1 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, :1]), mask_3pr))
         ss_pi2 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, 1:2]), mask_3pr))
 
@@ -259,9 +259,8 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
             muon = ak.drop_none(ak.mask(muon, valid_mask))
             higgs_p4 = muon + tau_p4
             beta_H = higgs_p4.boostvec
-            #beta_H = tau_p4.boostvec
             tau_vis_H = tau_vis.boost(-beta_H)
-            tau_p4_H   = tau_p4.boost(-beta_H)
+            tau_p4_H = tau_p4.boost(-beta_H)
 
             # rotate tau to max GJ angle if kinematic limit is exceeded
             tau_p4_H_rot, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis_H, tau_p4_H)
@@ -290,13 +289,8 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
             "t": ak.zeros_like(pv.x)}, with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
         r2 = pv.boost(beta_tau)
 
-        p2 = tau_p4.boost(-beta_tau)
-        p2 = ak.zip({
-            "pt": p2.pt,
-            "eta": p2.eta,
-            "phi": p2.phi,
-            "mass": p2.mass,},with_name="PtEtaPhiMLorentzVector", behavior=coffea.nanoevents.methods.vector.behavior,)
-
+        p2 = tau_p4
+        
     final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]   
     p1 = ak.drop_none(ak.mask(p1, final_mask))
     p2 = ak.drop_none(ak.mask(p2, final_mask))
@@ -326,12 +320,13 @@ def make_boost(vecs_p4, boostvec_=None):
     return zmf_vars
 
 
-def get_acop_angle(vecs_p4, do_phase_shift, ch1, eps=1e-9):
+def get_acop_angle(vecs_p4, do_phase_shift, ch1):
 
     v3 = {k: vecs_p4[k].to_3D() for k in vecs_p4}
     v3 = {k: unit(v) for k, v in v3.items()}
     # v3_new = {}
     # for k, v in v3.items():
+    #     eps = 1e-9
     #     mag = v.mag
     #     mask = mag > eps
     #     n_removed = ak.sum(~mask)
@@ -344,8 +339,8 @@ def get_acop_angle(vecs_p4, do_phase_shift, ch1, eps=1e-9):
     #     }, with_name="Vector3D", behavior=v.behavior)
     # v3 = v3_new
 
-    R1_tan = unit(v3['R1'] - v3['P1'] * v3['R1'].dot(v3['P1']))
-    R2_tan = unit(v3['R2'] - v3['P2'] * v3['R2'].dot(v3['P2']))
+    R1_tan = v3['R1'] - v3['P1'] * v3['R1'].dot(unit(v3['P1']))
+    R2_tan = v3['R2'] - v3['P2'] * v3['R2'].dot(unit(v3['P2']))
     
     Pminus = ak.where(ch1 < 0, v3['P1'], v3['P2'])
     Rminus = ak.where(ch1 < 0, R1_tan, R2_tan)
