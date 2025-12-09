@@ -1,16 +1,15 @@
 import os
 from columnflow.util import maybe_import
+from httcp.production.TComplex import TComplex
 
 np     = maybe_import("numpy")
 ak     = maybe_import("awkward")
 coffea = maybe_import("coffea")
 
-from httcp.production.TComplex import TComplex
-
 def multiplyLorentz(a: ak.Array, b: ak.Array) -> ak.Array:
     result = a.t * b.t - a.x * b.x - a.y * b.y - a.z * b.z
     return result
-
+    
 
 class PolarimetricA1:
     def __init__(self,
