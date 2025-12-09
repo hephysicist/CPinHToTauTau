@@ -147,15 +147,21 @@ def fastMTT(
             key = ('x1' if lep_str == 'lep0' else 'x2') + modifier_prefix
             modifier = MTT_cpp_rest[key]
 
-
             # correct full Lorentz-vector scaling
             lep_p4 = get_lep_p4(lep)
 
+            # scaled spatial components & correct relativistic energy
+            px_mtt = lep_p4.px / modifier
+            py_mtt = lep_p4.py / modifier
+            pz_mtt = lep_p4.pz / modifier
+
+            energy_mtt = np.sqrt(px_mtt**2 + py_mtt**2 + pz_mtt**2 + lep0_mass_defaults['tautau']**2)
+
             lep_tau = ak.zip({
-                "px": lep_p4.px / modifier,
-                "py": lep_p4.py / modifier,
-                "pz": lep_p4.pz / modifier,
-                "energy": lep_p4.energy / modifier,
+                "px": px_mtt,
+                "py": py_mtt,
+                "pz": pz_mtt,
+                "energy": energy_mtt,
             }, with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
 
             lep_dict = {
