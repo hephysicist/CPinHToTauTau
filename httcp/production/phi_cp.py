@@ -42,7 +42,7 @@ def unit(v, eps=1e-9):
         behavior=coffea.nanoevents.methods.vector.behavior)
 
 
-def rotate_to_gj_max(vis, mtt, tau):
+def rotate_to_gj_max(vis, mtt):
     """
     Enforce the physical Gottfried–Jackson limit for the tau decay system. 
     The function computes theta_GJ between the visible system (vis) 
@@ -281,8 +281,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
             # # boost back to lab frame
             # tau_p4 = tau_p4_H_rot.boost(beta_H)
 
-            tau = ak.drop_none(ak.mask(tau, valid_mask))
-            tau_p4, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis, tau_p4, tau)
+            tau_p4, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis, tau_p4)
         
         # Collect vectors for boosting into tau rest frame
         beta_tau = tau_p4.boostvec
