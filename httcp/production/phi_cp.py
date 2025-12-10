@@ -29,7 +29,7 @@ def pion_mask(tauprod): return np.abs(tauprod.pdgId) == 211
 def get_single_part(array: ak.Array, idx: int) -> ak.Array:
     return ak.firsts(array[:,idx:idx+1])
 
-# helper functions for the unit vectors and the method is buggy
+# helper functions for the unit vectors as the method is buggy
 def unit(v, eps=1e-9):
     v3 = v.to_3D()
     mag = v3.mag
@@ -42,32 +42,34 @@ def unit(v, eps=1e-9):
         behavior=coffea.nanoevents.methods.vector.behavior)
 
 
-def rotate_to_gj_max(vis, mtt):
+def rotate_to_gj_max(vis, mtt, tau):
     """
-    Compute the Gottfried-Jackson angle theta_GJ using 3-vector kinematics.
-    Rotate the tau momentum if theta_GJ exceeds the maximal allowed angle theta_max.
-
+    Enforce the physical Gottfried–Jackson limit for the tau decay system. 
+    The function computes theta_GJ between the visible system (vis) 
+    and the tau direction approximated by the FastMTT output (mtt).
+    If theta_GJ exceeds theta_max (the kinematic upper bound),
+    the tau momentum is rotated inside the decay plane such that
+    theta_GJ = theta_max.
+    
     Notes :
-    - All angular and cross-product operations are performed purely in 3-space to maintain numerical stability. 
+    - All angular and cross-product operations are performed in 3D to maintain numerical stability. 
       Only the tau energy is carried through from the original four-vector for the final reconstruction.
     - To preserve small-angle precision, vectors are not fully normalised until the final rotation step.
     """
-    
+
     vis3 = vis.to_3D()
     mtt3 = mtt.to_3D()
-    # --- magnitudes ---
     vis_mag = vis3.mag
     mtt_mag = mtt3.mag
 
-    # --- kinematic theta_GJ via dot product ---
-    # Compute theta_GJ preserving small opening angles.
-    # Normalizing vectors would erase tiny deviations, giving theta_gj=0 for nearly parallel vectors.
+    # --- Compute theta_GJ preserving small opening angles ---
+    # Normalising vectors would erase tiny deviations, giving theta_gj=0 for nearly parallel vectors.
     cos_theta_gj = vis3.dot(mtt3) / (vis_mag * mtt_mag)
     cos_theta_gj = ak.where(cos_theta_gj > 1.0, 1.0,
                             ak.where(cos_theta_gj < -1.0, -1.0, cos_theta_gj))
     theta_gj = np.arccos(cos_theta_gj)
 
-    # --- maximal allowed angle ---
+    # --- maximal allowed angle : sin(theta_max) = (m_tau^2 - m_vis^2) / (2 m_tau |p_vis|) ---
     tau_mass = 1.77686
     vis_m = vis.mass
     denom = 2.0 * tau_mass * vis_mag
@@ -81,49 +83,52 @@ def rotate_to_gj_max(vis, mtt):
         return mtt, theta_gj, theta_max, theta_gj
 
     # --- rotation basis ---
-    # Use original 3-vectors to define orthonormal basis
     eps = 1e-9
     n1 = unit(vis3)
-
-    # normal vector (perpendicular to decay plane)
     mtt_unit = unit(mtt3)
     n3_raw = n1.cross(mtt_unit)
-    n3_mag = n3_raw.mag
 
     # fallback direction if cross-product vanishes, if n1 is aligned with z-axis, choose x-axis as fallback
     unit_z = ak.zip({"x": 0*n1.x, "y": 0*n1.x, "z": 1*n1.x}, 
         with_name="Vector3D", behavior=coffea.nanoevents.methods.vector.behavior)
-    fallback = ak.where(abs(n1.z) < 0.99, n1.cross(unit_z), 
-        n1.cross(ak.zip({"x": 1*n1.x,"y":0*n1.x,"z":0*n1.x}, 
-        with_name="Vector3D", behavior=coffea.nanoevents.methods.vector.behavior)))
+    fallback = unit(n1.cross(unit_z))   
 
-    n3 = unit(ak.where(n3_mag > eps, n3_raw, fallback))
-
-    # in-plane direction
+    n3 = unit(ak.where(n3_raw.mag > eps, n3_raw, fallback))
     n2 = unit(n3.cross(n1))
 
-    # --- decompose tau momentum in this basis ---
+    # --- decompose mtt momentum in this basis (signed components) ---
     Porth = mtt3.dot(n3)
-    Ppar = np.sqrt(ak.where(mtt_mag**2 - Porth**2 > 0,
-                            mtt_mag**2 - Porth**2, 0))
+    P1 = mtt3.dot(n1)
+    P2 = mtt3.dot(n2)
+    p_plane_sq = P1**2 + P2**2
+    p_plane_mag = np.sqrt(ak.where(p_plane_sq > 0, p_plane_sq, 0.0))
+    Ppar = p_plane_mag
 
+    # --- compute cos/sin of theta_max ---
     cosT = np.cos(theta_max)
     sinT = np.sin(theta_max)
 
-    # target direction within decay plane
-    par_dir = unit(n1 * cosT + n2 * sinT)
+    # --- two candidate in-plane directions at theta_max (both signs) ---
+    n_par_1 = unit(n1 * cosT - n2 * sinT)
+    n_par_2 = unit(n1 * cosT + n2 * sinT)
 
-    # new spatial direction after enforcing GJ limit
-    new_dir = unit(par_dir * Ppar + n3 * Porth)
+    # --- reconstruct two candidate full directions keeping Porth unchanged ---
+    new_dir_1 = unit(ak.where(p_plane_mag > 0, n3 * Porth + n_par_1 * Ppar, n1))
+    new_dir_2 = unit(ak.where(p_plane_mag > 0, n3 * Porth + n_par_2 * Ppar, n1))
+
+    # --- choose the candidate closer to the original tau flight direction ---
+    choose_2 = new_dir_1.dot(mtt_unit) < new_dir_2.dot(mtt_unit)
+    new_dir = ak.where(choose_2, new_dir_2, new_dir_1)
+
+    # --- final spatial momentum (preserve original |p|) & rebuild 4-vector ---
     new_p = new_dir * mtt_mag
-    E_new = np.sqrt(mtt_mag**2 + tau_mass**2)
+    E_new = np.sqrt(mtt_mag**2 + tau_mass**2) # equal results to mtt.energy
 
-    # --- rebuild 4-vector using original energy ---
     tau_rot_cart = ak.zip({
             "x": new_p.x,
             "y": new_p.y,
             "z": new_p.z,
-            "energy": E_new,},
+            "energy": E_new},
         with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior,)
 
     tau_rot = ak.zip({
@@ -139,7 +144,7 @@ def rotate_to_gj_max(vis, mtt):
     
 
 def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
-    tau     = events.hcand_mutau.lep1 
+    tau     = events.hcand_mutau.lep1
     tau_MTT = events.hcand_mutau.fastMTT_BW.lep1
     tauprod = events.tau_decay_prods_mutau_lep1
     muon    = events.hcand_mutau.lep0    
@@ -262,19 +267,22 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         if pair_decay_ch == "mu_a1_3pr_pv_gef":
             tau_vis = os_pi + ss_pi1 + ss_pi2
 
-            # Boost to Higgs rest frame
-            muon = get_lep_p4(muon)
-            muon = ak.drop_none(ak.mask(muon, valid_mask))
-            higgs_p4 = muon + tau_p4
-            beta_H = higgs_p4.boostvec
-            tau_vis_H = tau_vis.boost(-beta_H)
-            tau_p4_H = tau_p4.boost(-beta_H)
+            # # Boost to Higgs rest frame
+            # muon = get_lep_p4(muon)
+            # muon = ak.drop_none(ak.mask(muon, valid_mask))
+            # higgs_p4 = muon + tau_p4
+            # beta_H = higgs_p4.boostvec
+            # tau_vis_H = tau_vis.boost(-beta_H)
+            # tau_p4_H = tau_p4.boost(-beta_H)
 
-            # rotate tau to max GJ angle if kinematic limit is exceeded
-            tau_p4_H_rot, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis_H, tau_p4_H)
+            # # rotate tau to max GJ angle if kinematic limit is exceeded
+            # tau_p4_H_rot, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis_H, tau_p4_H)
 
-            # boost back to lab frame
-            tau_p4 = tau_p4_H_rot.boost(beta_H)
+            # # boost back to lab frame
+            # tau_p4 = tau_p4_H_rot.boost(beta_H)
+
+            tau = ak.drop_none(ak.mask(tau, valid_mask))
+            tau_p4, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis, tau_p4, tau)
         
         # Collect vectors for boosting into tau rest frame
         beta_tau = tau_p4.boostvec
@@ -282,8 +290,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
             'p1': os_pi.boost(-beta_tau),
             'p2': tau_p4.boost(-beta_tau),
             'ss1': ss_pi1.boost(-beta_tau),
-            'ss2': ss_pi2.boost(-beta_tau)
-        }
+            'ss2': ss_pi2.boost(-beta_tau)}
 
         a1_pol = PolarimetricA1(vecs_pv['p2'], vecs_pv['p1'], vecs_pv["ss1"], vecs_pv["ss2"], tau_charge)
 
