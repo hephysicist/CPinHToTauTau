@@ -50,7 +50,8 @@ def keep_columns(cfg: od.Config) -> None:
                 "pt","eta","phi","mass","dxy","dz", "charge", 
                 "rawDeepTau2018v2p5VSjet","idDeepTau2018v2p5VSjet", "idDeepTau2018v2p5VSe", "idDeepTau2018v2p5VSmu", 
                 "decayMode", "decayModePNet", "genPartFlav", "rawIdx",
-                "pt_no_tes", "mass_no_tes", "IPx", "IPy", "IPz", "ip_sig", "jetIdx", "hasSV", "hasRefitSV","IP_cov*",
+                "pt_no_tes", "mass_no_tes", "IPx", "IPy", "IPz", "ip_sig", "jetIdx", 
+                "hasSV", "hasRefitSV", "IP_cov*", "refitSV*",
             ] 
         } | {
             f"Muon.{var}" for var in [
@@ -813,10 +814,19 @@ def add_dilepton_features(cfg: od.Config) -> None:
                     name=f"{ch_str}_{lep}_IP{coord}",
                     expression=f"hcand_{ch_str}.{lep}.IP{coord}",
                     null_value=EMPTY_FLOAT,
-                    binning=(30, -0.002, 0.002),
+                    binning=(30, -0.004, 0.004),
                     unit="",
                     x_title= rf"{lep_str} $IP_{coord}$",
                 )
+                if lep == 'lep1':
+                    cfg.add_variable(
+                        name=f"{ch_str}_{lep}_refitSV{coord}",
+                        expression=f"hcand_{ch_str}.{lep}.refitSV{coord}",
+                        null_value=EMPTY_FLOAT,
+                        binning=(30, -1.0, 1.0),
+                        unit="",
+                        x_title= rf"{lep_str} $refited SV_{coord}$",
+                    )
             if lep == 'lep0':
                 if ch_str == 'mutau':
                     cfg.add_variable(
@@ -851,14 +861,6 @@ def add_dilepton_features(cfg: od.Config) -> None:
             
             for proj in ['x','y','z']:
                 cfg.add_variable(
-                    name=f"{ch_str}_{lep}_ip{proj}",
-                    expression=f"hcand_{ch_str}.{lep}.IP{proj}",
-                    null_value=EMPTY_FLOAT,
-                    binning=(30, -0.01, 0.01),
-                    unit="",
-                    x_title= rf"{lep_str} $IP_{proj}$",
-                )
-                cfg.add_variable(
                     name=f"{ch_str}_{lep}_ip{proj}_qm",
                     expression=f"hcand_{ch_str}.{lep}.IP{proj}_qm",
                     null_value=EMPTY_FLOAT,
@@ -866,7 +868,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
                     unit="",
                     x_title= rf"{lep_str} $IP_{proj} corrected$",
                 )
-                
+
             #Variables with finer binning
             cfg.add_variable(
                 name=f"{ch_str}_{lep}_pt_fine_binning",
@@ -978,7 +980,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
             name=f"theta_gj_mu_a1_3pr_pv_gef",
             expression=f"theta_gj_mu_a1_3pr_pv_gef",
             null_value=EMPTY_FLOAT,
-            binning=(40, 0, 0.2),
+            binning=(40, 0, 3.5),
             x_title=r"$\theta_{GJ}$",
         )
         cfg.add_variable(
