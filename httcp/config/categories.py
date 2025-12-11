@@ -170,16 +170,17 @@ def add_categories(config: od.Config,
     #Add child categories to base categories
     
     jet_fake_map  = DotDict.wrap({
-        "jet_fakes": {'selection'  : ["tau_jet_fakes"],    'label': f"jet fakes",},
-        "prompt"  : {'selection'   : ["tau_no_jet_fakes"], 'label': f"prompt lep."},
+        "jet_fakes" : {'selection'  : ["tau_jet_fakes"],    'label': f"jet fakes",},
+        "prompt"    : {'selection'   : ["tau_no_jet_fakes"], 'label': f"prompt lep."},
+        "fake_incl" : {'selection'   : [], 'label': f"fakes + prompt lep."},
         })
     
     bdt_map  = DotDict.wrap({
-        "hig"   : {'selection'  : ["bdt_cat_higgs"], 'label': f"\nbdt cat Higgs",},
-        "gtau"  : {'selection'  : ["bdt_cat_gtau"], 
+        "hig"      : {'selection'  : ["bdt_cat_higgs"], 'label': f"\nbdt cat Higgs",},
+        "gtau"     : {'selection'  : ["bdt_cat_gtau"], 
                    'label'      : f"\nbdt cat genuine tau",
                    'aux'        : {'fit_var': 'bdt_raw_score_4bins_gtau'},},
-        "fake" : {'selection'  : ["bdt_cat_fake"],
+        "fake"     : {'selection'  : ["bdt_cat_fake"],
                    'label'      : f"\nbdt cat fakes",
                    'aux'        : {'fit_var': 'bdt_raw_score_4bins_fake'},},
         })
@@ -215,31 +216,31 @@ def add_categories(config: od.Config,
     splitted_by_jet_fake = create_child_categories(config,
                                                  parent_categories=base_cats,
                                                  child_category_map=jet_fake_map)
-    
-    splitted_by_bdt = create_child_categories(config,
-                                                 parent_categories=splitted_by_jet_fake,
-                                                 child_category_map=bdt_map)
     splitted_by_dm = create_child_categories(config,
-                                                 parent_categories=base_cats,
+                                                 parent_categories=splitted_by_jet_fake,
                                                  child_category_map=tau_decays_map)
     
-    sel_hig_cats = [the_cat for the_cat in splitted_by_bdt if '__hig' in the_cat]
-
-    splitted_by_hig_cats = create_child_categories(config,
-                                                 parent_categories=sel_hig_cats,
-                                                 child_category_map=hig_bins_map)
-
-    splitted_by_dm = create_child_categories(config,
-                                              parent_categories=splitted_by_hig_cats,
-                                              child_category_map=tau_decays_map)
-
-    sel_abcd_cats = [the_cat for the_cat in splitted_by_dm if (('abcd' in the_cat) and (('jet_fakes' in the_cat) or ('prompt' in the_cat)))]
-    #remove intermediate categories that are not required in the analysis
+    # splitted_by_bdt = create_child_categories(config,
+    #                                              parent_categories=splitted_by_jet_fake,
+    #                                              child_category_map=bdt_map)
     
-    for the_name in splitted_by_hig_cats:
-        the_cat = config.get_category(the_name)
-        config.remove_category(the_cat)
+    # sel_hig_cats = [the_cat for the_cat in splitted_by_bdt if '__hig' in the_cat]
+
+    # splitted_by_hig_cats = create_child_categories(config,
+    #                                              parent_categories=sel_hig_cats,
+    #                                              child_category_map=hig_bins_map)
+
+    # splitted_by_dm = create_child_categories(config,
+    #                                           parent_categories=splitted_by_hig_cats,
+    #                                           child_category_map=tau_decays_map)
+
+    # sel_abcd_cats = [the_cat for the_cat in splitted_by_dm if (('abcd' in the_cat) and (('jet_fakes' in the_cat) or ('prompt' in the_cat)))]
+    # #remove intermediate categories that are not required in the analysis
+    
+    # for the_name in splitted_by_hig_cats:
+    #     the_cat = config.get_category(the_name)
+    #     config.remove_category(the_cat)
         
-    for the_name in sel_abcd_cats:
-        the_cat = config.get_category(the_name)
-        config.remove_category(the_cat)
+    # for the_name in sel_abcd_cats:
+    #     the_cat = config.get_category(the_name)
+    #     config.remove_category(the_cat)

@@ -57,7 +57,7 @@ def muon_selection(
     events = set_ak_column(events, "Muon.ip_sig", events.Muon.sip3d)
     muon_wp = (self.config_inst.x.muon_id_wp).lower()
     good_selections = {
-        "muon_pt_26"          : events.Muon.pt >= 21,
+        "muon_pt_26"          : events.Muon.pt >= 26,
         "muon_eta_2p4"        : abs(events.Muon.eta) < 2.4,
         "muon_ID"             : getattr(events.Muon, f'{muon_wp}Id') == 1,
         "muon_dxy_0p045"      : abs(events.Muon.dxy) < 0.045,
@@ -288,7 +288,7 @@ def tau_selection(
 
     good_selections = {
         "tau_pt_20"     : events.Tau.pt > 20,
-        "tau_eta_2p5"   : abs(events.Tau.eta) < 2.5,
+        "tau_eta_2p4"   : abs(events.Tau.eta) < 2.4,
         "tau_dz_0p2"    : abs(events.Tau.dz) < 0.2,
         "DeepTauVSjet"  : events.Tau.idDeepTau2018v2p5VSjet >= deep_tau_vs_e_jet_wps["VVVLoose"], 
         "DeepTauVSe"    : events.Tau.idDeepTau2018v2p5VSe   >= deep_tau_vs_e_jet_wps["VVVLoose"],

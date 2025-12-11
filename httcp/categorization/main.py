@@ -61,7 +61,6 @@ def mt_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.
         if ch_str != 'tautau':
             mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 <= mt_cut_value), axis=1),False)
             mask = mask & ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 >= 0), axis=1),False)
-    #print(f"using mT cut {mt_cut_value}")
     return events, mask
 
 @categorizer(uses={'event', 'hcand_*'})
@@ -71,8 +70,7 @@ def mt_inv_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array,
     mt_cut_value = self.config_inst.x.mt_cut_value
     for ch_str in channels:
         if ch_str != 'tautau':
-            mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 > 100), axis=1),False)
-            mask = mask & ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 < 200), axis=1),False)
+            mask = mask | ak.fill_none(ak.firsts((events[f'hcand_{ch_str}'].mt_0 > mt_cut_value), axis=1),False)
     return events, mask
 
 @categorizer(uses={"is_b_vetoed"})
@@ -107,34 +105,6 @@ def deep_tau_wp(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array
                 channel_mask = channel_mask & (the_tau.idDeepTau2018v2p5VSjet >= wp_idx_ejet[deep_tau.vs_jet[channel]])
                 channel_mask = channel_mask & (the_tau.idDeepTau2018v2p5VSe   >= wp_idx_ejet[deep_tau.vs_jet[channel]])
                 channel_mask = channel_mask & (the_tau.idDeepTau2018v2p5VSmu  >= wp_idx_mu[deep_tau.vs_mu[channel]])
-        mask = mask | ak.fill_none(ak.firsts(channel_mask, axis=1),False)
-    return events, mask
-
-
-@categorizer(uses={'event', 'hcand_*'})
-def deep_tau_wp_mtt(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
-    channels = self.config_inst.channels.names()
-    deep_tau_vs_e_jet_wps = self.config_inst.x.deep_tau.vs_e_jet_wps
-    deep_tau_vs_mu_wps = self.config_inst.x.deep_tau.vs_mu_wps
-
-    mask = ak.zeros_like(events.event, dtype=np.bool_)
-    for channel in channels:
-        tau = events[f'hcand_{channel}'].lep1
-        channel_mask = ak.ones_like(events[f'hcand_{channel}'].lep1.rawIdx)
-        if channel == 'mutau':
-            channel_mask = channel_mask & (tau.idDeepTau2018v2p5VSjet >= deep_tau_vs_e_jet_wps["Medium"])
-            channel_mask = channel_mask & (tau.idDeepTau2018v2p5VSe   >= deep_tau_vs_e_jet_wps["Tight"])
-            channel_mask = channel_mask & (tau.idDeepTau2018v2p5VSmu  >= deep_tau_vs_mu_wps["Tight"])
-        elif channel == 'etau':
-            channel_mask = channel_mask & (tau.idDeepTau2018v2p5VSjet >= deep_tau_vs_e_jet_wps["Medium"])
-            channel_mask = channel_mask & (tau.idDeepTau2018v2p5VSe   >= deep_tau_vs_e_jet_wps["Tight"])
-            channel_mask = channel_mask & (tau.idDeepTau2018v2p5VSmu  >= deep_tau_vs_mu_wps["Tight"])
-        elif "tautau":
-            tau0 = events[f'hcand_{channel}'].lep0
-            for the_tau in [tau, tau0]:
-                channel_mask = channel_mask & (the_tau.idDeepTau2018v2p5VSjet >= deep_tau_vs_e_jet_wps["Medium"])
-                channel_mask = channel_mask & (the_tau.idDeepTau2018v2p5VSe   >= deep_tau_vs_e_jet_wps["VVLoose"])
-                channel_mask = channel_mask & (the_tau.idDeepTau2018v2p5VSmu  >= deep_tau_vs_mu_wps["VLoose"])
         mask = mask | ak.fill_none(ak.firsts(channel_mask, axis=1),False)
     return events, mask
 
@@ -197,7 +167,8 @@ def tau_eta2p3(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array,
 def tau_no_jet_fakes(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     channel = self.config_inst.channels.names()[0] #We are processing a single channel at once
     if self.dataset_inst.is_mc:
-        mask = ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep1.genPartFlav!=0, axis=1),False)
+        mask = ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep1.genPartFlav > 0, axis=1),False)
+        mask = mask & ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep1.genPartFlav < 6, axis=1),False)
     else:
         mask = ak.ones_like(events.event, dtype=np.bool_)
     return events, mask
@@ -303,13 +274,13 @@ def jet_veto_maps_jets(self: Categorizer, events: ak.Array, **kwargs) -> tuple[a
 @categorizer(uses={'event', 'hcand_*'})
 def tau_ip_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     channel = self.config_inst.channels.names()[0]
-    mask = ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep1.ip_sig >= 1.25, axis=1),False)
+    mask = ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep1.ip_sig_nom >= 1.25, axis=1),False)
     return events, mask
 
 @categorizer(uses={'event', 'hcand_*'})
 def muon_ip_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     channel = self.config_inst.channels.names()[0]
-    mask = ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep0.ip_sig >= 1., axis=1),False)
+    mask = ak.fill_none(ak.firsts(events[f'hcand_{channel}'].lep0.ip_sig_nom >= 1., axis=1),False)
     return events, mask
 
 
