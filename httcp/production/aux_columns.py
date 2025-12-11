@@ -400,15 +400,15 @@ def is_pion(prods): return ((np.abs(prods.pdgId) == 211))
 
 def is_photon(prods): return prods.pdgId == 22
 
+def one_pion(prods): return (ak.sum(is_pion(prods),   axis=1) == 1)
 
-def has_one_pion(prods): return (ak.sum(is_pion(prods),   axis=1) == 1)
+def at_least_one_pion(prods): return (ak.sum(is_pion(prods),   axis=1) >= 1)
 
+def three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) == 3)
 
-def has_three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) == 3)
-
+def at_least_three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) >= 3)
 
 def has_photons(prods): return (ak.sum(is_photon(prods), axis=1) > 0)
-
 
 def has_no_photons(prods): return (ak.sum(is_photon(prods), axis=1) == 0)
 
@@ -503,15 +503,15 @@ def add_tau_prods(
                 # DM0
                 tau = ak.firsts(tau)
                 mask = mask | ak.fill_none(
-                    tau.decayMode == 0, False) & has_one_pion(matched_tau_prods)#TODO: release this mask, make n_pions >=1
+                    tau.decayMode == 0, False) & at_least_one_pion(matched_tau_prods)#TODO: release this mask, make n_pions >=1
                 # DM1
-                mask = mask | ak.fill_none(tau.decayMode == 1, False) & has_one_pion(
+                mask = mask | ak.fill_none(tau.decayMode == 1, False) & at_least_one_pion(
                     matched_tau_prods) & has_photons(matched_tau_prods)#TODO: release this mask, make n_pions >=1
                 # DM10
                 mask = mask | ak.fill_none(
-                    tau.decayMode == 10, False) & has_three_pions(matched_tau_prods)#TODO: release this mask, make n_pions >=3
+                    tau.decayMode == 10, False) & at_least_three_pions(matched_tau_prods)#TODO: release this mask, make n_pions >=3
                 # DM11
-                mask = mask | ak.fill_none(tau.decayMode == 11, False) & has_three_pions(
+                mask = mask | ak.fill_none(tau.decayMode == 11, False) & at_least_three_pions(
                     matched_tau_prods) & has_photons(matched_tau_prods)#TODO: release this mask, make n_pions >=3
                 events = set_ak_column(
                     events, f'tau_decay_prods_{ch_str}_{lep_str}',  matched_tau_prods)
@@ -548,19 +548,17 @@ def pion_energy_split(
 ) -> ak.Array:
     channel = self.config_inst.channels.names()[0]
     tauprods = events[f'tau_decay_prods_{channel}_lep1']
-    charged_pion_mask = pion_mask(tauprods)
     em_mask = egamma_mask(tauprods)
-    charged_pion = ak.firsts(get_lep_p4(tauprods[charged_pion_mask]), axis=1)
+    charged_pions =  ak.drop_none(ak.mask(tauprods,pion_mask(tauprods)))
+    sorted_charged_pions = charged_pions[ak.argsort(charged_pions.pt, ascending=False)]
+    charged_pion = get_lep_p4(ak.drop_none(ak.firsts(sorted_charged_pions, axis=1))) #it's safe to do like so, because we require at least one chared pion to be at the decay product array
     neutral_pion = get_lep_p4(tauprods[em_mask]).sum()
-
-    mask = (ak.num(charged_pion_mask, axis=1) > 0) & (
-        ak.num(em_mask, axis=1) > 0)
-    mask = mask & (charged_pion.E > 0) & (neutral_pion.E > 0)
-
+    mask = (ak.num(em_mask, axis=1) > 0) & (charged_pion.E > 0) & (neutral_pion.E > 0)
     pion_E_split = ak.where(mask,
                             np.abs(charged_pion.E - neutral_pion.E) /
                             (charged_pion.E + neutral_pion.E),
                             EMPTY_FLOAT)
+    
     pion_E_split = ak.fill_none(pion_E_split, EMPTY_FLOAT)
     events = set_ak_column_f32(events, "pion_E_split", pion_E_split)
     return events

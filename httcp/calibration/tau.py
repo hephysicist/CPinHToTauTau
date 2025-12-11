@@ -46,7 +46,7 @@ def tau_energy_scale(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     match = flat_np_view(events.Tau.genPartFlav, axis=1)
 
     syst = "nom" # TODO define this systematics inside config file
-     #Get working points of the DeepTau tagger
+    #Get working points of the DeepTau tagger
     deep_tau = self.config_inst.x.deep_tau
     channel = self.config_inst.channels.names()
     if len(channel) > 1:

@@ -3,13 +3,9 @@
 Task to produce and merge histograms.
 """
 
-from __future__ import annotations
-
-import itertools
-import luigi
 import law
 
-from columnflow.tasks.framework.base import Requirements, AnalysisTask, DatasetTask, wrapper_factory
+from columnflow.tasks.framework.base import Requirements, BaseTask, AnalysisTask, DatasetTask, wrapper_factory
 from columnflow.tasks.framework.mixins import (ProducersMixin, 
                                                ChunkedIOMixin, DatasetsProcessesMixin, CategoriesMixin,VariablesMixin
 )
@@ -39,6 +35,7 @@ class ComputeFakeFactors(
     RemoteWorkflow,
     VariablesMixin,
     DatasetsProcessesMixin,
+    law.tasks.RunOnceTask
 ):
     single_config = False
 
@@ -124,7 +121,7 @@ class ComputeFakeFactors(
                                                  tag)) + '.json'),
                 }
 
-    @law.decorator.log
+    @law.tasks.RunOnceTask.complete_on_success
     def run(self):
         import hist
         import numpy as np
