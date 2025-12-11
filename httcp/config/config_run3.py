@@ -467,8 +467,8 @@ def add_run3(ana: od.Analysis,
     lumi_dict = {
         "2022preEE"     : Number(7_980.4,  {"lumi_13p6TeV_correlated": 0.014j,}),
         "2022postEE"    : Number(26_671.7, {"lumi_13p6TeV_correlated": 0.014j,}),
-        "2023preBPix"   : Number(17_794,   {"lumi_13p6TeV_correlated": 0.0j,}),
-        "2023postBPix"  : Number(9_451,    {"lumi_13p6TeV_correlated": 0.0j,}),
+        "2023preBPix"   : Number(18_063,   {"lumi_13p6TeV_correlated": 0.0j,}), 
+        "2023postBPix"  : Number(9_693,    {"lumi_13p6TeV_correlated": 0.0j,}),
         "2024"          : Number(109_080,  {"lumi_13p6TeV_correlated": 0.0j,}),
     }
     cfg.x.luminosity = lumi_dict[f"{year}{tag}"]
@@ -578,7 +578,7 @@ def add_run3(ana: od.Analysis,
     ##########################
     
     jsonpog_dir = "/eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_latest/POG/"
-    jsonpog_tau_dir = "//eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
+    jsonpog_tau_dir = "/eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
     corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/"
     ml_dir = "/eos/user/s/stzakhar/TauTheDifference/Training/models/"
     golden_ls = { 
@@ -619,6 +619,7 @@ def add_run3(ana: od.Analysis,
     
     
     cat_path = "/cvmfs/cms-griddata.cern.ch/cat/metadata"
+    tmp_corr_dir = "/eos/user/s/stzakhar/htt_corrections_mirror/"
     cat_tag = tags['cat_tag']
     
     jsons_2025_v2 = DotDict.wrap({
@@ -637,16 +638,16 @@ def add_run3(ana: od.Analysis,
         "tau_sf"                        : f"{corr_dir}measured_by_ic/tau_sf/tau_sf_pt-dm_DeepTau2018v2p5VSjet_{year}_{tag}.json.gz",
         "tau_trigger_sf"                : f"{corr_dir}measured_by_ic/tau_trigger_sf/tau_trigger_DeepTau2018v2p5_{year}_{tag}.json.gz",
         "zpt_weight"                    : f"{corr_dir}dy_ptll/DY_pTll_weights_{year}{tag}.json.gz",
-        "met_recoil"                    : f"{corr_dir}dy_ptll/DY_pTll_recoil_corrections_{year}{tag}.json.gz",
+        "met_recoil"                    : f"{tmp_corr_dir}ZpT_RecCorr_V5/DY_pTll_recoil_corrections_{year}{tag}.json.gz",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
-        "fake_factors"                  : (f"{corr_dir}fake_factors_v1_2025_{channel}_22and23_mt{cfg.x.mt_cut_value}_dr_iso0p05_mt70.json", "v2"),
+        "fake_factors"                  : (f"{tmp_corr_dir}fake_factors_v1_2025_{channel}_22and23_mt{cfg.x.mt_cut_value}_dr_iso0p05_mt70.json", "v2"),
+        "ip_sig_corr"                   : (f"{tmp_corr_dir}measured_by_Alexei/IPsignificance/JSON/IP_Significance_Correction_Run3_2022-2023_muon.json", "v2"),
         "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
         "ml_model_even"                 : f"{corr_dir}signal_classifier/model_EVEN.json",
         "ml_model_odd"                  : f"{corr_dir}signal_classifier/model_ODD.json",
         "filter_eff"                    : f"{corr_dir}filter_eff/2025_v1/Run3_{year}{short_tag}.yaml",
         "stitching"                     : f"{corr_dir}stitching_weights.json",
-
     })
     
     
@@ -705,8 +706,8 @@ def add_run3(ana: od.Analysis,
 
    
     for i, (match, dm) in enumerate(itertools.product(["jet", "e"], [0, 1, 2, 10, 11])):
-        cfg.add_shift(name=f"tec_{match}_dm{dm}_up", id=20 + 2 * i, type="shape", tags={"tec"})
-        cfg.add_shift(name=f"tec_{match}_dm{dm}_down", id=21 + 2 * i, type="shape", tags={"tec"})
+        cfg.add_shift(name=f"tec_{match}_dm{dm}_up", id=40 + 2 * i, type="shape", tags={"tec"})
+        cfg.add_shift(name=f"tec_{match}_dm{dm}_down", id=41 + 2 * i, type="shape", tags={"tec"})
         add_shift_aliases(
             cfg,
             f"tec_{match}_dm{dm}",
@@ -726,6 +727,10 @@ def add_run3(ana: od.Analysis,
     cfg.add_shift(name="mu_down", id=4, type="shape")
     add_shift_aliases(cfg, "mu", {"muon_weight": "muon_weight_{direction}"})
     
+    
+   
+
+    
     # cfg.add_shift(name="ts_up", id=5, type="shape") #cp-even
     # cfg.add_shift(name="ts_down", id=7, type="shape") #cp-odd
     # add_shift_aliases(cfg, "ts", {"tauspinner_weight": "tauspinner_weight_{direction}"})
@@ -736,11 +741,22 @@ def add_run3(ana: od.Analysis,
     
     cfg.add_shift(name="top_pt_up", id=10, type="shape")
     cfg.add_shift(name="top_pt_down", id=11, type="shape")
-    add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"})
+    add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"}) 
+    
+    cfg.x.ip_sig_syst = ['prompt_etaLt1p0_stat',
+                   'prompt_eta1p0to1p6_stat',
+                   'prompt_etaGt1p6_stat',
+                   'tauDecay_etaLt1p0_stat',
+                   'tauDecay_eta1p0to1p6_stat',
+                   'tauDecay_etaGt1p6_stat']
+    
+    for idx, name in enumerate( cfg.x.ip_sig_syst, start=12):
+        cfg.add_shift(name=f"ip_sig_{name}_up", id=2 * idx, type="shape") 
+        cfg.add_shift(name=f"ip_sig_{name}_down", id=2 * idx + 1, type="shape") 
     
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
- 
+    
     cfg.x.event_weights = DotDict({
         "normalization_weight": [],
         "filter_weight": [],
@@ -865,7 +881,6 @@ def add_run3(ana: od.Analysis,
             "DYto2Tau_MLL_50_0J_amcatnloFXFX": "NLO",
             "DYto2Tau_MLL_50_1J_amcatnloFXFX": "NLO",
             "DYto2Tau_MLL_50_2J_amcatnloFXFX": "NLO",
-            
             "WtoLNu_amcatnloFXFX": "NLO",
             },
        
