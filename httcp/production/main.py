@@ -24,7 +24,7 @@ from httcp.production.dilepton_features import hcand_fields
 from httcp.production.phi_cp import phi_cp
 from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split,gen_lep_fields
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
-from httcp.production.ip_corrector import ip_correction
+from httcp.production.ip_corrector import ip_correction,ip_sig_correction
 from httcp.production.bdt_score import hcp_bdt_score
 from httcp.production.fast_mtt import fast_mtt
 from httcp.production.stitching_weights import stitching_weight
@@ -42,7 +42,6 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
     uses={
         attach_coffea_behavior,
         normalization_weights,
-        #split_dy,
         pu_weight,
         trigger_weight_mutau,
         muon_weight,
@@ -67,6 +66,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         pion_energy_split,
         gen_lep_fields,
         ip_correction,
+        ip_sig_correction,
         hcp_bdt_score,
         fast_mtt,
         filter_weight,
@@ -75,7 +75,6 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
     produces={
         attach_coffea_behavior,
         normalization_weights,
-        #split_dy,
         pu_weight,
         trigger_weight_mutau,
         muon_weight,
@@ -99,6 +98,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         pion_energy_split,
         gen_lep_fields,
         ip_correction,
+        ip_sig_correction,
         hcp_bdt_score,
         fast_mtt,
         filter_weight,
@@ -115,6 +115,9 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     print("Performing IP correction...")
     events = self[ip_correction](events, **kwargs) #Uses the output of the gen_lep_fields producer
     
+    print("Performing IP significance correction...")
+    events = self[ip_sig_correction](events, **kwargs) 
+
     print("Producing pion energy split...")
     events = self[pion_energy_split](events, **kwargs)
     print("Producing jet variables for plotting...") 

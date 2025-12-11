@@ -809,7 +809,15 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 x_title=rf"{lep_str} HPS decay mode",
             )
             cfg.add_variable(
-                name=f"{ch_str}_{lep}_ip_sig",
+                name='_'.join((ch_str,lep,'ip_sig', 'nom')),
+                expression=f"hcand_{ch_str}.{lep}.ip_sig_nom",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0.0, 10),
+                unit="",
+                x_title= rf"{lep_str} $\frac{{|IP|}}{{\sigma(IP)}}$ nom",
+            )
+            cfg.add_variable(
+                name='_'.join((ch_str,lep,'ip_sig')),
                 expression=f"hcand_{ch_str}.{lep}.ip_sig",
                 null_value=EMPTY_FLOAT,
                 binning=(40, 0.0, 10),
