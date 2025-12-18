@@ -172,9 +172,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                 mc_qcd = mc[locator('ar_qcd')]
                 data_wj = data[locator('ar_wj')]
                 mc_wj = mc[locator('ar_wj')]
-                #from IPython import embed; embed()
                 yields = calc_yields(hists, locator('ar_yields'), locator('ar_yields_fakes'))
-                
                 
                 h_donor_name  = list(hists.keys())[0]
                 if qcd not in hists.keys():
@@ -456,6 +454,6 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         "blind_sr"                  : blind_sr,
         "ensure_zl_hist"            : ensure_zl_hist,
         "order"                     : order_hists,
-       "incl"                       : make_inclusive_hists,
-       "add_cats"                   : add_cats,
+        "incl"                       : make_inclusive_hists,
+        "add_cats"                   : add_cats,
        }

@@ -88,7 +88,11 @@ def httcp_fill_hist(self: HistProducer, h: dict, data: dict[str, Any], task: law
         fill_data['shift'] = ak.full_like(fill_data['weight'], data['shift'], dtype=np.int32)
         fill_data['process'] = data['process'][mask]
         var_name = [v for v in data.keys() if v not in ['category','process','weight', 'shift']][0]
-        fill_data[var_name] = data[var_name][mask]
+        is_unsigned = np.issubdtype(ak.to_numpy(data[var_name]).dtype, np.unsignedinteger)
+        if is_unsigned:
+            fill_data[var_name] = ak.values_astype(data[var_name][mask], np.float32)
+        else:
+            fill_data[var_name] = data[var_name][mask]
         fill_hist(h[cat.name], fill_data, last_edge_inclusive=task.last_edge_inclusive) 
      
 @httcp_hist_producer.post_process_hist
@@ -182,7 +186,7 @@ def ff_fill_hist(self: HistProducer, h: dict, data: dict[str, Any], task: law.Ta
             if the_var_name == 'n_jets':
                 fill_data[the_var_name] = np.clip(data[the_var_name][mask],0,2)
             else:
-                fill_data[the_var_name] = data[the_var_name][mask]
+                fill_data[the_var_name] = ak.values_astype(data[the_var_name][mask], np.int32)
         fill_hist(h[cat.name], fill_data, last_edge_inclusive=task.last_edge_inclusive) 
      
 @ff_hist_producer.post_process_hist
