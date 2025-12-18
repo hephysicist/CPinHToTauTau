@@ -23,7 +23,8 @@ def keep_columns(cfg: od.Config) -> None:
             "GenVtx.*",
             # general event info
             "run", "luminosityBlock", "event",
-            "PV.npvs","Pileup.nTrueInt","Pileup.nPU","genWeight", "LHEWeight.originalXWGTUP", "HTXS_njets*","weight","zpt_weight","muon_weight_nom","mc_weight","tau_weight_nom",
+            "PV.npvs","PV.x","PV.y","PV.z","PVBS.x","PVBS.y","PVBS.z",
+            "Pileup.nTrueInt","Pileup.nPU","genWeight", "LHEWeight.originalXWGTUP", "HTXS_njets*","weight","zpt_weight","muon_weight_nom","mc_weight","tau_weight_nom",
             "LHE.Njets", "LHE.NpNLO",
         } | {
             f"PuppiMET.{var}" for var in [
@@ -144,15 +145,20 @@ def add_common_features(cfg: od.config) -> None:
         binning=(20, 0, 100.0),
         x_title="Reconstructed primary vertices",
         null_value=EMPTY_FLOAT,
-        #discrete_x=True,
     )
+    # cfg.add_variable(
+    #     name="nPVBS",
+    #     expression="nPVBS",
+    #     binning=(20, 0, 100.0),
+    #     x_title="Reconstructed primary vertices (beam-spot)",
+    #     null_value=EMPTY_FLOAT,
+    # )
     cfg.add_variable( #Pileup.nTrueInt
         name="pu_nTrue_Int",
         expression="Pileup.nTrueInt",
         binning=(20, 0.0, 100.0),
         x_title="True number of Pile Up per Event",
         null_value=EMPTY_FLOAT,
-        #discrete_x=True,
     )
     cfg.add_variable( #Pileup.nPU
         name="nPU",
@@ -160,7 +166,6 @@ def add_common_features(cfg: od.config) -> None:
         binning=(20, 0.0, 100.0),
         x_title="Number of Pile Up per Event",
         null_value=EMPTY_FLOAT,
-        #discrete_x=True,
     )
 
 def add_lepton_features(cfg: od.Config) -> None:
@@ -814,19 +819,61 @@ def add_dilepton_features(cfg: od.Config) -> None:
                     name=f"{ch_str}_{lep}_IP{coord}",
                     expression=f"hcand_{ch_str}.{lep}.IP{coord}",
                     null_value=EMPTY_FLOAT,
-                    binning=(30, -0.004, 0.004),
+                    binning=(40, -0.004, 0.004),
                     unit="",
                     x_title= rf"{lep_str} $IP_{coord}$",
                 )
                 if lep == 'lep1':
-                    cfg.add_variable(
-                        name=f"{ch_str}_{lep}_refitSV{coord}",
-                        expression=f"hcand_{ch_str}.{lep}.refitSV{coord}",
-                        null_value=EMPTY_FLOAT,
-                        binning=(30, -1.0, 1.0),
-                        unit="",
-                        x_title= rf"{lep_str} $refited SV_{coord}$",
-                    )
+                    if coord == 'z':
+                        cfg.add_variable(
+                            name=f"PV_{coord}",
+                            expression=f"PV.{coord}",
+                            null_value=EMPTY_FLOAT,
+                            binning=(40, -20.0, 20.0),
+                            unit="cm",
+                            x_title= rf"$PV_{coord}$",
+                        )
+                        cfg.add_variable(
+                            name=f"PVBS_{coord}",
+                            expression=f"PVBS.{coord}",
+                            null_value=EMPTY_FLOAT,
+                            binning=(40, -20.0, 20.0),
+                            unit="cm",
+                            x_title= rf"$PV_{coord}$ (beam-spot)",
+                        )
+                        cfg.add_variable(
+                            name=f"{ch_str}_{lep}_refitSV{coord}",
+                            expression=f"hcand_{ch_str}.{lep}.refitSV{coord}",
+                            null_value=EMPTY_FLOAT,
+                            binning=(40, -20.0, 20.0),
+                            unit="cm",
+                            x_title= rf"{lep_str} $refited SV_{coord}$",
+                        )
+                    else:
+                        cfg.add_variable(
+                            name=f"PV_{coord}",
+                            expression=f"PV.{coord}",
+                            null_value=EMPTY_FLOAT,
+                            binning=(40, -0.25, 0.25),
+                            unit="cm",
+                            x_title= rf"$PV_{coord}$",
+                        )
+                        cfg.add_variable(
+                            name=f"PVBS_{coord}",
+                            expression=f"PVBS.{coord}",
+                            null_value=EMPTY_FLOAT,
+                            binning=(40, -0.25, 0.25),
+                            unit="cm",
+                            x_title= rf"$PV_{coord}$ (beam-spot)",
+                        )
+                        cfg.add_variable(
+                            name=f"{ch_str}_{lep}_refitSV{coord}",
+                            expression=f"hcand_{ch_str}.{lep}.refitSV{coord}",
+                            null_value=EMPTY_FLOAT,
+                            binning=(40, -1.0, 1.0),
+                            unit="cm",
+                            x_title= rf"{lep_str} $refited SV_{coord}$",
+                        )
             if lep == 'lep0':
                 if ch_str == 'mutau':
                     cfg.add_variable(
@@ -980,22 +1027,39 @@ def add_dilepton_features(cfg: od.Config) -> None:
             name=f"theta_gj_mu_a1_3pr_pv_gef",
             expression=f"theta_gj_mu_a1_3pr_pv_gef",
             null_value=EMPTY_FLOAT,
-            binning=(40, 0, 3.5),
+            binning=(40, 0, 0.1),
             x_title=r"$\theta_{GJ}$",
         )
         cfg.add_variable(
             name=f"theta_max_mu_a1_3pr_pv_gef",
             expression=f"theta_max_mu_a1_3pr_pv_gef",
             null_value=EMPTY_FLOAT,
-            binning=(40, 0, 0.4),
+            binning=(40, 0, 0.1),
             x_title=r"$\theta_{GJ}^{max}$",
         )
         cfg.add_variable(
             name=f"theta_rot_mu_a1_3pr_pv_gef",
             expression=f"theta_rot_mu_a1_3pr_pv_gef",
             null_value=EMPTY_FLOAT,
-            binning=(40, 0, 0.4),
+            binning=(40, 0, 0.1),
             x_title=r"$\theta_{GJ}^{rotated}$",
+        )
+        for coord in ['x','y','z']:
+            cfg.add_variable(
+                name=f"dsvpv_{coord}",
+                expression=f"dsvpv_{coord}",
+                null_value=EMPTY_FLOAT,
+                binning=(40, -1.2, 1.2),
+                unit="cm",
+                x_title=rf"$d(SV^{{\text{{refit}}}},PV)_{coord}$",
+            )
+        cfg.add_variable(
+            name=f"dsvpv_mag",
+            expression=f"dsvpv_mag",
+            null_value=EMPTY_FLOAT,
+            binning=(40, 0, 1.5),
+            unit="cm",
+            x_title=r"$|d(SV^{refit},PV)|$",
         )
 
 def add_ff_variables(cfg: od.Config) -> None:

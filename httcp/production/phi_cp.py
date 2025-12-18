@@ -9,7 +9,7 @@ from columnflow.production import Producer, producer
 from columnflow.util import maybe_import
 from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 from columnflow.columnar_util import optional_column as optional
-from httcp.util import get_lep_p4, get_ip_p4
+from httcp.util import get_lep_p4, get_ip_p4, to_pt_eta_phi_m
 from httcp.production.PolarimetricA1 import PolarimetricA1
 
 np = maybe_import("numpy")
@@ -38,11 +38,10 @@ def unit(v, eps=1e-9):
             "x": ak.where(mag > eps, v3.x / mag, 1.0),
             "y": ak.where(mag > eps, v3.y / mag, 1.0),
             "z": ak.where(mag > eps, v3.z / mag, 1.0),},
-        with_name="Vector3D",
-        behavior=coffea.nanoevents.methods.vector.behavior)
+        with_name="Vector3D", behavior=coffea.nanoevents.methods.vector.behavior)
 
 
-def rotate_to_gj_max(vis, mtt):
+def rotate_to_gj_max(vis, mtt, dsvpv):
     """
     Enforce the physical Gottfried–Jackson limit for the tau decay system. 
     The function computes theta_GJ between the visible system (vis) 
@@ -58,51 +57,43 @@ def rotate_to_gj_max(vis, mtt):
     """
 
     vis3 = vis.to_3D()
-    mtt3 = mtt.to_3D()
-    vis_mag = vis3.mag
-    mtt_mag = mtt3.mag
+
+    tau_mass = 1.77686
+    tau_comi = ak.zip({
+            "pt": mtt.pt,
+            "eta": dsvpv.eta,
+            "phi": dsvpv.phi,
+            "mass": tau_mass,},
+        with_name="PtEtaPhiMLorentzVector",behavior=coffea.nanoevents.methods.vector.behavior,)
+    tau_comi3 = tau_comi.to_3D()
 
     # --- Compute theta_GJ preserving small opening angles ---
     # Normalising vectors would erase tiny deviations, giving theta_gj=0 for nearly parallel vectors.
-    cos_theta_gj = vis3.dot(mtt3) / (vis_mag * mtt_mag)
+    cos_theta_gj = vis3.dot(tau_comi3) / (vis3.mag * tau_comi3.mag)
     cos_theta_gj = ak.where(cos_theta_gj > 1.0, 1.0,
                             ak.where(cos_theta_gj < -1.0, -1.0, cos_theta_gj))
     theta_gj = np.arccos(cos_theta_gj)
 
     # --- maximal allowed angle : sin(theta_max) = (m_tau^2 - m_vis^2) / (2 m_tau |p_vis|) ---
-    tau_mass = 1.77686
-    vis_m = vis.mass
-    denom = 2.0 * tau_mass * vis_mag
-    sin_max = ak.where(denom > 0, (tau_mass**2 - vis_m**2) / denom, 0.0)
+    denom = 2.0 * tau_mass * vis3.mag
+    sin_max = ak.where(denom > 0, (tau_mass**2 - vis.mass**2) / denom, 0.0)
     sin_max = ak.where(sin_max > 1.0, 1.0, ak.where(sin_max < -1.0, -1.0, sin_max))
     theta_max = np.arcsin(sin_max)
-
-    # --- check which taus need rotation ---
-    need_rot = theta_gj > theta_max
-    if not ak.any(need_rot):
-        return mtt, theta_gj, theta_max, theta_gj
 
     # --- rotation basis ---
     eps = 1e-9
     n1 = unit(vis3)
-    mtt_unit = unit(mtt3)
-    n3_raw = n1.cross(mtt_unit)
+    tau_comi_unit = unit(tau_comi3)
 
-    # fallback direction if cross-product vanishes, if n1 is aligned with z-axis, choose x-axis as fallback
-    unit_z = ak.zip({"x": 0*n1.x, "y": 0*n1.x, "z": 1*n1.x}, 
-        with_name="Vector3D", behavior=coffea.nanoevents.methods.vector.behavior)
-    fallback = unit(n1.cross(unit_z))   
-
-    n3 = unit(ak.where(n3_raw.mag > eps, n3_raw, fallback))
+    n3 = unit(n1.cross(tau_comi_unit))
     n2 = unit(n3.cross(n1))
 
     # --- decompose mtt momentum in this basis (signed components) ---
-    Porth = mtt3.dot(n3)
-    P1 = mtt3.dot(n1)
-    P2 = mtt3.dot(n2)
+    Porth = tau_comi3.dot(n3)
+    P1 = tau_comi3.dot(n1)
+    P2 = tau_comi3.dot(n2)
     p_plane_sq = P1**2 + P2**2
-    p_plane_mag = np.sqrt(ak.where(p_plane_sq > 0, p_plane_sq, 0.0))
-    Ppar = p_plane_mag
+    Ppar = np.sqrt(ak.where(p_plane_sq > 0, p_plane_sq, 0.0))
 
     # --- compute cos/sin of theta_max ---
     cosT = np.cos(theta_max)
@@ -113,41 +104,45 @@ def rotate_to_gj_max(vis, mtt):
     n_par_2 = unit(n1 * cosT + n2 * sinT)
 
     # --- reconstruct two candidate full directions keeping Porth unchanged ---
-    new_dir_1 = unit(ak.where(p_plane_mag > 0, n3 * Porth + n_par_1 * Ppar, n1))
-    new_dir_2 = unit(ak.where(p_plane_mag > 0, n3 * Porth + n_par_2 * Ppar, n1))
+    new_dir_1 = unit(ak.where(Ppar > 0, n3 * Porth + n_par_1 * Ppar, n1))
+    new_dir_2 = unit(ak.where(Ppar > 0, n3 * Porth + n_par_2 * Ppar, n1))
 
     # --- choose the candidate closer to the original tau flight direction ---
-    choose_2 = new_dir_1.dot(mtt_unit) < new_dir_2.dot(mtt_unit)
-    new_dir = ak.where(choose_2, new_dir_2, new_dir_1)
+    choose_1 = new_dir_1.dot(tau_comi_unit) > new_dir_2.dot(tau_comi_unit)
+    new_dir = ak.where(choose_1, new_dir_1, new_dir_2)
 
     # --- final spatial momentum (preserve original |p|) & rebuild 4-vector ---
-    new_p = new_dir * mtt_mag
-    E_new = np.sqrt(mtt_mag**2 + tau_mass**2) # equal results to mtt.energy
-
-    tau_rot_cart = ak.zip({
-            "x": new_p.x,
-            "y": new_p.y,
-            "z": new_p.z,
-            "energy": E_new},
-        with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior,)
+    new_p = new_dir * tau_comi3.mag
+    E_new = np.sqrt(tau_comi3.mag**2 + tau_mass**2) # equal results to mtt.energy
 
     tau_rot = ak.zip({
-            "pt": tau_rot_cart.pt,
-            "eta": tau_rot_cart.eta,
-            "phi": tau_rot_cart.phi,
-            "mass": tau_rot_cart.mass,},
-        with_name="PtEtaPhiMLorentzVector",behavior=coffea.nanoevents.methods.vector.behavior,)
-
-    theta_rot = ak.where(need_rot, theta_max, theta_gj)
-
-    return tau_rot, theta_gj, theta_max, theta_rot
+            "px": new_p.x,
+            "py": new_p.y,
+            "pz": new_p.z,
+            "E": E_new},
+        with_name="PtEtaPhiMLorentzVector", behavior=coffea.nanoevents.methods.vector.behavior,)
+    tau_rot = to_pt_eta_phi_m(tau_rot)
     
+    # --- check which taus need rotation ---
+    need_rot = theta_gj > theta_max
+
+    tau_final = ak.where(need_rot, tau_rot, tau_comi)
+    tau3_final = tau_final.to_3D()
+
+    cos_theta_rot = vis3.dot(tau3_final) / (vis3.mag * tau3_final.mag)
+    cos_theta_rot = ak.where(cos_theta_rot > 1.0, 1.0,
+                    ak.where(cos_theta_rot < -1.0, -1.0, cos_theta_rot))
+    theta_rot = np.arccos(cos_theta_rot)
+
+    return tau_final, theta_gj, theta_max, theta_rot
+
 
 def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     tau     = events.hcand_mutau.lep1
     tau_MTT = events.hcand_mutau.fastMTT_BW.lep1
     tauprod = events.tau_decay_prods_mutau_lep1
-    muon    = events.hcand_mutau.lep0    
+    muon    = events.hcand_mutau.lep0   
+    PVBS      = events.PVBS
 
     p1 = p2 = get_lep_p4(muon)
     r1 = r2 = get_ip_p4(muon)
@@ -155,9 +150,11 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     ip2 = get_ip_p4(tau)
 
     # initialise variables for GJ rotation case
-    theta_gj = ak.zeros_like(tau.pt) * EMPTY_FLOAT
-    theta_max = ak.zeros_like(tau.pt) * EMPTY_FLOAT
-    theta_rot = ak.zeros_like(tau.pt) * EMPTY_FLOAT
+    theta_gj, theta_max, theta_rot, empty = (
+        ak.zeros_like(tau.pt) * EMPTY_FLOAT for _ in range(4))
+    
+    dsvpv = ak.zip({"x": empty, "y": empty, "z": empty},
+        with_name="Vector3D", behavior=coffea.nanoevents.methods.vector.behavior)
     
     if pair_decay_ch == "mu_pi":
         charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
@@ -253,14 +250,27 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         tau_p4 = ak.drop_none(ak.mask(tau_p4, mask_3pr))
         ss_pi1 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, 0:1]), mask_3pr))
         ss_pi2 = ak.drop_none(ak.mask(get_lep_p4(ss_pions[:, 1:2]), mask_3pr))
+
+        # m1 = (os_pi + ss_pi1).mass
+        # m2 = (os_pi + ss_pi2).mass
+        
+        # rho_mass = 0.77526
+        # dm1 = np.abs(m1 - rho_mass)
+        # dm2 = np.abs(m2 - rho_mass)
+        
+        # sel_ss_pi = ak.where(dm1 < dm2, ss_pi1, ss_pi2)
+        # single_pi = ak.where(dm1 > dm2, ss_pi1, ss_pi2)
         
         # Drop events with missing inputs ## same mask as above
         valid_mask = ((ak.num(os_pi) == 1) & (ak.num(tau_p4) == 1) &
                         (ak.num(ss_pi1) == 1) & (ak.num(ss_pi2) == 1))[..., np.newaxis]
+                        #(ak.num(sel_ss_pi) == 1) & (ak.num(single_pi) == 1))[..., np.newaxis]
         os_pi   = ak.drop_none(ak.mask(os_pi, valid_mask))
         tau_p4  = ak.drop_none(ak.mask(tau_p4, valid_mask))
         ss_pi1  = ak.drop_none(ak.mask(ss_pi1, valid_mask))
         ss_pi2  = ak.drop_none(ak.mask(ss_pi2, valid_mask))
+        # ss_pi1  = ak.drop_none(ak.mask(sel_ss_pi, valid_mask))
+        # ss_pi2  = ak.drop_none(ak.mask(single_pi, valid_mask))
         tau_charge = ak.drop_none(ak.mask(ak.firsts(tau.charge), valid_mask))
 
         # GJ rotation and boost in Higgs rest frame
@@ -281,7 +291,15 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
             # # boost back to lab frame
             # tau_p4 = tau_p4_H_rot.boost(beta_H)
 
-            tau_p4, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis, tau_p4)
+            tau = ak.drop_none(ak.mask(tau, valid_mask))
+            PVBS = ak.drop_none(ak.mask(PVBS, valid_mask))
+            dsvpv = ak.zip({
+                "x" : tau.refitSVx - PVBS.x,
+                "y" : tau.refitSVy - PVBS.y,
+                "z" : tau.refitSVz - PVBS.z}, with_name="Vector3D", behavior=coffea.nanoevents.methods.vector.behavior)
+            dsvpv = ak.drop_none(ak.mask(dsvpv, valid_mask))
+    
+            tau_p4, theta_gj, theta_max, theta_rot = rotate_to_gj_max(tau_vis, tau_p4, dsvpv)
         
         # Collect vectors for boosting into tau rest frame
         beta_tau = tau_p4.boostvec
@@ -294,7 +312,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         a1_pol = PolarimetricA1(vecs_pv['p2'], vecs_pv['p1'], vecs_pv["ss1"], vecs_pv["ss2"], tau_charge)
 
         # Reconstruct the tau impact-parameter in boosted frame
-        pv = -a1_pol.PVC().pvec #tau rest frame
+        pv = -a1_pol.PVC().pvec
 
         pv = ak.zip({
             "x": pv.x, 
@@ -322,7 +340,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     vecs_p4 = {}
     for var in ['p1', 'p2', 'r1', 'r2', 'ip2']:
         vecs_p4[var] = eval(var)
-    return vecs_p4, do_phase_shift, ch1, theta_gj, theta_max, theta_rot
+    return vecs_p4, do_phase_shift, ch1, theta_gj, theta_max, theta_rot, dsvpv
 
 def make_boost(vecs_p4, boostvec_=None):
     # Create a dictionary to store boosted variables (they are defined with upper case names)
@@ -338,20 +356,6 @@ def get_acop_angle(vecs_p4, do_phase_shift, ch1):
 
     v3 = {k: vecs_p4[k].to_3D() for k in vecs_p4}
     v3 = {k: unit(v) for k, v in v3.items()}
-    # v3_new = {}
-    # for k, v in v3.items():
-    #     eps = 1e-9
-    #     mag = v.mag
-    #     mask = mag > eps
-    #     n_removed = ak.sum(~mask)
-    #     print(f"{k}: {n_removed} vectors set to zero due to small magnitude")
-    #     # setze kleine Vektoren auf 0
-    #     v3_new[k] = ak.zip({
-    #         "x": ak.where(mask, v.x/mag, 0.0),
-    #         "y": ak.where(mask, v.y/mag, 0.0),
-    #         "z": ak.where(mask, v.z/mag, 0.0),
-    #     }, with_name="Vector3D", behavior=v.behavior)
-    # v3 = v3_new
 
     R1_tan = unit(v3['R1'] - v3['P1'] * v3['R1'].dot(v3['P1']))
     R2_tan = unit(v3['R2'] - v3['P2'] * v3['R2'].dot(v3['P2']))
@@ -406,13 +410,14 @@ channels = ['mu_pi','mu_rho','mu_a1_1pr',
 
 @producer(
     uses={
-        "hcand_*","tau_decay_prods_*"},
+        "hcand_*","tau_decay_prods_*","PVBS.*"},
     produces={
         f"phi_cp_{the_ch}" for the_ch in channels
     }| {
         'theta_gj_mu_a1_3pr_pv_gef',
         'theta_max_mu_a1_3pr_pv_gef',
         'theta_rot_mu_a1_3pr_pv_gef',
+        'dsvpv_x','dsvpv_y','dsvpv_z','dsvpv_mag',
     }
 )
 def phi_cp(
@@ -423,7 +428,7 @@ def phi_cp(
    
     for the_ch in channels:
         print(f"Calculating phi_cp for {the_ch}")
-        vecs_p4, do_phase_shift, ch1, theta_gj, theta_max, theta_rot = prepare_acop_vecs(events, pair_decay_ch=the_ch)
+        vecs_p4, do_phase_shift, ch1, theta_gj, theta_max, theta_rot, dsvpv = prepare_acop_vecs(events, pair_decay_ch=the_ch)
         zmf_vecs_p4 = make_boost(vecs_p4)
         phi_cp = get_acop_angle(zmf_vecs_p4, do_phase_shift, ch1)
         phi_cp = ak.fill_none(ak.firsts(phi_cp,axis=1), EMPTY_FLOAT)
@@ -433,12 +438,20 @@ def phi_cp(
         events = set_ak_column_f32(events, f"phi_cp_{the_ch}",phi_cp)
 
         if the_ch == "mu_a1_3pr_pv_gef":
-            theta_gj = ak.fill_none(ak.firsts(theta_gj,axis=1), EMPTY_FLOAT)
+            theta_gj  = ak.fill_none(ak.firsts(theta_gj,axis=1), EMPTY_FLOAT)
             theta_max = ak.fill_none(ak.firsts(theta_max,axis=1), EMPTY_FLOAT)
             theta_rot = ak.fill_none(ak.firsts(theta_rot,axis=1), EMPTY_FLOAT)
+            dsvpv_x     = ak.fill_none(ak.firsts(dsvpv.x,axis=1), EMPTY_FLOAT)
+            dsvpv_y     = ak.fill_none(ak.firsts(dsvpv.y,axis=1), EMPTY_FLOAT)
+            dsvpv_z     = ak.fill_none(ak.firsts(dsvpv.z,axis=1), EMPTY_FLOAT)
+            dsvpv_mag   = ak.fill_none(ak.firsts(dsvpv.mag,axis=1), EMPTY_FLOAT)
             events = set_ak_column_f32(events, f"theta_gj_{the_ch}",theta_gj)
             events = set_ak_column_f32(events, f"theta_max_{the_ch}",theta_max)
             events = set_ak_column_f32(events, f"theta_rot_{the_ch}",theta_rot)
+            events = set_ak_column_f32(events, f"dsvpv_x",dsvpv_x)
+            events = set_ak_column_f32(events, f"dsvpv_y",dsvpv_y)
+            events = set_ak_column_f32(events, f"dsvpv_z",dsvpv_z)
+            events = set_ak_column_f32(events, f"dsvpv_mag",dsvpv_mag)
 
         #alpha = np.ones_like(events.event)*EMPTY_FLOAT
         # alpha_per_ch = produce_alpha(vecs_p4)
