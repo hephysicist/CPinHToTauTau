@@ -128,6 +128,7 @@ class ComputeFakeFactors(
         from scipy.optimize import curve_fit
         from scipy.special import erf
         import matplotlib.pyplot as plt
+        import matplotlib as mpl
         import correctionlib.schemav2 as cs
         from numpy import exp
         plt.figure(dpi=200)
@@ -218,34 +219,66 @@ class ComputeFakeFactors(
             ff_raw.view().variance[...,0] = ff_err**2
             ff_raw.name = name + '_raw'
             ff_raw.label = label + '_raw'
-            
             def get_fit_model(name, dm, nj):
-                if dm==0 and nj==2:
-                    formula_str = 'p0+p1*x'
-                    def fitf(x,p0,p1): 
-                        from numpy import exp
-                        return eval(formula_str)
-            
-                    def jac(x,p):
-                        from numpy import array,exp
-                        ders=array([ 1.,x])
-                        return ders 
-                    bounds = ([-0.5, -0.1],[0.5,0.1]) 
-                else:
-                    formula_str = 'p0+p1*exp(-p2*x)'
-                    def fitf(x,p0,p1,p2): 
+                if dm==0:
+                    formula_str = 'p0+p1/(1+exp(p2*(x-p3)))'
+                    def fitf(x,p0,p1,p2,p3): 
                         from numpy import exp
                         return eval(formula_str)
             
                     def jac(x,p):
                         from numpy import array,exp
                         ders=array([ 1.,
-                                    exp(-p[2]*x),
-                                    -1.*p[1]*x*exp(-p[2]*x)])
-                        return ders
-                    
-                    bounds = ([-1, -5, 0],[1,5,1]) 
+                                    1/(1+exp(p[2]*(x-p[3]))),
+                                    -p[1]*exp(p[2]*(x-p[3]))*(x-p[3])/(1+exp(p[2]*(x-p[3])))**2,
+                                    p[1]*exp(p[2]*(x-p[3]))*p[2]/(1+exp(p[2]*(x-p[3])))**2,
+                                    ])
+                        return ders 
+                    bounds = ([0,0,-0.5,20],[0.3,0.3,-0.05,50]) 
+                else:
+                    formula_str = 'p0+p1/(1+exp(p2*(x-p3)))'
+                    def fitf(x,p0,p1,p2,p3): 
+                        from numpy import exp
+                        return eval(formula_str)
+            
+                    def jac(x,p):
+                        from numpy import array,exp
+                        ders=array([ 1.,
+                                    1/(1+exp(p[2]*(x-p[3]))),
+                                    -p[1]*exp(p[2]*(x-p[3]))*(x-p[3])/(1+exp(p[2]*(x-p[3])))**2,
+                                    p[1]*exp(p[2]*(x-p[3]))*p[2]/(1+exp(p[2]*(x-p[3])))**2,
+                                    ])
+                        return ders 
+                    bounds = ([0,0,-2,20],[0.3,0.3,-0.05,50])  
                 return formula_str, fitf, jac, bounds
+            
+            # def get_fit_model(name, dm, nj):
+            #     if dm==0:
+            #         formula_str = 'p0+p1*x'
+            #         def fitf(x,p0,p1): 
+            #             from numpy import exp
+            #             return eval(formula_str)
+            
+            #         def jac(x,p):
+            #             from numpy import array,exp
+            #             ders=array([ 1.,x])
+            #             return ders 
+            #         bounds = ([-0.5, -0.1],[0.5,0.1]) 
+            #     else:
+            #         formula_str = 'p0+p1*exp(-p2*x)'
+            #         def fitf(x,p0,p1,p2): 
+            #             from numpy import exp
+            #             return eval(formula_str)
+            
+            #         def jac(x,p):
+            #             from numpy import array,exp
+            #             ders=array([ 1.,
+            #                         exp(-p[2]*x),
+            #                         -1.*p[1]*x*exp(-p[2]*x)])
+            #             return ders
+                    
+            #         bounds = ([-1, -5, 0],[1,5,1]) 
+            #     return formula_str, fitf, jac, bounds
                     
         
             ff_fitted = ff_raw.copy().reset()
@@ -454,9 +487,15 @@ class ComputeFakeFactors(
                             y_fitf,
                             color='#FF867B')
                     ax.fill_between(x, y_fitf_up,  y_fitf_down, color='#83d55f', alpha=0.5)
-                    ax.set_ylim(0,1.1*np.max(y_fitf_up))
+                    ax.set_ylim(0,1.3*np.max(y_fitf_up))
                     #from IPython import embed; embed()
-                    ax.set_xticks(pt_axis.edges, pt_axis.edges)
+                    ax.set_xscale('log', base=10)
+                    from matplotlib.ticker import LogFormatter,LogLocator,ScalarFormatter
+                    formatter = LogFormatter(labelOnlyBase=False, minor_thresholds = (5,0.8))
+                    ax.get_xaxis().set_minor_formatter(formatter)
+                    ax.get_xaxis().set_major_formatter(ScalarFormatter())
+                    #ax.set_xticks(pt_axis.edges, pt_axis.edges)
+                    
                     ax.set_ylabel('Fake Factor')
                     ax.set_xlabel('Tau pT [GeV]')
                     ax.grid()
