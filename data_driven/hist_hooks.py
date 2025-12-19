@@ -464,6 +464,6 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         "blind_sr"                  : blind_sr,
         "ensure_zl_hist"            : ensure_zl_hist,
         "order"                     : order_hists,
-       "incl"                       : make_inclusive_hists,
-       "add_cats"                   : add_cats,
+        "incl"                       : make_inclusive_hists,
+        "add_cats"                   : add_cats,
        }

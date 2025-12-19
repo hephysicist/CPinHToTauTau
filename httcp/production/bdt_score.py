@@ -70,7 +70,7 @@ def hcp_bdt_score(
         'jdeta': flat_np_view(events.dijet.deltaeta),
         'dijetpt': flat_np_view(events.dijet.pt),
         'n_jets': flat_np_view(events.n_jets),
-       #'n_bjets': flat_np_view(events.N_b_jets),
+        #'n_bjets': flat_np_view(events.N_b_jets),
     }
     features = pd.DataFrame.from_dict(features_dict)
     features.index = events.event

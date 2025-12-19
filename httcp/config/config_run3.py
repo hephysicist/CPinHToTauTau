@@ -580,6 +580,7 @@ def add_run3(ana: od.Analysis,
     jsonpog_dir = "/eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_latest/POG/"
     jsonpog_tau_dir = "/eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
     corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/"
+    tmp_corr_dir = "/eos/user/s/stzakhar/htt_corrections_mirror/"
     ml_dir = "/eos/user/s/stzakhar/TauTheDifference/Training/models/"
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
@@ -608,7 +609,7 @@ def add_run3(ana: od.Analysis,
         "zpt_weight"                    : f"{corr_dir}/dy_ptll/DY_pTll_recoil_corrections_{year}{long_tag}.json.gz",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
-        "fake_factors"                  : (f"{corr_dir}fake_factors_{channel}_22and23_mt{cfg.x.mt_cut_value}_4bins.json", "v2"),
+        "fake_factors"                  : f"{tmp_corr_dir}fake_factors_v1_2025_{channel}_22and23_mt{cfg.x.mt_cut_value}_dr_iso0p05_mt70.json",
         "met_recoil"                    : (f"{corr_dir}hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{tag}_v2.json.gz", "v2"),
         #"met_phi_corr": (f"{jsonpog_dir}JME/{cfg.x.year}{pog_tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
         "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
@@ -916,7 +917,7 @@ def add_run3(ana: od.Analysis,
         cfg.x.get_dataset_lfns_sandbox = dev_sandbox("bash::$CF_BASE/sandboxes/cf.sh")
         # define custom remote fs's to look at
         cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: "wlcg_fs_eos"
-        
+
     # add categories using the "add_category" tool which adds auto-generated ids
     from httcp.config.categories import add_categories
     add_categories(cfg,channel=channel)
