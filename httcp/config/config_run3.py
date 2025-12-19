@@ -641,7 +641,7 @@ def add_run3(ana: od.Analysis,
         "met_recoil"                    : f"{tmp_corr_dir}ZpT_RecCorr_V5/DY_pTll_recoil_corrections_{year}{tag}.json.gz",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
-        "fake_factors"                  : (f"{tmp_corr_dir}fake_factors_v1_2025_{channel}_22and23_mt{cfg.x.mt_cut_value}_dr_iso0p05_mt70.json", "v2"),
+        "fake_factors"                  : (f"{tmp_corr_dir}fake_factors_v1_2025_no_recoil_sigmoid_9bins.json", "v2"),
         "ip_sig_corr"                   : (f"{tmp_corr_dir}measured_by_Alexei/IPsignificance/JSON/IP_Significance_Correction_Run3_2022-2023_muon.json", "v2"),
         "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
         "ml_model_even"                 : f"{corr_dir}signal_classifier/model_EVEN.json",
@@ -855,7 +855,8 @@ def add_run3(ana: od.Analysis,
     cfg.x.fake_factor_method = DotDict.wrap({
     "axes": {'tau_pt': {
                 'var_route' : [f'hcand_{channel}', 'lep1', 'pt'],
-                'ax_str'    : 'Variable([20,30,40,60,200], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
+                'ax_str'    : 'Variable([20,25,30,35,40,50,60,80,300], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
+                # 'ax_str'    : 'Variable([20,30,40,60,200], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
                 },
              'tau_dm_pnet': {
                 'var_route' : [f'hcand_{channel}', 'lep1', 'decayModePNet'],
@@ -881,12 +882,13 @@ def add_run3(ana: od.Analysis,
             "DYto2Tau_MLL_50_0J_amcatnloFXFX": "NLO",
             "DYto2Tau_MLL_50_1J_amcatnloFXFX": "NLO",
             "DYto2Tau_MLL_50_2J_amcatnloFXFX": "NLO",
-            "WtoLNu_amcatnloFXFX": "NLO",
-            },
-       
-       
-        # 'datasets' : {'dy_lep_madgraph'  : "LO",
-        #               'wj_incl_madgraph' : "LO"},
+            "WtoLNu_amcatnloFXFX"  : "NLO",
+            "WtoLNu_1J_madgraphMLM": "LO",
+            "WtoLNu_2J_madgraphMLM": "LO",
+            "WtoLNu_3J_madgraphMLM": "LO",
+            "WtoLNu_4J_madgraphMLM": "LO",
+            "WtoLNu_madgraphMLM"   : "LO",
+        },
     })
     
     if cfg.campaign.x("custom").get("creator") == "desy":  
