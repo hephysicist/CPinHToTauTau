@@ -23,7 +23,7 @@ from law.util import DotDict
 from columnflow.columnar_util import set_ak_column
 #from columnflow.production.cms.top_pt_weight import gen_parton_top
 
-from httcp.selection.physics_objects import jet_selection, muon_selection, electron_selection, tau_selection
+from httcp.selection.physics_objects import muon_selection, electron_selection, tau_selection
 from httcp.selection.trigger import trigger_selection
 from httcp.selection.lepton_pair import pair_selection
 from httcp.selection.match_trigobj import match_trigobj
@@ -53,7 +53,6 @@ coffea = maybe_import("coffea")
         muon_selection,
         electron_selection,
         tau_selection,
-        jet_selection,
         jet_veto,
         pair_selection,
         channel_id,
@@ -80,7 +79,6 @@ coffea = maybe_import("coffea")
         muon_selection,
         electron_selection,
         tau_selection,
-        jet_selection,
         jet_veto,
         pair_selection,
         channel_id,
@@ -190,7 +188,7 @@ def main(
     #produce masks for tight_jetID and tight_jet_id_lep_veto
     events = self[create_jetID_masks](events, **kwargs)
     
-    #produce is_b_vetoed columnd
+    #produce is_b_vetoed column
     events = self[jet_veto](events, **kwargs)
 
     #produce channel id column (legacy)

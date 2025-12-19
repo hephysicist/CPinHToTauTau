@@ -35,9 +35,15 @@ def setup_plot_styles(config: od.Config) -> None:
     }
     ratio = {
         "yloc" : "center",
-        #"xticks" : np.linspace(-0.01,0.01,5),
-        #"xminorticks" : np.linspace(-0.01,0.01,25)
-        
+        "ylim" : [0.4, 1.6],
+        "yticks" : np.linspace(0.5,1.5,3),
+        "yminorticks" : np.linspace(0.5,1.5,10),
+        "grid" : {
+            'which': "minor",
+            'axis': "y",
+            'linestyle': ":",
+            'linewidth': 1.5
+            }
     }
     annotate = {
         "fontsize": 18, "style": "italic", "xycoords": "axes fraction", "xy": (0.035, 0.955),
