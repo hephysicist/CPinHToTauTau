@@ -154,20 +154,19 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                     
             hists[qcd][...] = tmp_arr
             output[config] = hists
-            return output
+        return output
     
     def ff_method(task, inputs): #cf0p3
         from cmsdb.processes.qcd import jet_fakes,qcd
         output = {}
         for config, hists in inputs.items():
-            sr_cats = [c for c in config.categories.names() if ('_sr' in c) and ('no_mt' not in c) ]
+            sr_cats = [c for c in config.categories.names() if ('_sr' in c) and ('prompt' in c) and ('tau2' in c) and ('no_mt' not in c) ]
             for the_cat in sr_cats:
-                print(f'Applying fake factor method on {the_cat}')
-                sr = config.get_category(the_cat)
+                print(f'Applying fake factor method on {config.name} {the_cat}')
+                sr = config.get_category(the_cat) 
                 sr.label = sr.label.replace('prompt lep.', '') + f'\njet fakes from FF'
                 data = get_data_hist(hists)
                 mc = get_mc_hist(hists)
-               
                 locator = lambda reg:  {'category': hist.loc(sr.aux['ff_regs'][reg]),'shift': hist.loc(task.shift)}
                 def fake_locator(reg):
                     ar_string = sr.aux['ff_regs'][reg]
@@ -177,10 +176,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                 mc_qcd = mc[locator('ar_qcd')]
                 data_wj = data[locator('ar_wj')]
                 mc_wj = mc[locator('ar_wj')]
-                #from IPython import embed; embed()
                 yields = calc_yields(hists, locator('ar_yields'), fake_locator('ar_yields'))
-                
-                
                 h_donor_name  = list(hists.keys())[0]
                 if qcd not in hists.keys():
                     hists[qcd] = hists[h_donor_name].copy().reset()
@@ -202,7 +198,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
             [wj_proc] = [p for p in hists.keys() if 'wj' in p.name]
             del hists[wj_proc]   
             output[config] = hists
-            return output
+        return output
     
     def ff_closure_test(task, inputs): #cf0p3
         from cmsdb.processes.qcd import jet_fakes,qcd
@@ -383,19 +379,25 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
     def make_inclusive_hists(task, inputs): #cf0p3
         ouputs = {}
         for config, hists in inputs.items():
-            incl = 'cat_mutau_sr'
-            bkg_type = ['incl_fakes']
+            #from IPython import embed; embed()
+            
+            incl = task.categories
+            #'cat_mutau_sr_no_mt' #'cat_mutau_sr'
+            if 'ff_method' in task.hist_hooks:
+                bkg_type = 'prompt' #take prompt contribution form all hists and estimate jet fake contribution via transfer factor method
+            else:
+                bkg_type = 'fake_incl'
+            print(f"Using {bkg_type} subcategories to make inclusive hists.")
+            
             decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
             out_h = hists.copy()
-            for p, h in hists.items():
-                tmp_arr = h.view()
-                subhists = []
-                for bkg in bkg_type:
-                    if p.is_data and bkg=='jet_fakes': 
-                        print('Not adding data second time')
-                        continue #Otherwise we double count data from prompt cats and from the jet_fakes cats
+            for incl in task.categories:
+                print(f'Preparing hists for {incl} from {config.name}')
+                for p, h in hists.items():
+                    tmp_arr = h.view()
+                    subhists = []
                     for the_decay in decay_ch:
-                        cat_name = '__'.join((incl,bkg,the_decay))
+                        cat_name = '__'.join((incl,bkg_type,the_decay))
                         print(f'Adding :{cat_name} for {p.name} from {config.name}')
                         loc_dict = {'category': hist.loc(cat_name),
                                     'shift': hist.loc(task.shift)}
@@ -403,14 +405,14 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                             subhists.append(h[loc_dict])
                         else:
                             print(f"WARNING: didn't find {cat_name} for {p.name} from {config.name}")
-                if len(subhists):
-                    incl_h = sum(subhists)
-                    tmp_arr[find_idxs(h, incl, task.shift)].value = incl_h.view().value
-                    tmp_arr[find_idxs(h, incl, task.shift)].variance = incl_h.view().variance
-                else: 
-                    tmp_arr[find_idxs(h, incl, task.shift)].value = 0
-                    tmp_arr[find_idxs(h, incl, task.shift)].variance = 0
-                out_h[p][...] = tmp_arr
+                    if len(subhists):
+                        incl_h = sum(subhists)
+                        tmp_arr[find_idxs(h, incl, task.shift)].value = incl_h.view().value
+                        tmp_arr[find_idxs(h, incl, task.shift)].variance = incl_h.view().variance
+                    else: 
+                        tmp_arr[find_idxs(h, incl, task.shift)].value = 0
+                        tmp_arr[find_idxs(h, incl, task.shift)].variance = 0
+                    out_h[p][...] = tmp_arr
             ouputs[config] = out_h
         return ouputs
 
