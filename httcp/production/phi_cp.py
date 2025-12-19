@@ -84,7 +84,6 @@ def rotate_to_gj_max(vis, mtt, dsvpv):
     eps = 1e-9
     n1 = unit(vis3)
     tau_comi_unit = unit(tau_comi3)
-
     n3 = unit(n1.cross(tau_comi_unit))
     n2 = unit(n3.cross(n1))
 
@@ -438,9 +437,29 @@ def phi_cp(
         events = set_ak_column_f32(events, f"phi_cp_{the_ch}",phi_cp)
 
         if the_ch == "mu_a1_3pr_pv_gef":
-            theta_gj  = ak.fill_none(ak.firsts(theta_gj,axis=1), EMPTY_FLOAT)
-            theta_max = ak.fill_none(ak.firsts(theta_max,axis=1), EMPTY_FLOAT)
-            theta_rot = ak.fill_none(ak.firsts(theta_rot,axis=1), EMPTY_FLOAT)
+
+            empty_event_mask = None
+            theta_clean = {}
+            theta_vars = {"gj":  theta_gj, "max": theta_max, "rot": theta_rot,}
+
+            for name, theta in theta_vars.items():
+
+                empty_mask = ~np.isfinite(theta)
+                print(f"Found {ak.sum(empty_mask)}/{len(theta)} "
+                    f"theta_{name} values were non-finite and replaced with EMPTY_FLOAT")
+
+                event_mask = ak.any(empty_mask, axis=1)
+                empty_event_mask = (event_mask if empty_event_mask is None
+                                    else empty_event_mask | event_mask)
+                
+                if name == "rot":
+                    print("Number of empty events:", ak.sum(empty_event_mask))
+
+                theta_vars[name] = ak.where(np.isfinite(theta), theta, EMPTY_FLOAT)
+
+            theta_gj    = ak.fill_none(ak.firsts(theta_vars["gj"],axis=1), EMPTY_FLOAT)
+            theta_max   = ak.fill_none(ak.firsts(theta_vars["max"],axis=1), EMPTY_FLOAT)
+            theta_rot   = ak.fill_none(ak.firsts(theta_vars["rot"],axis=1), EMPTY_FLOAT)
             dsvpv_x     = ak.fill_none(ak.firsts(dsvpv.x,axis=1), EMPTY_FLOAT)
             dsvpv_y     = ak.fill_none(ak.firsts(dsvpv.y,axis=1), EMPTY_FLOAT)
             dsvpv_z     = ak.fill_none(ak.firsts(dsvpv.z,axis=1), EMPTY_FLOAT)
