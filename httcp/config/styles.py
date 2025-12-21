@@ -35,9 +35,9 @@ def setup_plot_styles(config: od.Config) -> None:
     }
     ratio = {
         "yloc" : "center",
-        "ylim" : [0.4, 1.6],
-        "yticks" : np.linspace(0.5,1.5,3),
-        "yminorticks" : np.linspace(0.5,1.5,10),
+        "ylim" : [0.75, 1.25],
+        "yticks" : np.linspace(0.8,1.2,3),
+        "yminorticks" : np.linspace(0.8,1.2,10),
         "grid" : {
             'which': "minor",
             'axis': "y",
