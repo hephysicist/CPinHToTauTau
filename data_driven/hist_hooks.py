@@ -85,6 +85,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
     """
     Add histogram hooks to a configuration.
     """
+   
     flat_tf = True
     def qcd_estimation(task, inputs): #cf0p3
         output = {}
@@ -153,27 +154,29 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                     
             hists[qcd][...] = tmp_arr
             output[config] = hists
-            return output
+        return output
     
     def ff_method(task, inputs): #cf0p3
         from cmsdb.processes.qcd import jet_fakes,qcd
         output = {}
         for config, hists in inputs.items():
-            sr_cats = [c for c in config.categories.names() if ('_sr' in c) and ('no_mt' not in c) ]
+            sr_cats = [c for c in config.categories.names() if ('_sr' in c) and ('prompt' in c) and ('tau2' in c) and ('no_mt' not in c) ]
             for the_cat in sr_cats:
-                print(f'Applying fake factor method on {the_cat}')
-                sr = config.get_category(the_cat)
+                print(f'Applying fake factor method on {config.name} {the_cat}')
+                sr = config.get_category(the_cat) 
+                sr.label = sr.label.replace('prompt lep.', '') + f'\njet fakes from FF'
                 data = get_data_hist(hists)
                 mc = get_mc_hist(hists)
-               
                 locator = lambda reg:  {'category': hist.loc(sr.aux['ff_regs'][reg]),'shift': hist.loc(task.shift)}
-                
+                def fake_locator(reg):
+                    ar_string = sr.aux['ff_regs'][reg]
+                    af_fakes_string = ar_string.replace('prompt','jet_fakes')
+                    return {'category': hist.loc(af_fakes_string),'shift': hist.loc(task.shift)}
                 data_qcd = data[locator('ar_qcd')]
                 mc_qcd = mc[locator('ar_qcd')]
                 data_wj = data[locator('ar_wj')]
                 mc_wj = mc[locator('ar_wj')]
-                yields = calc_yields(hists, locator('ar_yields'), locator('ar_yields_fakes'))
-                
+                yields = calc_yields(hists, locator('ar_yields'), fake_locator('ar_yields'))
                 h_donor_name  = list(hists.keys())[0]
                 if qcd not in hists.keys():
                     hists[qcd] = hists[h_donor_name].copy().reset()
@@ -195,7 +198,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
             [wj_proc] = [p for p in hists.keys() if 'wj' in p.name]
             del hists[wj_proc]   
             output[config] = hists
-            return output
+        return output
     
     def ff_closure_test(task, inputs): #cf0p3
         from cmsdb.processes.qcd import jet_fakes,qcd
@@ -221,10 +224,10 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                         tmp_fakes[find_idxs(hists[jet_fakes], num, task.shift)].value = np.maximum(h_d.values() - h_mc.values(), 0)
                         tmp_fakes[find_idxs(hists[jet_fakes], num, task.shift)].variance = h_d.variances() + h_mc.variances()
                         hists[proc][...] = tmp_fakes
-                    if name == 'wj':
-                        p_list = [p for p in hists.keys() if 'wj' in p.name]
-                        if len(p_list):
-                            del hists[p_list[0]]          
+                    # if name == 'wj':
+                    #     p_list = [p for p in hists.keys() if 'wj' in p.name]
+                    #     if len(p_list):
+                    #         del hists[p_list[0]]          
             output[config] = hists
             return output
     
@@ -345,7 +348,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                     for the_cat in sr_cats:
                         loc_dict = {'category': hist.loc(the_cat),'shift': hist.loc(task.shift)}
                         tmp_arr[find_idxs(h, the_cat, task.shift)].value[-5:] = 0
-                        tmp_arr[find_idxs(h, the_cat, task.shift)].variance[-5:] = 0
+                        tmp_arr[find_idxs(h, the_cat, task.shift)].variance[-5:] = 1
 
                     out_h[p][...] = tmp_arr
             ouputs[config] = out_h
@@ -374,35 +377,42 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
     
     
     def make_inclusive_hists(task, inputs): #cf0p3
-        
         ouputs = {}
         for config, hists in inputs.items():
-            incl = 'cat_mutau_sr'
-            bkg_type = ['prompt','jet_fakes']
-            hig_cats = ['hig__cat0','hig__cat1', 'hig__cat2'] 
+            #from IPython import embed; embed()
+            
+            incl = task.categories
+            #'cat_mutau_sr_no_mt' #'cat_mutau_sr'
+            if 'ff_method' in task.hist_hooks:
+                bkg_type = 'prompt' #take prompt contribution form all hists and estimate jet fake contribution via transfer factor method
+            else:
+                bkg_type = 'fake_incl'
+            print(f"Using {bkg_type} subcategories to make inclusive hists.")
+            
             decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
             out_h = hists.copy()
-            for p, h in hists.items():
-                tmp_arr = h.view()
-                subhists = []
-                for bkg in bkg_type:
-                    if p.is_data and bkg=='jet_fakes': 
-                        print('Not adding data second time')
-                        continue #Otherwise we double count data from prompt cats and from the jet_fakes cats
-                    for the_cat in hig_cats:
-                        for the_decay in decay_ch:
-                            cat_name = '__'.join((incl,bkg,the_cat,the_decay))
-                            print(f'Adding :{cat_name} for {p.name} from {config.name}')
-                            loc_dict = {'category': hist.loc(cat_name),
-                                        'shift': hist.loc(task.shift)}
-                            if cat_name in h.axes[0]:
-                                subhists.append(h[loc_dict])
-                            else:
-                                print(f"WARNING: didn't find {cat_name} for {p.name} from {config.name}")
-                incl_h = sum(subhists)
-                tmp_arr[find_idxs(h, incl, task.shift)].value = incl_h.view().value
-                tmp_arr[find_idxs(h, incl, task.shift)].variance = incl_h.view().variance
-                out_h[p][...] = tmp_arr
+            for incl in task.categories:
+                print(f'Preparing hists for {incl} from {config.name}')
+                for p, h in hists.items():
+                    tmp_arr = h.view()
+                    subhists = []
+                    for the_decay in decay_ch:
+                        cat_name = '__'.join((incl,bkg_type,the_decay))
+                        print(f'Adding :{cat_name} for {p.name} from {config.name}')
+                        loc_dict = {'category': hist.loc(cat_name),
+                                    'shift': hist.loc(task.shift)}
+                        if cat_name in h.axes[0]:
+                            subhists.append(h[loc_dict])
+                        else:
+                            print(f"WARNING: didn't find {cat_name} for {p.name} from {config.name}")
+                    if len(subhists):
+                        incl_h = sum(subhists)
+                        tmp_arr[find_idxs(h, incl, task.shift)].value = incl_h.view().value
+                        tmp_arr[find_idxs(h, incl, task.shift)].variance = incl_h.view().variance
+                    else: 
+                        tmp_arr[find_idxs(h, incl, task.shift)].value = 0
+                        tmp_arr[find_idxs(h, incl, task.shift)].variance = 0
+                    out_h[p][...] = tmp_arr
             ouputs[config] = out_h
         return ouputs
 
@@ -411,7 +421,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         for config, hists in inputs.items():
             incl = 'cat_mutau_sr'
             #subcats = ['cat_mutau_sr','cat_mutau_abcd_dr_num'] #to plot iso inclusive
-            subcats = ['cat_mutau_sr','cat_mutau_dr_num_wj'] #to plot mt inclusive
+            subcats = ['cat_mutau_dr_num_wj__prompt','cat_mutau_dr_num_wj__jet_fakes'] #to plot mt inclusive
             out_h = hists.copy()
             for p, h in hists.items():
                 tmp_arr = h.view()

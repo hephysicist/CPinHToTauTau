@@ -335,8 +335,8 @@ def tau_weight(self: Producer, events: ak.Array, do_syst: bool, **kwargs) -> ak.
                         "tau_had"   : 5
                     }
                     #Calculate scale factors for tau vs electron classifier 
-                    masked_dm_pnet = (dm_pnet == 0) & (dm_pnet == 1) & (dm_pnet == 2) & (dm_pnet == 10) & (dm_pnet == 11)
-                    masked_dm = (dm == 0) & (dm == 1) & (dm == 10) & (dm == 11)
+                    masked_dm_pnet = (dm_pnet == 0) | (dm_pnet == 1) | (dm_pnet == 2) | (dm_pnet == 10) | (dm_pnet == 11)
+                    masked_dm = (dm == 0) | (dm == 1) | (dm == 10) | (dm == 11)
                     e_mask = ((genmatch == tau_part_flav["prompt_e"]) | (genmatch == tau_part_flav["tau->e"])) & masked_dm
                     per_ch_sf[e_mask] *= self.id_vs_e_corrector.evaluate(*args_vs_e(e_mask,shift))
                     #Calculate scale factors for tau vs muon classifier 
@@ -445,7 +445,7 @@ def fake_factors(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     pt = np.clip(flat_np_view(tau.pt, axis=1), 20,200)#fake factors are estimated for this pt region
     dm = flat_np_view(tau.decayModePNet, axis=1)
     n_jets = np.clip(flat_np_view(events.n_jets).copy(),0,2).astype(int) 
-    mask = (dm ==0) | (dm==1) | (dm==10) | (dm==11) 
+    mask = (dm ==0) | (dm==1) | (dm==2) | (dm==10) | (dm==11) 
     for the_name in self.config_inst.x.fake_factor_method.columns:
         for the_shift in self.config_inst.x.fake_factor_method.shifts:
             ff_evaluator = self.fake_factor_qcd if 'qcd' in the_name else self.fake_factor_wjets

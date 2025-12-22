@@ -149,6 +149,22 @@ def jet_veto(
     events = set_ak_column(events, "is_b_vetoed", event_mask)
     return events
 
+def jet_pt_selection(jets: ak.Array,
+                     eta_bins: list,
+                     pt_cuts: list):
+    jet_pt_mask = ak.zeros_like(jets.pt,dtype=np.bool)
+    eta_bin_prev = 0
+    pt = jets.pt
+    eta = abs(jets.eta)
+    for idx, (eta_bin, pt_cut) in enumerate(zip(eta_bins,pt_cuts)):
+            if idx==0: 
+                jet_pt_mask = jet_pt_mask | ((pt > pt_cut) & (eta <= eta_bin))
+            else: 
+                jet_pt_mask = jet_pt_mask | ((pt > pt_cut) & (
+                    (eta <= eta_bin) & (eta > eta_bin_prev)))
+            eta_bin_prev = eta_bin   
+    return ak.drop_none(ak.mask(jets, jet_pt_mask))
+
 
 @producer(
     uses={f"Jet.{var}" for var in
@@ -156,6 +172,7 @@ def jet_veto(
            ]} | {"hcand_*"},
     produces={
         "n_jets",
+        "n_jets_recoil",
         "lead_jet.*",
         "sublead_jet.*",
         "dijet.*",
@@ -194,15 +211,19 @@ def jet_pt_def(
         _jet_br, _lep_br = ak.unzip(ak.cartesian([presel_jet, lep], axis=1))
         jet_p4 = get_lep_p4(_jet_br)
         lep_p4 = get_lep_p4(_lep_br)
-        mask = mask & ak.fill_none((jet_p4.delta_r(lep_p4) > 0.4), False)
+        mask = mask & ak.fill_none((jet_p4.delta_r(lep_p4) > 0.5), False)
 
     jets = get_lep_p4(sorted_jets[mask])
-    jet_pt_mask = ((jets.pt > 20) & (abs(jets.eta) <= 2.5))
-    jet_pt_mask = jet_pt_mask | ((jets.pt > 50) & (
-        (abs(jets.eta) <= 3.0) & (abs(jets.eta) > 2.5)))
-    jet_pt_mask = jet_pt_mask | ((jets.pt > 30) & ((abs(jets.eta) > 3.0)))
-
-    sel_jets = ak.drop_none(ak.mask(jets, jet_pt_mask))
+    
+    #Selecting jets for MET recoil of the analysis
+    eta_bins = [2.5,3.0,4.7]
+    pt_cuts  = [30, 50, 30]
+    sel_jets_recoil = jet_pt_selection(jets, eta_bins, pt_cuts)
+    njets_recoil = ak.num(sel_jets_recoil, axis=1)
+    #Selecting jets for the main pipeline of the analysis
+    eta_bins = [2.5,3.0,4.7] 
+    pt_cuts  = [20, 50, 30]
+    sel_jets = jet_pt_selection(jets, eta_bins, pt_cuts)
     njets = ak.num(sel_jets, axis=1)
 
     lead_jet_p4 = ak.where(njets > 0,
@@ -248,6 +269,7 @@ def jet_pt_def(
     events = set_ak_column(events, 'sublead_jet', ak.zip(sublead_jet))
     events = set_ak_column(events, 'dijet', ak.zip(dijet))
     events = set_ak_column(events, 'n_jets', njets)
+    events = set_ak_column(events, 'n_jets_recoil', njets_recoil)
     return events
 
 
@@ -400,15 +422,15 @@ def is_pion(prods): return ((np.abs(prods.pdgId) == 211))
 
 def is_photon(prods): return prods.pdgId == 22
 
+def one_pion(prods): return (ak.sum(is_pion(prods),   axis=1) == 1)
 
-def has_one_pion(prods): return (ak.sum(is_pion(prods),   axis=1) == 1)
+def at_least_one_pion(prods): return (ak.sum(is_pion(prods),   axis=1) >= 1)
 
+def three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) == 3)
 
-def has_three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) == 3)
-
+def at_least_three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) >= 3)
 
 def has_photons(prods): return (ak.sum(is_photon(prods), axis=1) > 0)
-
 
 def has_no_photons(prods): return (ak.sum(is_photon(prods), axis=1) == 0)
 
@@ -503,15 +525,15 @@ def add_tau_prods(
                 # DM0
                 tau = ak.firsts(tau)
                 mask = mask | ak.fill_none(
-                    tau.decayMode == 0, False) & has_one_pion(matched_tau_prods)#TODO: release this mask, make n_pions >=1
+                    tau.decayMode == 0, False) & at_least_one_pion(matched_tau_prods)#TODO: release this mask, make n_pions >=1
                 # DM1
-                mask = mask | ak.fill_none(tau.decayMode == 1, False) & has_one_pion(
+                mask = mask | ak.fill_none(tau.decayMode == 1, False) & at_least_one_pion(
                     matched_tau_prods) & has_photons(matched_tau_prods)#TODO: release this mask, make n_pions >=1
                 # DM10
                 mask = mask | ak.fill_none(
-                    tau.decayMode == 10, False) & has_three_pions(matched_tau_prods)#TODO: release this mask, make n_pions >=3
+                    tau.decayMode == 10, False) & at_least_three_pions(matched_tau_prods)#TODO: release this mask, make n_pions >=3
                 # DM11
-                mask = mask | ak.fill_none(tau.decayMode == 11, False) & has_three_pions(
+                mask = mask | ak.fill_none(tau.decayMode == 11, False) & at_least_three_pions(
                     matched_tau_prods) & has_photons(matched_tau_prods)#TODO: release this mask, make n_pions >=3
                 events = set_ak_column(
                     events, f'tau_decay_prods_{ch_str}_{lep_str}',  matched_tau_prods)
@@ -548,19 +570,17 @@ def pion_energy_split(
 ) -> ak.Array:
     channel = self.config_inst.channels.names()[0]
     tauprods = events[f'tau_decay_prods_{channel}_lep1']
-    charged_pion_mask = pion_mask(tauprods)
     em_mask = egamma_mask(tauprods)
-    charged_pion = ak.firsts(get_lep_p4(tauprods[charged_pion_mask]), axis=1)
+    charged_pions =  ak.drop_none(ak.mask(tauprods,pion_mask(tauprods)))
+    sorted_charged_pions = charged_pions[ak.argsort(charged_pions.pt, ascending=False)]
+    charged_pion = get_lep_p4(ak.drop_none(ak.firsts(sorted_charged_pions, axis=1))) #it's safe to do like so, because we require at least one chared pion to be at the decay product array
     neutral_pion = get_lep_p4(tauprods[em_mask]).sum()
-
-    mask = (ak.num(charged_pion_mask, axis=1) > 0) & (
-        ak.num(em_mask, axis=1) > 0)
-    mask = mask & (charged_pion.E > 0) & (neutral_pion.E > 0)
-
+    mask = (ak.num(em_mask, axis=1) > 0) & (charged_pion.E > 0) & (neutral_pion.E > 0)
     pion_E_split = ak.where(mask,
                             np.abs(charged_pion.E - neutral_pion.E) /
                             (charged_pion.E + neutral_pion.E),
                             EMPTY_FLOAT)
+    
     pion_E_split = ak.fill_none(pion_E_split, EMPTY_FLOAT)
     events = set_ak_column_f32(events, "pion_E_split", pion_E_split)
     return events

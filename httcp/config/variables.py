@@ -444,6 +444,16 @@ def add_highlevel_features(cfg: od.Config) -> None:
         unit="GeV",
         x_title=r"PUPPI MET $p_T$",
     )
+    
+    cfg.add_variable(
+        name="puppi_met_pt_coarse",
+        expression="PuppiMET.pt",
+        null_value=EMPTY_FLOAT,
+        binning=(40, 0,200),
+        unit="GeV",
+        x_title=r"PUPPI MET $p_T$",
+    )
+    
     cfg.add_variable(
         name="puppi_met_phi",
         expression="PuppiMET.phi",
@@ -453,7 +463,7 @@ def add_highlevel_features(cfg: od.Config) -> None:
     ) 
     cfg.add_variable(
         name="puppi_met_pt_no_recoil",
-        expression="PuppiMET_no_recoil.pt",
+        expression="PuppiMET.pt_no_recoil",
         null_value=EMPTY_FLOAT,
         binning=(50, 0,100),
         unit="GeV",
@@ -461,7 +471,7 @@ def add_highlevel_features(cfg: od.Config) -> None:
     )
     cfg.add_variable(
         name="puppi_met_phi_no_recoil",
-        expression="PuppiMET_no_recoil.phi",
+        expression="PuppiMET.phi_no_recoil",
         null_value=EMPTY_FLOAT,
         binning=(32, -3.2,3.2),
         x_title=r"PUPPI MET $\phi$ (no recoil corr)",
@@ -648,6 +658,14 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 x_title=r"$m_{vis}$",
             )
         cfg.add_variable(
+                name=f"{ch_str}_mvis_coarse",
+                expression=f"hcand_{ch_str}.mass",
+                null_value=EMPTY_FLOAT,
+                binning=(50, 0.0, 200.0),
+                unit="GeV",
+                x_title=r"$m_{vis}$",
+            )
+        cfg.add_variable(
                 name=f"{ch_str}_mvis_fine",
                 expression=f"hcand_{ch_str}.mass",
                 null_value=EMPTY_FLOAT,
@@ -704,6 +722,16 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 unit="GeV",
                 x_title=r"$p_{T\mathrm{vis}}$",
             )
+            
+            cfg.add_variable(
+                name=f"{ch_str}_pt_vis_coarse",
+                expression=f"hcand_{ch_str}.pt_vis",
+                null_value=EMPTY_FLOAT,
+                binning=(50, 0.0, 400.0),
+                unit="GeV",
+                x_title=r"$p_{T\mathrm{vis}}$",
+            )
+             
             cfg.add_variable(
                 name=f"{ch_str}_pt_ll",
                 expression=f"hcand_{ch_str}.pt_ll",
@@ -768,6 +796,16 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 unit="GeV",
                 x_title= rf"{lep_str} $p_{{T}}$",
             )
+            
+            cfg.add_variable(
+                name=f"{ch_str}_{lep}_pt_coarse",
+                expression=f"hcand_{ch_str}.{lep}.pt",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0, 200.),
+                unit="GeV",
+                x_title= rf"{lep_str} $p_{{T}}$",
+            )
+            
             cfg.add_variable(
                 name=f"{ch_str}_{lep}_eta",
                 expression=f"hcand_{ch_str}.{lep}.eta",
@@ -807,7 +845,15 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 x_title=rf"{lep_str} HPS decay mode",
             )
             cfg.add_variable(
-                name=f"{ch_str}_{lep}_ip_sig",
+                name='_'.join((ch_str,lep,'ip_sig', 'nom')),
+                expression=f"hcand_{ch_str}.{lep}.ip_sig_nom",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0.0, 10),
+                unit="",
+                x_title= rf"{lep_str} $\frac{{|IP|}}{{\sigma(IP)}}$ nom",
+            )
+            cfg.add_variable(
+                name='_'.join((ch_str,lep,'ip_sig')),
                 expression=f"hcand_{ch_str}.{lep}.ip_sig",
                 null_value=EMPTY_FLOAT,
                 binning=(40, 0.0, 10),

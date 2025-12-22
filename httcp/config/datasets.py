@@ -210,7 +210,7 @@ def add_datasets_2025_skim_v2():
         "data_tau_C",
         "data_tau_D",
         # DY->ll
-        #"DYto2L_M_10to50_amcatnloFXFX",
+        "DYto2L_M_10to50_amcatnloFXFX",
         "DYto2L_M_50_0J_amcatnloFXFX",
         "DYto2L_M_50_1J_amcatnloFXFX",
         "DYto2L_M_50_2J_amcatnloFXFX",
@@ -271,7 +271,7 @@ def add_datasets_2025_skim_v2():
         "data_tau_F",
         "data_tau_G",
         # DY->ll
-        #"DYto2L_M_10to50_amcatnloFXFX",
+        "DYto2L_M_10to50_amcatnloFXFX",
         "DYto2L_M_50_0J_amcatnloFXFX",
         "DYto2L_M_50_1J_amcatnloFXFX",
         "DYto2L_M_50_2J_amcatnloFXFX",
@@ -322,6 +322,7 @@ def add_datasets_2025_skim_v2():
         "data_mu_Cv123",
         "data_mu_Cv4",
         # DY->ll
+        "DYto2L_M_10to50_amcatnloFXFX",
         "DYto2L_M_50_0J_amcatnloFXFX",
         "DYto2L_M_50_1J_amcatnloFXFX",
         "DYto2L_M_50_2J_amcatnloFXFX",
@@ -367,6 +368,7 @@ def add_datasets_2025_skim_v2():
         #data
         "data_mu_D",
         # DY->ll
+        "DYto2L_M_10to50_amcatnloFXFX",
         "DYto2L_M_50_0J_amcatnloFXFX",
         "DYto2L_M_50_1J_amcatnloFXFX",
         "DYto2L_M_50_2J_amcatnloFXFX",
