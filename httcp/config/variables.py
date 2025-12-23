@@ -565,18 +565,28 @@ def add_cutflow_features(cfg: od.Config) -> None:
 def phi_cp_variables(cfg: od.Config) -> None:
     n_bins_phi_cp = 8
     cfg.add_variable(
-    name="phi_cp_incl",
-    expression="phi_cp_incl",
-    null_value=EMPTY_FLOAT,
-    binning=(n_bins_phi_cp, 0, 2*np.pi),
-    x_title=rf"$\varphi_{{CP}} (rad)",
+        name="phi_cp_incl",
+        expression="phi_cp_incl",
+        null_value=EMPTY_FLOAT,
+        binning=(n_bins_phi_cp, 0, 2*np.pi),
+        x_title=rf"$\varphi_{{CP}} (rad)",
     )
-    for the_ch in ['mu_pi','mu_rho','mu_a1_3pr_dp_reco','mu_a1_3pr_pv_reco','mu_a1_3pr_pv_mtt','mu_a1_3pr_pv_gef']:
-        spitted_str = the_ch.split('_')
-        if 'a1' in the_ch: 
-            title_str = "\\" + spitted_str[0] + fr" a_1, {spitted_str[2]}" + fr"({spitted_str[3]} {spitted_str[4]})"
-        else:
-             title_str = "\\" + spitted_str[0] + "\\" + spitted_str[1]
+    for the_ch in ['mu_pi','mu_pi_gen','mu_rho','mu_rho_gen',
+                   'mu_a1_1pr','mu_a1_1pr_gen','mu_a1_3pr_dp_reco','mu_a1_3pr_dp_gen',
+                   'mu_a1_3pr_pv_reco','mu_a1_3pr_pv_mtt','mu_a1_3pr_pv_gef','mu_a1_3pr_pv_gen']:
+
+        if the_ch.startswith("mu_a1_3pr"):
+            suffix = the_ch.split("_")[-2:]
+            title_str = fr"\mu a_1, 3pr ({suffix[0]} {suffix[1]})"
+
+        elif the_ch.startswith("mu_a1_1pr"):
+            title_str = r"\mu a_1, 1pr" + (" (gen)" if the_ch.endswith("_gen") else "")
+
+        elif the_ch.startswith(("mu_rho", "mu_pi")):
+            had = the_ch.split("_")[1]
+            title_str = fr"\mu \{had}" + (" (gen)" if the_ch.endswith("_gen") else "")
+
+
         if the_ch == 'mu_rho' or the_ch.startswith('mu_a1_3pr'):
             n_bins_phi_cp = 10
         else: 
