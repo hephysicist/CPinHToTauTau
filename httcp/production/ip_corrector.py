@@ -62,23 +62,15 @@ def ip_correction(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
                 mask = mask & ((genmatch == tau_part_flav["prompt_mu"]) | genmatch == 15)
             for the_comp in ['x','y','z']:
                 #print(f'performing IP correction for {the_comp} component...')
-                gen_ip_comp = flat_np_view(gen_lep[f'gen_ip_{the_comp}'], axis=1)
+                gen_ip_comp = flat_np_view(gen_lep[f'IP{the_comp}'], axis=1)
                 ip_comp     = flat_np_view(lep[f'IP{the_comp}'], axis=1)
-                #DIRTY HACK PLEASE REPLACE IT ASAP
-                if lep_str == 'lep1':
-                    gen2reco_shift = ip_comp 
-                else:
-                    gen2reco_shift = (ip_comp - gen_ip_comp)
+                gen2reco_shift = (ip_comp - gen_ip_comp)
                 mask = mask & (abs(gen2reco_shift) < 0.03) #Input for the correction should have IP component magnitude < 0.03
                 corrected_ip = ip_comp.copy()
                 corrected_ip[mask] = ip_correction.evaluate(gen2reco_shift[mask],
                                                             the_comp, 
                                                             abseta[mask])
-                #DIRTY HACK PLEASE REPLACE IT ASAP
-                if lep_str == 'lep1':
-                    pass
-                else:
-                    corrected_ip[mask] = corrected_ip[mask] + gen_ip_comp[mask]
+                corrected_ip[mask] = corrected_ip[mask] + gen_ip_comp[mask]
                
                 lep[f'IP{the_comp}_qm'] = ak.unflatten(corrected_ip, ak.num(lep.pt, axis=1)) 
         output_hcand[lep_str] = lep 
