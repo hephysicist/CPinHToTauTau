@@ -52,10 +52,6 @@ def get_ip_p4(part): return ak.zip({f'{var}': part[f'IP{var}']for var in ['x', '
                                    with_name="LorentzVector",
                                    behavior=coffea.nanoevents.methods.vector.behavior)# # lambda function to get 4-vector from the particle objects
 
-def get_gen_ip_p4(part): return ak.zip({f'{var}': part[f'gen_ip_{var}']for var in ['x', 'y', 'z']} | {'t': ak.zeros_like(part.IPx)},
-                                   with_name="LorentzVector",
-                                   behavior=coffea.nanoevents.methods.vector.behavior)
-
 def get_vec_p3(part,vec_column=None): 
     if vec_column is not None:
         return ak.zip({f'{var}': part[f'{vec_column}{var}']for var in ['x', 'y', 'z']},

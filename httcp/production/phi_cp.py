@@ -8,7 +8,7 @@ import functools
 from columnflow.production import Producer, producer
 from columnflow.util import maybe_import
 from columnflow.columnar_util import EMPTY_FLOAT, set_ak_column
-from httcp.util import get_lep_p4, get_ip_p4, get_gen_ip_p4
+from httcp.util import get_lep_p4, get_ip_p4
 from httcp.production.PolarimetricA1 import PolarimetricA1
 from httcp.production.gef import unit, rotate_to_gj_max 
 
@@ -41,8 +41,8 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     PVBS        = events.PVBS
 
     if pair_decay_ch.endswith("_gen"):
-        r1  = r2 = get_gen_ip_p4(muon)
-        ip2 = get_gen_ip_p4(tau)
+        r1  = r2 = get_ip_p4(muon)
+        ip2 = get_ip_p4(tau)
         ch1 = events.gen_lep.lep0.charge
         tau, tauprod, muon = tau_gen, tauprod_gen, muon_gen
     else:
@@ -66,12 +66,8 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
         best_pion = ak.drop_none(ak.firsts(ss_pions[sorted_idx],axis=1)[..., np.newaxis])
         p2 = get_lep_p4(best_pion) # for the tau -> rho decay, p1 - is 4-vector of the charged pion and r1 is 4-vector of the neutral pion
-        
         # Create 4-vectors of tau impact parameters
-        if pair_decay_ch.endswith("_gen"):
-            r2 = get_gen_ip_p4(tau)
-        else:
-            r2 = get_ip_p4(tau)
+        r2 = get_ip_p4(tau)
         r2 = ak.drop_none(ak.mask(r2, r2.rho2 > 0))
 
     elif pair_decay_ch.startswith("mu_rho"):
