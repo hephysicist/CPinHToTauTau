@@ -862,7 +862,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
             )
             for coord in ['x','y','z']:
                 cfg.add_variable(
-                    name=f"{ch_str}_{lep}_IP{coord}",
+                    name=f"{lep}_IP{coord}",
                     expression=f"hcand_{ch_str}.{lep}.IP{coord}",
                     null_value=EMPTY_FLOAT,
                     binning=(40, -0.004, 0.004),
@@ -954,7 +954,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
             
             for proj in ['x','y','z']:
                 cfg.add_variable(
-                    name=f"{ch_str}_{lep}_ip{proj}_qm",
+                    name=f"{lep}_IP{proj}_qm",
                     expression=f"hcand_{ch_str}.{lep}.IP{proj}_qm",
                     null_value=EMPTY_FLOAT,
                     binning=(30, -0.01, 0.01),
@@ -1107,6 +1107,67 @@ def add_dilepton_features(cfg: od.Config) -> None:
             unit="cm",
             x_title=r"$|d(SV^{refit},PV)|$",
         )
+        
+        
+        
+
+
+
+def add_genlep_features(cfg: od.Config) -> None:
+    bin_factor = 1/2
+    channels = cfg.channels.names()
+    ch_objects = DotDict.wrap({
+        'etau'  : {'lep0':'Electron',
+                   'lep1':'Tau'    },
+        'mutau' : {'lep0':'Muon'    ,
+                   'lep1':'Tau'    },
+        'emu'   : {'lep0':'Electron',
+                   'lep1':'Muon'   },
+        'tautau': {'lep0':'Tau'     ,
+                   'lep1':'Tau'    },
+    })
+    for ch_str in channels:
+        for lep in ['lep0','lep1']:
+            if ch_str != 'tautau': lep_str = ch_objects[ch_str][lep].lower()
+            cfg.add_variable(
+                name=f"gen_{lep}_pt",
+                expression=f"gen_lep.{lep}.pt",
+                null_value=EMPTY_FLOAT,
+                binning=(bin_factor*40, 20, 100.),
+                unit="GeV",
+                x_title= rf"Gen {lep_str} $p_{{T}}$",
+            )
+            cfg.add_variable(
+                name=f"gen_{lep}_pt_coarse",
+                expression=f"gen_lep.{lep}.pt",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0, 200.),
+                unit="GeV",
+                x_title= rf"Gen {lep_str} $p_{{T}}$",
+            )
+            cfg.add_variable(
+                name=f"gen_{lep}_eta",
+                expression=f"gen_lep.{lep}.eta",
+                null_value=EMPTY_FLOAT,
+                binning=(30, -3, 3),
+                x_title=rf"Gen {lep_str} $\eta$",
+            )
+            cfg.add_variable(
+                name=f"gen_{lep}_phi",
+                expression=f"gen_lep.{lep}.phi",
+                null_value=EMPTY_FLOAT,
+                binning=(32, -3.3, 3.3),
+                x_title=rf"Gen {lep_str} $\phi$",
+            )
+            for coord in ['x','y','z']:
+                cfg.add_variable(
+                    name=f"gen_{lep}_IP{coord}",
+                    expression=f"gen_lep.{lep}.IP{coord}",
+                    null_value=EMPTY_FLOAT,
+                    binning=(40, -0.004, 0.004),
+                    unit="cm",
+                    x_title= rf"Gen {lep_str} $IP_{coord}$",
+                )
 
 def add_ff_variables(cfg: od.Config) -> None:
     for the_name, ax in cfg.x.fake_factor_method.axes.items():
@@ -1124,6 +1185,7 @@ def add_variables(cfg: od.Config) -> None:
     add_weight_features(cfg)
     add_cutflow_features(cfg)
     add_dilepton_features(cfg)
+    add_genlep_features(cfg)
     add_hcp_bdt_output(cfg)
     add_ff_variables(cfg)
    
