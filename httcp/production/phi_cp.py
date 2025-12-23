@@ -39,16 +39,15 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     muon        = events.hcand_mutau.lep0
     muon_gen    = events.gen_lep.lep0
     PVBS        = events.PVBS
+    ch1         = muon.charge # take the same charge for reco and gen
 
     if pair_decay_ch.endswith("_gen"):
         r1  = r2 = get_ip_p4(muon)
         ip2 = get_ip_p4(tau)
-        ch1 = events.gen_lep.lep0.charge
         tau, tauprod, muon = tau_gen, tauprod_gen, muon_gen
     else:
         r1  = r2 = get_ip_p4(muon)
         ip2 = get_ip_p4(tau)
-        ch1 = muon.charge
 
     p1 = p2 = get_lep_p4(muon)
 
