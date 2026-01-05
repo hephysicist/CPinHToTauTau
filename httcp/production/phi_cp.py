@@ -7,7 +7,7 @@ import functools
 
 from columnflow.production import Producer, producer
 from columnflow.util import maybe_import
-from columnflow.columnar_util import EMPTY_FLOAT, set_ak_column
+from columnflow.columnar_util import EMPTY_FLOAT, set_ak_column, optional_column as optional
 from httcp.util import get_lep_p4, get_ip_p4
 from httcp.production.PolarimetricA1 import PolarimetricA1
 from httcp.production.gef import unit, rotate_to_gj_max 
@@ -31,24 +31,23 @@ def get_single_part(array: ak.Array, idx: int) -> ak.Array:
 
 
 def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
-    tau         = events.hcand_mutau.lep1
-    tau_MTT     = events.hcand_mutau.fastMTT_BW.lep1
-    tau_gen     = events.gen_lep.lep1
-    tauprod     = events.tau_decay_prods_mutau_lep1
-    tauprod_gen = events.gentau_decay_prods_mutau_lep1 #here adapt this
-    muon        = events.hcand_mutau.lep0
-    muon_gen    = events.gen_lep.lep0
     PVBS        = events.PVBS
-    ch1         = muon.charge # take the same charge for reco and gen
-
     if pair_decay_ch.endswith("_gen"):
-        r1  = r2 = get_ip_p4(muon)
-        ip2 = get_ip_p4(tau)
-        tau, tauprod, muon = tau_gen, tauprod_gen, muon_gen
+        tau = events.gen_lep.lep1
+        tauprod = events.gentau_decay_prods_mutau_lep1 
+        muon = events.gen_lep.lep0
     else:
-        r1  = r2 = get_ip_p4(muon)
-        ip2 = get_ip_p4(tau)
-
+        tau = events.hcand_mutau.lep1
+        tauprod = events.tau_decay_prods_mutau_lep1
+        muon = events.hcand_mutau.lep0
+        if (pair_decay_ch == "mu_a1_3pr_pv_mtt") or (pair_decay_ch == "mu_a1_3pr_pv_gef"):
+            tauMTT = events.hcand_mutau.fastMTT_BW.lep1
+        
+    
+    ch1 = events.hcand_mutau.lep0.charge # Take the same charge for reco and gen
+    ip2 = get_ip_p4(events.hcand_mutau.lep1) #Take always the IP of reco level tau
+    
+    r1  = r2 = get_ip_p4(muon)
     p1 = p2 = get_lep_p4(muon)
 
     # initialise variables for GJ rotation case
@@ -61,20 +60,20 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     if pair_decay_ch.startswith("mu_pi"):
         charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
         pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
+       
         ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
         sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
-        best_pion = ak.drop_none(ak.firsts(ss_pions[sorted_idx],axis=1)[..., np.newaxis])
+        best_pion = ss_pions[sorted_idx[:,:1]]
         p2 = get_lep_p4(best_pion) # for the tau -> rho decay, p1 - is 4-vector of the charged pion and r1 is 4-vector of the neutral pion
         # Create 4-vectors of tau impact parameters
         r2 = get_ip_p4(tau)
         r2 = ak.drop_none(ak.mask(r2, r2.rho2 > 0))
-
     elif pair_decay_ch.startswith("mu_rho"):
         charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
         pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
         ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
         sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
-        best_pion = ak.drop_none(ak.firsts(ss_pions[sorted_idx],axis=1)[..., np.newaxis])
+        best_pion = ss_pions[sorted_idx[:,:1]]
         em_particles = ak.drop_none(ak.mask(tauprod,egamma_mask(tauprod)))
         # for the tau -> rho decay, p1 - is 4-vector of the charged pion and r1 is 4-vector of the neutral pion
         p2 = get_lep_p4(best_pion)
@@ -87,7 +86,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
         ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
         sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
-        best_pion = ak.drop_none(ak.firsts(ss_pions[sorted_idx],axis=1)[..., np.newaxis])
+        best_pion = ss_pions[sorted_idx[:,:1]]
         em_particles = ak.drop_none(ak.mask(tauprod,egamma_mask(tauprod)))
         # for the tau -> rho decay, p1 - is 4-vector of the charged pion and r1 is 4-vector of the neutral pion
         p2 = get_lep_p4(best_pion)
@@ -128,15 +127,11 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     elif pair_decay_ch.startswith('mu_a1_3pr_pv'):
 
         # Select tau four-momentum based on the reconstruction method
-        if pair_decay_ch == "mu_a1_3pr_pv_reco":
+        if (pair_decay_ch == "mu_a1_3pr_pv_mtt") or (pair_decay_ch == "mu_a1_3pr_pv_gef"):
+            tau_p4 = get_lep_p4(tauMTT)
+        else:    
             tau_p4 = get_lep_p4(tau)
-        elif pair_decay_ch == "mu_a1_3pr_pv_mtt":
-            tau_p4 = get_lep_p4(tau_MTT)
-        elif pair_decay_ch == "mu_a1_3pr_pv_gef":
-            tau_p4 = get_lep_p4(tau_MTT)
-        elif pair_decay_ch == "mu_a1_3pr_pv_gen":
-            tau_p4 = get_lep_p4(tau)
-
+      
         # Select charged pions from the tau decay
         charged_pion = ak.drop_none(ak.mask(tauprod, pion_mask(tauprod)))
 
@@ -309,17 +304,12 @@ def produce_alpha(vecs_p4) -> ak.Array:
     return alpha
     
 
-channels = ['mu_pi','mu_pi_gen',
-            'mu_rho','mu_rho_gen',
-            'mu_a1_1pr','mu_a1_1pr_gen',
-            'mu_a1_3pr_dp_reco','mu_a1_3pr_dp_gen',
-            'mu_a1_3pr_pv_reco','mu_a1_3pr_pv_mtt','mu_a1_3pr_pv_gef','mu_a1_3pr_pv_gen']
-
 @producer(
     uses={
-        "hcand_*","tau_decay_prods_*","PVBS.*"},
+        "hcand_*","tau_decay_prods_*","PVBS.*",
+        optional("gen_lep.*"), optional("gentau_decay_prods_mutau_lep1.*")},
     produces={
-        f"phi_cp_{the_ch}" for the_ch in channels
+        f"phi_cp_*"
     } | {
         'theta_gj_mu_a1_3pr_pv_gef',
         'theta_max_mu_a1_3pr_pv_gef',
@@ -332,7 +322,14 @@ def phi_cp(
         events: ak.Array,
         **kwargs
 ) -> ak.Array:
-   
+    channels = ['mu_pi',
+                'mu_rho',
+                'mu_a1_1pr',
+                'mu_a1_3pr_dp',
+                'mu_a1_3pr_pv']
+    if self.dataset_inst.is_mc:
+        channels = channels + [the_ch+'_gen' for the_ch in channels]
+    channels += ['mu_a1_3pr_pv_mtt','mu_a1_3pr_pv_gef']
     for the_ch in channels:
         print(f"Calculating phi_cp for {the_ch}")
         vecs_p4, do_phase_shift, ch1, theta_gj, theta_max, theta_rot, dsvpv = prepare_acop_vecs(events, pair_decay_ch=the_ch)
@@ -381,7 +378,7 @@ def phi_cp(
             events = set_ak_column_f32(events, f"dsvpv_z",dsvpv_z)
             events = set_ak_column_f32(events, f"dsvpv_mag",dsvpv_mag)
 
-
+    
         #alpha = np.ones_like(events.event)*EMPTY_FLOAT
         # alpha_per_ch = produce_alpha(vecs_p4)
         # alpha_per_ch = ak.fill_none(alpha_per_ch, EMPTY_FLOAT)

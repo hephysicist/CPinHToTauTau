@@ -591,7 +591,7 @@ def get_part_by_idx(obj: ak.Array, idx_arr: ak.Array)-> ak.Array:
     local_idx = ak.local_index(obj.pt)
     idx_arr, local_idx = ak.broadcast_arrays(idx_arr, local_idx)
     mask = idx_arr == local_idx
-    return obj[mask]
+    return ak.drop_none(ak.mask(obj,mask))
 
 def unit(v): return ak.where(v.mag > 0, v/v.mag, v/1.)    
 
@@ -604,7 +604,7 @@ def get_meson_mask(obj: ak.Array, charged_only=False) ->ak.Array:
 @producer(
     uses={"hcand_*"
           } | {"GenPart.*", "GenVtx.*","GenVisTau.*"},
-    produces={"gen_lep.*","gentau_decay_prods_*"},
+    produces={"gen_lep*","gentau_decay_prods_*"},
     exposed=False,
 )
 def gen_lep_fields(
@@ -625,10 +625,8 @@ def gen_lep_fields(
         # Get index of the gen object that corresponds to the object from the selected dilepton pair
         gen_lep_idx = ak.firsts(hcand[lep].genPartIdx, axis=1)
         if lep == 'lep0': # in case of muon its v-vector is already treated as SV
-            ip_mask = gen_lep_idx>=0
-            gen_lep = ak.where(ip_mask,
-                               get_part_by_idx(events.GenPart,gen_lep_idx),
-                               empty_gen_part)
+            ip_mask = ak.fill_none(gen_lep_idx>=0, False) #None can appear because of gen2reco mismatch
+            gen_lep = get_part_by_idx(events.GenPart,gen_lep_idx)
             gen_sv = get_vec_p3(gen_lep, 'v')
             tauprod = gen_lep
         else:
@@ -637,29 +635,28 @@ def gen_lep_fields(
             gen_tau_idx = ak.fill_none(ak.firsts(gen_vis_tau.genPartIdxMother, axis=1),-9999) #-1 does not work because protons have genPartIdxMother=-1
             gen_tau_idx_br, _ = ak.broadcast_arrays(gen_tau_idx, events.GenPart.pt)
             gen_tau_prod_mask = gen_tau_idx_br == events.GenPart.genPartIdxMother
-            gen_lep_doughter = ak.firsts(events.GenPart[gen_tau_prod_mask], axis=1) 
+            gen_lep_doughter = events.GenPart[gen_tau_prod_mask][:,:1]
             gen_sv = get_vec_p3(gen_lep_doughter, 'v')
             
-            gen_lep = ak.where(gen_tau_mask,
-                               get_part_by_idx(events.GenPart,gen_tau_idx),
-                               empty_gen_part)
-            
+            gen_lep = get_part_by_idx(events.GenPart,gen_tau_idx)
+           
             meson_mask =  get_meson_mask(events.GenPart) & gen_tau_prod_mask #Yes, we also take kaons, but ther number is very small in comparison with pions
             decay_prods = events.GenPart[meson_mask]
             
             decay_prods['charge'] = ak.where(get_meson_mask(decay_prods,charged_only=True), 
                                              -1*np.sign(decay_prods.pdgId), #NB pdgId is positive for particles and negative for antiparticles!!!
                                              ak.zeros_like(decay_prods.pdgId))
-            ip_mask = gen_tau_mask
+            dp_mask = ak.num(decay_prods.pt,axis=1)>0 
+            ip_mask = (gen_tau_mask & dp_mask)
             tauprod = gen_vis_tau
-        
         # Estimate tau trajectory by substracting coordinates of primary vertex from secondary vertex
         tau_path = gen_sv - gen_pv
         gen_lep_p3 = unit(get_lep_p4(tauprod).to_3D().to_pxpypz())
         tau_proj = tau_path.dot(gen_lep_p3)
         gen_ip_vec = tau_path - tau_proj * gen_lep_p3
-        evt_mask = evt_mask & ip_mask & ak.fill_none(ak.num(gen_ip_vec, axis=1) > 0,False)
-        
+        evt_mask = (evt_mask & 
+                    ip_mask & 
+                    ak.fill_none(ak.num(gen_ip_vec, axis=1) > 0,False))
         gentau[lep] = gen_lep
         gentau[lep]['charge'] = ak.values_astype(-1*np.sign(gen_lep.pdgId), np.int16)#NB pdgId is positive for particles and negative for antiparticles!!!
         for the_comp in ['x', 'y', 'z']:
@@ -672,10 +669,11 @@ def gen_lep_fields(
     empty_gen_part['charge'] = ak.zeros_like(empty_gen_part.pt,dtype=np.int16)
     
     masked_gentau = {}        
-    for lep in ['lep0', 'lep1']:  
-        masked_gentau[lep] = ak.where(evt_mask, gentau[lep], empty_gen_part)
+    for lep in ['lep0', 'lep1']: 
+        masked_gentau[lep] = ak.where(evt_mask, gentau[lep], empty_gen_part) #Fill with empty gen particles to perform properly the ip correcion
+   
+    masked_decay_prods = ak.drop_none(ak.mask(decay_prods, evt_mask[..., np.newaxis]))
     
-        
     events = set_ak_column(events, f"gen_lep",  ak.zip(masked_gentau))
-    events = set_ak_column(events, f"gentau_decay_prods_{ch_name}_lep1", decay_prods)
+    events = set_ak_column(events, f"gentau_decay_prods_{ch_name}_lep1", masked_decay_prods)
     return events

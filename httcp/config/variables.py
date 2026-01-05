@@ -572,12 +572,13 @@ def phi_cp_variables(cfg: od.Config) -> None:
         x_title=rf"$\varphi_{{CP}} (rad)",
     )
     for the_ch in ['mu_pi','mu_pi_gen','mu_rho','mu_rho_gen',
-                   'mu_a1_1pr','mu_a1_1pr_gen','mu_a1_3pr_dp_reco','mu_a1_3pr_dp_gen',
-                   'mu_a1_3pr_pv_reco','mu_a1_3pr_pv_mtt','mu_a1_3pr_pv_gef','mu_a1_3pr_pv_gen']:
+                   'mu_a1_1pr','mu_a1_1pr_gen','mu_a1_3pr_dp','mu_a1_3pr_dp_gen',
+                   'mu_a1_3pr_pv','mu_a1_3pr_pv_mtt','mu_a1_3pr_pv_gef','mu_a1_3pr_pv_gen']:
 
         if the_ch.startswith("mu_a1_3pr"):
-            suffix = the_ch.split("_")[-2:]
-            title_str = fr"\mu a_1, 3pr ({suffix[0]} {suffix[1]})"
+            suffix = the_ch.split("_")
+            if len(suffix)==4: suffix.append('reco')
+            title_str = fr"\mu a_1, 3pr ({suffix[-2]} {suffix[-1]})"
 
         elif the_ch.startswith("mu_a1_1pr"):
             title_str = r"\mu a_1, 1pr" + (" (gen)" if the_ch.endswith("_gen") else "")
