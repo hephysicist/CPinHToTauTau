@@ -727,11 +727,7 @@ def add_run3(ana: od.Analysis,
     cfg.add_shift(name="mu_up", id=3, type="shape")
     cfg.add_shift(name="mu_down", id=4, type="shape")
     add_shift_aliases(cfg, "mu", {"muon_weight": "muon_weight_{direction}"})
-    
-    
-   
 
-    
     # cfg.add_shift(name="ts_up", id=5, type="shape") #cp-even
     # cfg.add_shift(name="ts_down", id=7, type="shape") #cp-odd
     # add_shift_aliases(cfg, "ts", {"tauspinner_weight": "tauspinner_weight_{direction}"})
