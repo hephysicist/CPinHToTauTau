@@ -875,7 +875,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
                     name=f"{lep}_IP{coord}",
                     expression=f"hcand_{ch_str}.{lep}.IP{coord}",
                     null_value=EMPTY_FLOAT,
-                    binning=(40, -0.004, 0.004),
+                    binning=(30, -0.015, 0.015),
                     unit="",
                     x_title= rf"{lep_str} $IP_{coord}$",
                 )
@@ -967,7 +967,7 @@ def add_dilepton_features(cfg: od.Config) -> None:
                     name=f"{lep}_IP{proj}_qm",
                     expression=f"hcand_{ch_str}.{lep}.IP{proj}_qm",
                     null_value=EMPTY_FLOAT,
-                    binning=(30, -0.01, 0.01),
+                    binning=(30, -0.015, 0.015),
                     unit="",
                     x_title= rf"{lep_str} $IP_{proj} corrected$",
                 )
