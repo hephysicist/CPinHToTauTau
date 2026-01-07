@@ -914,6 +914,12 @@ def add_run3(ana: od.Analysis,
         # define custom remote fs's to look at
         cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: "wlcg_fs_eos"
 
+    cfg.x.verbose = DotDict.wrap({
+        "selection": {
+            "main"                    : True,
+        },        
+    })
+
     # add categories using the "add_category" tool which adds auto-generated ids
     from httcp.config.categories import add_categories
     add_categories(cfg,channel=channel)
