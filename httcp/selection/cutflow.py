@@ -18,10 +18,16 @@ logger = law.logger.get_logger(__name__)
 ### Plotting and saving efficiency tables ###
 #############################################
 
+def make_path(filename: str) -> str:
+    """Return full path and create parent directories if needed."""
+    BASE_PATH = os.environ.get("CF_STORE_LOCAL")
+    full_path = os.path.join(BASE_PATH, "analysis_httcp/cutflow", filename)
+    os.makedirs(os.path.dirname(full_path), exist_ok=True)
+    return full_path
+
 def save_efficiency_table(table, dataset_name, title="Selection Yield"):
-    file_path = f"/eos/user/m/mwitt/hambourg/cutflow/{title}_{dataset_name}_.txt"
-    directory = os.path.dirname(file_path)
-    os.makedirs(directory, exist_ok=True)
+    filename = f"{title}_{dataset_name}.txt".replace(" ", "_")
+    file_path = make_path(filename)
 
     with open(file_path, "w") as f:  # w = write
         f.write(table)
@@ -79,9 +85,9 @@ def plot_eff(selections, headers, dataset_name, title="Selection Yield"): #self:
     for x, eff in zip(x_positions, efficiencies):
         ax2.text(x, eff + 0.05, f"{eff:.2%}", ha="center", va="bottom", fontsize=10, color="red")
 
-
+    filename = f"{title}_{dataset_name}.pdf".replace(" ", "_")
     fig.tight_layout()
-    fig.savefig(f"/eos/user/m/mwitt/hambourg/cutflow/{title}_{dataset_name}.pdf", dpi=300)
+    fig.savefig(make_path(filename), dpi=300)
     
     return fig
 
@@ -175,10 +181,10 @@ def get_object_eff(results, tag, dataset_name):
 
 
 def cutflow_main(events, results, dataset_name, **kwargs):
-    logger.info(f"---> Inspecting event selections <---")
+    logger.info(f"---> Inspecting event selections")
     get_event_level_eff(events, results, dataset_name)
     
-    logger.info(f"---> Inspecting object selections <---")
+    logger.info(f"---> Inspecting object selections")
     get_object_eff(results, "Muon", dataset_name)
     get_object_eff(results, "Tau", dataset_name)
     get_object_eff(results, "Jet", dataset_name)
