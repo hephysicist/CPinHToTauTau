@@ -588,7 +588,7 @@ def phi_cp_variables(cfg: od.Config) -> None:
             title_str = fr"\mu \{had}" + (" (gen)" if the_ch.endswith("_gen") else "")
 
 
-        if the_ch == 'mu_rho' or the_ch.startswith('mu_a1_3pr'):
+        if the_ch.startswith('mu_rho') or the_ch.startswith('mu_a1_3pr'):
             n_bins_phi_cp = 10
         else: 
             n_bins_phi_cp = 8

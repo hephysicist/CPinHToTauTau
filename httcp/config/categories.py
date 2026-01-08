@@ -178,17 +178,20 @@ def add_categories(config: od.Config,
     bdt_map  = DotDict.wrap({
         "hig"      : {'selection'  : ["bdt_cat_higgs"], 'label': f"\nbdt cat Higgs",},
         "gtau"     : {'selection'  : ["bdt_cat_gtau"], 
-                   'label'      : f"\nbdt cat genuine tau",
-                   'aux'        : {'fit_var': 'bdt_raw_score_4bins_gtau'},},
+                      'label'      : f"\nbdt cat genuine tau",
+                      'aux'        : {'fit_var': 'bdt_raw_score_4bins_gtau'},},
         "fake"     : {'selection'  : ["bdt_cat_fake"],
-                   'label'      : f"\nbdt cat fakes",
-                   'aux'        : {'fit_var': 'bdt_raw_score_4bins_fake'},},
+                      'label'      : f"\nbdt cat fakes",
+                      'aux'        : {'fit_var': 'bdt_raw_score_4bins_fake'},},
+        "bdt_incl" : {'selection'  : [],
+                      'label': f"\nBDT incl."}, 
         })
 
     hig_bins_map  = DotDict.wrap({
-        "cat0"   : {'selection': ["hig_cat_0"], 'label': f"\nD_H in (0.33,0.5]",},
-        "cat1"   : {'selection': ["hig_cat_1"], 'label': f"\nD_H in (0.5,0.7]",},
-        "cat2"   : {'selection': ["hig_cat_2"], 'label': f"\nD_H in (0.7,1.0]",},
+        "cat0"    : {'selection': ["hig_cat_0"], 'label': f"\nD_H in (0.33,0.5]",},
+        "cat1"    : {'selection': ["hig_cat_1"], 'label': f"\nD_H in (0.5,0.7]",},
+        "cat2"    : {'selection': ["hig_cat_2"], 'label': f"\nD_H in (0.7,1.0]",},
+        "cat_incl": {'selection': [], 'label': f"",},
         })
     
     tau_decays_map  = DotDict.wrap({
@@ -216,31 +219,28 @@ def add_categories(config: od.Config,
     splitted_by_jet_fake = create_child_categories(config,
                                                  parent_categories=base_cats,
                                                  child_category_map=jet_fake_map)
-    splitted_by_dm = create_child_categories(config,
-                                                 parent_categories=splitted_by_jet_fake,
+    splitted_by_bdt = create_child_categories(config,
+                                              parent_categories=splitted_by_jet_fake,
+                                              child_category_map=bdt_map)
+    
+    sr_cats = [c for c in splitted_by_bdt if 'hig' in c]
+    
+    splitted_by_hig_bins = create_child_categories(config,
+                                                   parent_categories=sr_cats,
+                                                   child_category_map=hig_bins_map)
+    
+    splitted_by_dm_hig = create_child_categories(config,
+                                                 parent_categories=splitted_by_hig_bins,
+                                                 child_category_map=tau_decays_map)
+    bdt_incl_cats = [c for c in splitted_by_bdt if 'bdt_incl' in c]
+    
+    splitted_by_dm_incl = create_child_categories(config,
+                                                 parent_categories=bdt_incl_cats,
                                                  child_category_map=tau_decays_map)
     
-    # splitted_by_bdt = create_child_categories(config,
-    #                                              parent_categories=splitted_by_jet_fake,
-    #                                              child_category_map=bdt_map)
+    # no_split_by_dm = [c for c in config.categories.names() if ('tau2' not in c) and (c != 'cat_mutau_sr') and (c != 'incl')]
     
-    # sel_hig_cats = [the_cat for the_cat in splitted_by_bdt if '__hig' in the_cat]
-
-    # splitted_by_hig_cats = create_child_categories(config,
-    #                                              parent_categories=sel_hig_cats,
-    #                                              child_category_map=hig_bins_map)
-
-    # splitted_by_dm = create_child_categories(config,
-    #                                           parent_categories=splitted_by_hig_cats,
-    #                                           child_category_map=tau_decays_map)
-
-    # sel_abcd_cats = [the_cat for the_cat in splitted_by_dm if (('abcd' in the_cat) and (('jet_fakes' in the_cat) or ('prompt' in the_cat)))]
-    # #remove intermediate categories that are not required in the analysis
-    
-    # for the_name in splitted_by_hig_cats:
+    # for the_name in no_split_by_dm:
     #     the_cat = config.get_category(the_name)
     #     config.remove_category(the_cat)
-        
-    # for the_name in sel_abcd_cats:
-    #     the_cat = config.get_category(the_name)
-    #     config.remove_category(the_cat)
+    
