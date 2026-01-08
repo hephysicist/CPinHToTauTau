@@ -385,8 +385,10 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
             #'cat_mutau_sr_no_mt' #'cat_mutau_sr'
             if 'ff_method' in task.hist_hooks:
                 bkg_type = 'prompt' #take prompt contribution form all hists and estimate jet fake contribution via transfer factor method
-            else:
+            elif 'qcd' in task.hist_hooks:
                 bkg_type = 'fake_incl'
+            else: 
+                bkg_type = ''
             print(f"Using {bkg_type} subcategories to make inclusive hists.")
             
             decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
@@ -397,7 +399,10 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                     tmp_arr = h.view()
                     subhists = []
                     for the_decay in decay_ch:
-                        cat_name = '__'.join((incl,bkg_type,the_decay))
+                        if bkg_type== '':
+                            cat_name = '__'.join((incl,bkg_type,the_decay))
+                        else:
+                            cat_name = '__'.join((incl,the_decay))
                         print(f'Adding :{cat_name} for {p.name} from {config.name}')
                         loc_dict = {'category': hist.loc(cat_name),
                                     'shift': hist.loc(task.shift)}
