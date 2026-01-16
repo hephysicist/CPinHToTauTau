@@ -18,7 +18,6 @@ class HCPModelBase(InferenceModel):
 
     def __init__(self, *args, **kwargs) -> None:
         # members that are set in init_objects
-     
         self.config = args
         self.single_config: bool
         self.campaign_keys: dict[od.Config, str] = {}
@@ -46,7 +45,7 @@ class HCPModelBase(InferenceModel):
     def init_parameters(self) -> None:
         # should setup inference model parameters
         ...
-
+        
     def init_func(self) -> None:
         # the default initialization is split into logical parts
         self.init_objects()
@@ -63,10 +62,16 @@ class HCPModelBase(InferenceModel):
 
     def init_objects(self) -> None:
         # gather campaign identifier keys per config
-        #self.single_config = len(self.config) == 1
-        #for config_inst in self.config:
-        #    year2 = config_inst.campaign.x.year % 100
-        #    self.campaign_keys[config_inst] = f"{year2}{config_inst.campaign.x.postfix}"
+        #self.single_config = len(self.config_insts) == 1
+        #for config_inst in self.config_insts:
+        #    self.campaign_keys[config_inst] = f"{config_inst.campaign.x.year}{config_inst.campaign.x.postfix}"
+
+        # overall campaign key
+        self.campaign_key = "_".join(self.campaign_keys.values())
+
+        # setup the process_map
+        self.init_proc_map()
+
 
         # overall campaign key
         self.campaign_key = "_".join(self.campaign_keys.values())

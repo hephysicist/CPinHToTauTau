@@ -46,7 +46,8 @@ def ip_correction(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
                 #print(f'Do not apply IP correction: Filling IP_{the_comp}_qm with  the values from IP_{the_comp}')
                 lep[f'IP{the_comp}_qm'] = lep[f'IP{the_comp}']
         else:
-            gen_lep = events.gen_lep[lep_str]
+         
+                
             abseta = flat_np_view(abs(lep.eta), axis=1)
             max_eta = 2.4 if ch_str=='mutau' else 2.1
             mask = (abseta <= max_eta) 
@@ -61,9 +62,9 @@ def ip_correction(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
             elif ch_objects[lep_str] == 'Muon':
                 mask = mask & ((genmatch == tau_part_flav["prompt_mu"]) | genmatch == 15)
             for the_comp in ['x','y','z']:
-                #print(f'performing IP correction for {the_comp} component...')
-                gen_ip_comp = flat_np_view(gen_lep[f'IP{the_comp}'], axis=1)
                 ip_comp     = flat_np_view(lep[f'IP{the_comp}'], axis=1)
+                gen_ip_comp = ak.fill_none(ak.firsts(events.gen_lep[lep_str][f'IP{the_comp}'],axis=1),EMPTY_FLOAT)
+                gen_ip_comp = flat_np_view(gen_ip_comp)
                 gen2reco_shift = (ip_comp - gen_ip_comp)
                 mask = mask & (abs(gen2reco_shift) < 0.03) #Input for the correction should have IP component magnitude < 0.03
                 corrected_ip = ip_comp.copy()
