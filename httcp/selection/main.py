@@ -29,6 +29,7 @@ from httcp.selection.lepton_pair import pair_selection
 from httcp.selection.match_trigobj import match_trigobj
 from httcp.selection.lepton_veto import double_lepton_veto, extra_lepton_veto,tau_veto
 from httcp.selection.higgscand import new_higgscand, mask_nans
+from httcp.selection.cutflow import cutflow_main
 
 from httcp.production.aux_columns import channel_id, create_jetID_masks, jet_veto, add_tau_prods
 from columnflow.selection.cms.jets import jet_veto_map
@@ -257,4 +258,12 @@ def main(
 
     events, results = self[increment_stats](
         events, results, stats, weight_map=weight_map, group_map=group_map, **kwargs)
+
+    # cutflow / efficiency tables and plots
+    if self.config_inst.x.verbose.selection.main:
+        cutflow_main(
+            events=events,
+            results=results,
+            dataset_name=self.dataset_inst.name
+        )
     return events, results
