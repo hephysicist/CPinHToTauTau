@@ -33,6 +33,7 @@ def get_single_part(array: ak.Array, idx: int) -> ak.Array:
 def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     PVBS        = events.PVBS
     if pair_decay_ch.endswith("_gen"):
+        #from IPython import embed; embed()
         tau = events.gen_lep.lep1
         tauprod = events.gentau_decay_prods_mutau_lep1 
         muon = events.gen_lep.lep0
@@ -44,7 +45,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
             tauMTT = events.hcand_mutau.fastMTT_BW.lep1
         
     
-    ch1 = events.hcand_mutau.lep0.charge # Take the same charge for reco and gen
+    ch1 = muon.charge # Take the same charge for reco and gen
     ip2 = get_ip_p4(events.hcand_mutau.lep1) #Take always the IP of reco level tau
     
     r1  = r2 = get_ip_p4(muon)
@@ -59,7 +60,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     
     if pair_decay_ch.startswith("mu_pi"):
         charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
-        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
+        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.fill_none(ak.firsts(tau.charge),0))
        
         ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
         sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
@@ -70,7 +71,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         r2 = ak.drop_none(ak.mask(r2, r2.rho2 > 0))
     elif pair_decay_ch.startswith("mu_rho"):
         charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
-        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
+        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.fill_none(ak.firsts(tau.charge),0))
         ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
         sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
         best_pion = ss_pions[sorted_idx[:,:1]]
@@ -83,7 +84,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     
     elif pair_decay_ch.startswith("mu_a1_1pr"):
         charged_pions = ak.drop_none(ak.mask(tauprod,pion_mask(tauprod)))
-        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
+        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.fill_none(ak.firsts(tau.charge),0))
         ss_pions = ak.drop_none(ak.mask(charged_pions, pi_ch == tau_ch))
         sorted_idx = ak.argsort(ss_pions.pt, ascending=False)
         best_pion = ss_pions[sorted_idx[:,:1]]
@@ -96,7 +97,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
        
     elif pair_decay_ch.startswith("mu_a1_3pr_dp"):
         charged_pions = ak.drop_none(ak.mask(tauprod, pion_mask(tauprod)))
-        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
+        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.fill_none(ak.firsts(tau.charge),0))
         ss_pions = ak.drop_none(ak.mask(charged_pions, charged_pions.charge == tau_ch))
         os_pion  = ak.drop_none(ak.mask(charged_pions, charged_pions.charge == -1*tau_ch))
         
@@ -131,7 +132,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
       
         # Identify same-sign (SS) and opposite-sign (OS) pions
         charged_pions = ak.drop_none(ak.mask(tauprod, pion_mask(tauprod)))
-        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge , ak.firsts(tau.charge))
+        pi_ch, tau_ch = ak.broadcast_arrays(charged_pions.charge ,ak.fill_none(ak.firsts(tau.charge),0))
         ss_pions = ak.drop_none(ak.mask(charged_pions, charged_pions.charge == tau_ch))
         os_pion  = ak.drop_none(ak.mask(charged_pions, charged_pions.charge == -1*tau_ch))
 
@@ -155,7 +156,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         tau_p4  = ak.drop_none(ak.mask(tau_p4, valid_mask))
         ss_pi1  = ak.drop_none(ak.mask(ss_pi1, valid_mask))
         ss_pi2  = ak.drop_none(ak.mask(ss_pi2, valid_mask))
-        tau_charge = ak.drop_none(ak.mask(ak.firsts(tau.charge), valid_mask))
+        tau_charge = ak.drop_none(ak.mask(ak.fill_none(ak.firsts(tau.charge),0), valid_mask))
 
         # GJ rotation and boost in Higgs rest frame
         if pair_decay_ch == "mu_a1_3pr_pv_gef":
@@ -204,7 +205,6 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         r2 = pv.boost(beta_tau)
 
         p2 = tau_p4
-
     final_mask = ((ak.num(p2,axis=1)==1) & (ak.num(r2,axis=1)==1))[...,np.newaxis]   
     p1 = ak.drop_none(ak.mask(p1, final_mask))
     p2 = ak.drop_none(ak.mask(p2, final_mask))

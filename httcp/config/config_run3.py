@@ -150,8 +150,8 @@ def add_run3(ana: od.Analysis,
     process_names = [
         "data", 
         "data_mu",
-        "data_tau",
-        "data_e",
+        #"data_tau",
+        #"data_e",
         "data_singlemu",
         #Drell-Yan
         "dy_lep",
@@ -163,6 +163,7 @@ def add_run3(ana: od.Analysis,
         "dy_tt_m50",
         # "dy_lep_m10to50",
         #W + jets
+        "w",
         "wj",
         "wj_1j",
         "wj_2j",
@@ -182,19 +183,15 @@ def add_run3(ana: od.Analysis,
         "tt_fh",
         #single top
         "st",
-        #single top t-channel        
-        "st_tchannel_tbar",
-        "st_tchannel_t",
-        #single top s-channel   
-        "st_schannel_t_lep",
-        "st_schannel_tbar_lep",
-        # single top tW channel
-        "st_twchannel_t_fh","st_twchannel_t_sl","st_twchannel_t_dl",
-        "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh",
+        "st_twchannel_t_dl",
+        "st_twchannel_t_fh",
+        "st_twchannel_t_sl",
+        "st_twchannel_tbar_dl",
+        "st_twchannel_tbar_fh",
+        "st_twchannel_tbar_sl",
         #ggF signal
-        "h_ggf_htt_sm",
         "h_ggf_htt_sm_prod_sm","h_ggf_htt_sm_prod_mm","h_ggf_htt_sm_prod_cpo",
-        "h_ggf_htt_mm",
+
         "h_ggf_htt_mm_prod_sm","h_ggf_htt_mm_prod_mm","h_ggf_htt_mm_prod_cpo",
         "h_ggf_htt_cpo",
         "h_ggf_htt_cpo_prod_sm","h_ggf_htt_cpo_prod_mm","h_ggf_htt_cpo_prod_cpo",
@@ -207,15 +204,24 @@ def add_run3(ana: od.Analysis,
         "wh_htt_cpo","wh_htt_sm","wh_htt_mm","wh_htt_flat",
         "wph_htt_cpo","wph_htt_sm","wph_htt_mm","wph_htt_flat",
         "wmh_htt_cpo","wmh_htt_sm","wmh_htt_mm","wmh_htt_flat",
+        "qcd",
+        "jet_fakes"
     ]
     for process_name in process_names:
         # add the process
-        #print(f'importing {process_name} for {campaign.name}')
-        proc = cfg.add_process(procs.get(process_name))
+        if process_name == "qcd":
+            # qcd is not part of procs since there is no dataset registered for it
+            from cmsdb.processes.qcd import qcd
+            cfg.add_process(qcd)
+        elif process_name == "jet_fakes":
+            # qcd is not part of procs since there is no dataset registered for it
+            from cmsdb.processes.qcd import jet_fakes
+            cfg.add_process(jet_fakes)
+        else:   
+            proc = cfg.add_process(procs.get(process_name))
         #for signal datasets create special tag
         if process_name.startswith("h_"):
-            proc.add_tag("signal")
-           
+            proc.add_tag("signal")  
     # add datasets we need to study
     from httcp.config.datasets import add_datasets_2025_skim_v2,add_datasets_2024_skim_v1
     datasets = add_datasets_2025_skim_v2()
@@ -267,12 +273,12 @@ def add_run3(ana: od.Analysis,
     # process groups for conveniently looping over certain processs
     # (used in wrapper_factory and during plotting)
     cfg.x.process_groups = {
-        "data" : ["data_mu", "data_tau","data_e"],
-        "vv"   : ["ww", "wz", "zz"],
-        "tt"   : ["tt_sl","tt_dl","tt_fh"],
-        "st"   : ["st_tchannel_tbar","st_tchannel_t","st_schannel_tbar_lep","st_schannel_t_lep",
-               "st_twchannel_t_fh","st_twchannel_t_sl","st_twchannel_t_dl",
-               "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh",],
+        #"data" : ["data_mu", "data_tau","data_e"],
+        #"vv"   : ["ww", "wz", "zz"],
+        #"tt"   : ["tt_sl","tt_dl","tt_fh"],
+        #"st"   : ["st_tchannel_tbar","st_tchannel_t","st_schannel_tbar_lep","st_schannel_t_lep",
+        #       "st_twchannel_t_fh","st_twchannel_t_sl","st_twchannel_t_dl",
+        #       "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh",],
     }
     # dataset groups for conveniently looping over certain datasets
     # (used in wrapper_factory and during plotting)
@@ -913,6 +919,12 @@ def add_run3(ana: od.Analysis,
         cfg.x.get_dataset_lfns_sandbox = dev_sandbox("bash::$CF_BASE/sandboxes/cf.sh")
         # define custom remote fs's to look at
         cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: "wlcg_fs_eos"
+
+    cfg.x.verbose = DotDict.wrap({
+        "selection": {
+            "main"                    : True,
+        },        
+    })
 
     # add categories using the "add_category" tool which adds auto-generated ids
     from httcp.config.categories import add_categories
