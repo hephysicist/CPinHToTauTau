@@ -99,8 +99,12 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                 sr_cats = []
                 decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
                 for the_cat in task.categories:
+                    
                     for the_ch in decay_ch:
-                        sr_cats.append( '__'.join((the_cat,the_ch)))
+                        if '_tau2' not in the_cat:
+                            sr_cats.append( '__'.join((the_cat,the_ch)))
+                        else:
+                            sr_cats.append(the_cat)
                 print(sr_cats)
                 shifts = [task.shift]
             for shift in shifts:
