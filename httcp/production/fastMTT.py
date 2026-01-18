@@ -81,7 +81,7 @@ def fastMTT(
     verbosity = False # True = prints fastMTT infos in terminal
     delta = 1.0/1.15 # regularization parameter delta        1.0/1.15    1.0/1.2
     reg_order = 6.0  # regularization parameter order       6.0         5.5
-    mX = 125.10 # Higgs mass                                125.10      125.08
+    mX = 125.08 # Higgs mass                                125.10      125.08
     widthX = 2.5 # window                                   2.5         2.0
     #if args.sample=='dy':
     #mX = 91.2 # Z boson mass
