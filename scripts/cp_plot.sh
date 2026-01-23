@@ -6,8 +6,7 @@ args=(
         --configs $configs
         --processes $processes
         --datasets  $datasets
-        --categories  cat_mutau_sr__fake_incl__bdt_incl__tau2a1_3pr
-        # 'cat_mutau_sr__fake_incl__hig__cat2__tau2a1_3pr'
+        --categories  cat_mutau_sr__fake_incl__bdt_incl__tau2a1_3pr,cat_mutau_sr__fake_incl__hig__cat2__tau2a1_3pr
         #`'cat_mutau_sr__fake_incl__tau2pi,cat_mutau_sr__fake_incl__tau2rho,'`
         #`'cat_mutau_sr__fake_incl__tau2a1,cat_mutau_sr__fake_incl__tau2a1_3pr'`
         # 'cat_mutau_sr__fake_incl,cat_mutau_sr__fake_incl__tau2pi,cat_mutau_sr__fake_incl__tau2rho,'`
@@ -37,7 +36,7 @@ args=(
         --cf.MergeHistograms-workflow local
         --cf.PlotVariables1D-version merge_check
         
-        --variables phi_cp_mu_a1_3pr_dp_reco,phi_cp_mu_a1_3pr_pv_gef,theta_gj_mu_a1_3pr_pv_gef,theta_max_mu_a1_3pr_pv_gef,theta_rot_mu_a1_3pr_pv_gef
+        --variables mutau_lep1_pt,theta_rot_mu_a1_3pr_pv_gef
         ## all variables
         # 'npvs,
         #  mutau_lep0_pt,mutau_lep0_eta,mutau_lep0_phi,mutau_lep0_mass,mutau_lep0_iso,
@@ -53,7 +52,6 @@ args=(
         #  hcand_mutau_fastMTT_BW_mass,hcand_mutau_fastMTT_BW_lep0_pt,hcand_mutau_fastMTT_BW_lep0_eta,hcand_mutau_fastMTT_BW_lep0_phi,hcand_mutau_fastMTT_BW_lep0_mass,hcand_mutau_fastMTT_BW_lep1_pt,hcand_mutau_fastMTT_BW_lep1_eta,hcand_mutau_fastMTT_BW_lep1_phi,hcand_mutau_fastMTT_BW_lep1_mass,
         #  hcand_mutau_fastMTT_cons_mass,hcand_mutau_fastMTT_cons_lep0_pt,hcand_mutau_fastMTT_cons_lep0_eta,hcand_mutau_fastMTT_cons_lep0_phi,hcand_mutau_fastMTT_cons_lep0_mass,hcand_mutau_fastMTT_cons_lep1_pt,hcand_mutau_fastMTT_cons_lep1_eta,hcand_mutau_fastMTT_cons_lep1_phi,hcand_mutau_fastMTT_cons_lep1_mass,
         #  theta_gj_mu_a1_3pr_pv_gef,theta_max_mu_a1_3pr_pv_gef,theta_rot_mu_a1_3pr_pv_gef,
-        #  theta_gj_scaled_mu_a1_3pr_pv_gef,theta_max_scaled_mu_a1_3pr_pv_gef,theta_rot_scaled_mu_a1_3pr_pv_gef'
         
         --file-types pdf,png
 
