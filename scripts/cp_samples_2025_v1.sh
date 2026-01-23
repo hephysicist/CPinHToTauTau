@@ -3,26 +3,6 @@
 set_common_vars() {
 
 version="merge_check"
-    
-#categories='cat_mutau_sr,cat_mutau_sr__tau2a1_3pr,cat_mutau_sr__prompt__hig__cat2__tau2a1_3pr'
-#variables='hcand_mutau_fastMTT_BW_mass,hcand_mutau_fastMTT_BW_lep0_pt,hcand_mutau_fastMTT_BW_lep0_eta,hcand_mutau_fastMTT_BW_lep0_phi,hcand_mutau_fastMTT_BW_lep0_mass,hcand_mutau_fastMTT_BW_lep1_pt,hcand_mutau_fastMTT_BW_lep1_eta,hcand_mutau_fastMTT_BW_lep1_phi,hcand_mutau_fastMTT_BW_lep1_mass,theta_gj_mu_a1_3pr_pv_gef,theta_max_mu_a1_3pr_pv_gef,theta_rot_mu_a1_3pr_pv_gef,phi_cp_mu_a1_3pr_dp_reco,phi_cp_mu_a1_3pr_pv_reco,phi_cp_mu_a1_3pr_pv_mtt,phi_cp_mu_a1_3pr_pv_gef,bdt_raw_score_higgs,bdt_cat'
-
-## all variables
-# variables='npvs,
-#            mutau_lep0_pt,mutau_lep0_eta,mutau_lep0_phi,mutau_lep0_mass,mutau_lep0_iso,
-#            mutau_lep1_pt,mutau_lep1_eta,mutau_lep1_phi,mutau_lep1_mass,mutau_lep1_iso,
-#            mutau_lep1_decayMode,mutau_lep1_decayModePNet,hcand_mutau_delta_r
-#            mutau_mvis,mutau_mt,mutau_delta_r,puppi_met_pt,puppi_met_phi,
-#            mutau_lep0_IPx,mutau_lep0_IPy,mutau_lep0_IPz,mutau_lep0_ip_sig,
-#            mutau_lep1_IPx,mutau_lep1_IPy,mutau_lep1_IPz,mutau_lep1_ip_sig,
-#            bdt_raw_score_gtau,bdt_raw_score_higgs,bdt_raw_score_fake,bdt_cat,
-#            phi_cp_mu_a1_3pr_dp_reco,phi_cp_mu_a1_3pr_pv_reco,phi_cp_mu_a1_3pr_pv_mtt,phi_cp_mu_a1_3pr_pv_gef,
-#            hcand_mutau_fastMTT_mass,hcand_mutau_fastMTT_lep0_pt,hcand_mutau_fastMTT_lep0_eta,hcand_mutau_fastMTT_lep0_phi,hcand_mutau_fastMTT_lep0_mass,hcand_mutau_fastMTT_lep1_pt,hcand_mutau_fastMTT_lep1_eta,hcand_mutau_fastMTT_lep1_phi,hcand_mutau_fastMTT_lep1_mass,
-#            hcand_mutau_fastMTT_BW_mass,hcand_mutau_fastMTT_BW_lep0_pt,hcand_mutau_fastMTT_BW_lep0_eta,hcand_mutau_fastMTT_BW_lep0_phi,hcand_mutau_fastMTT_BW_lep0_mass,hcand_mutau_fastMTT_BW_lep1_pt,hcand_mutau_fastMTT_BW_lep1_eta,hcand_mutau_fastMTT_BW_lep1_phi,hcand_mutau_fastMTT_BW_lep1_mass,
-#            hcand_mutau_fastMTT_cons_mass,hcand_mutau_fastMTT_cons_lep0_pt,hcand_mutau_fastMTT_cons_lep0_eta,hcand_mutau_fastMTT_cons_lep0_phi,hcand_mutau_fastMTT_cons_lep0_mass,hcand_mutau_fastMTT_cons_lep1_pt,hcand_mutau_fastMTT_cons_lep1_eta,hcand_mutau_fastMTT_cons_lep1_phi,hcand_mutau_fastMTT_cons_lep1_mass,
-#            theta_gj_mu_a1_3pr_pv_gef,theta_max_mu_a1_3pr_pv_gef,theta_rot_mu_a1_3pr_pv_gef,
-#            theta_gj_scaled_mu_a1_3pr_pv_gef,theta_max_scaled_mu_a1_3pr_pv_gef,theta_rot_scaled_mu_a1_3pr_pv_gef'
-# --shape-norm for the last line
 
 data_muoneg_2022preEE='data_muoneg_C,data_muoneg_D,'
 data_mu_2022preEE='data_mu_C,data_mu_D,data_singlemu_C,'
