@@ -231,7 +231,7 @@ def add_run3(ana: od.Analysis,
         dataset = cfg.add_dataset(campaign.get_dataset(dataset_name))
         if dataset_name.startswith("h_") or dataset_name.startswith("zh_") or dataset_name.startswith("wh_"):
             dataset.add_tag("signal")   
-        if dataset.name.startswith("tt_"):
+        if dataset.name.startswith("TTto"):
             dataset.add_tag({"has_top", "ttbar", "tt"})    
         # for testing purposes, limit the number of files to 1
         for info in dataset.info.values():
