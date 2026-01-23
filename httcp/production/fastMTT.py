@@ -79,7 +79,7 @@ def fastMTT(
 
     # Steering Parameters for the FastMTT algorithm
     verbosity = False # True = prints fastMTT infos in terminal
-    delta = 1.0/1.15 # regularization parameter delta        1.0/1.15    1.0/1.2
+    delta = 1.0/1.15 # regularization parameter delta       1.0/1.15    1.0/1.2
     reg_order = 6.0  # regularization parameter order       6.0         5.5
     mX = 125.08 # Higgs mass                                125.10      125.08
     widthX = 2.5 # window                                   2.5         2.0
@@ -129,13 +129,8 @@ def fastMTT(
     # Extract reconstructed MTT Higgs mass and decay products properties
     hcand_features = ['pt', 'eta', 'phi'] #no 'px', 'py', 'pz', in lep so far (put can be used in apply_fastMTT.py)
     
-    # Replace possible NaNs in lep0 mass with SM values
-    lep0_mass_defaults = {
-        'mutau': 0.10566,   # muon mass in GeV
-        'etau': 0.000511,   # electron mass in GeV
-        'tautau': 1.77686   # tau mass in GeV 
-        }
-    lep0_mass_threshold = 1e-7
+    # SM particle masses in GeV
+    tau_mass = 1.77686 # GeV
 
     def build_corrected_leptons(modifier_prefix): # '' , _BW, _cons '''
         leptons_corrected = {}
@@ -155,7 +150,7 @@ def fastMTT(
             py_mtt = lep_p4.py / modifier
             pz_mtt = lep_p4.pz / modifier
 
-            energy_mtt = np.sqrt(px_mtt**2 + py_mtt**2 + pz_mtt**2 + lep0_mass_defaults['tautau']**2)
+            energy_mtt = np.sqrt(px_mtt**2 + py_mtt**2 + pz_mtt**2 + tau_mass**2)
 
             lep_tau = ak.zip({
                 "px": px_mtt,
@@ -172,11 +167,11 @@ def fastMTT(
                 "mass": lep_tau.mass,
             }
             
-            # Mass fix for lep0 only
-            if lep_str == 'lep0':
-                lep_dict['mass'] = ak.where(lep_dict["mass"] < lep0_mass_threshold,
-                                            lep0_mass_defaults.get(ch_str, 0.0),
-                                            lep_dict["mass"])
+            # Mass fix if lepton mass is ~ 0
+            lep_mass_threshold = 1e-7
+            lep_dict['mass'] = ak.where(lep_dict["mass"] < lep_mass_threshold,
+                                        tau_mass,
+                                        lep_dict["mass"])
 
             # Rebuild vector to compute corrected mass
             leptons_corrected[lep_str] = ak.zip(
@@ -185,7 +180,7 @@ def fastMTT(
                 behavior=coffea.nanoevents.methods.vector.behavior
             )
 
-        # Prepare the reconstructed tau leptons into new hcand columns | part 2/2
+        # Prepare the reconstructed tau leptons into new hcand columns
         return ak.zip({
                 'lep0': leptons_corrected['lep0'],
                 'lep1': leptons_corrected['lep1'],
