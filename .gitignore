@@ -38,6 +38,3 @@ data
 .mypy_cache
 .vscode
 .python-version
-.__afs*
-delete.txt
-

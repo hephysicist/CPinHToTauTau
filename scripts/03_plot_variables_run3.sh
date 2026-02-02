@@ -7,7 +7,7 @@ args=(
         --processes $processes
         --datasets $datasets
         
-        --categories  $categories_mutau
+        --categories  'cat_mutau_sr__tau2rho,cat_mutau_sr__tau2rho__hig_cat_0,cat_mutau_sr__tau2rho__hig_cat_1,cat_mutau_sr__tau2rho__hig_cat_2'
         
         #'cat_mutau_sr__tau2rho,cat_mutau_sr__tau2rho__hig_cat_0,cat_mutau_sr__tau2rho__hig_cat_1,cat_mutau_sr__tau2rho__hig_cat_2'
         
@@ -110,15 +110,15 @@ args=(
         
         --cf.MergeSelectionStats-version $version
         --cf.ProvideReducedEvents-version $version
-        --version 25_july_test_new_cats_MTT_4Mev
-        --variables $variables_mutau
+        --version bdt_check
+        --variables 
         #'mutau_mvis,mutau_pt_vis,mutau_pt_vis,mutau_mt_ll,'`
         #`'mutau_mt0,mutau_mt1,mutau_mt_tot,mutau_delta_eta,mutau_delta_r,'`
         #`'leading_jet_pt,subleading_jet_pt,leading_jet_eta,subleading_jet_eta,leading_jet_phi,subleading_jet_phi,'`
         #`'dijet_delta_eta,mjj,N_jets_pT_20_eta_4_7_Tight,N_b_jets,'`
         #`'mutau_delta_phi,mutau_delta_phi_0_met,mutau_delta_phi_1_met,'`
-        #,'bdt_raw_score_gtau,bdt_raw_score_higgs,bdt_raw_score_fake,bdt_cat'
-        #'phi_cp_mu_rho'
+        #'bdt_raw_score_gtau,bdt_raw_score_higgs,bdt_raw_score_fake,bdt_cat'
+        'phi_cp_mu_rho'
         #'mutau_lep1_pt,mutau_mvis,mutau_mvis_fine,mutau_lep0_ipx,mutau_lep0_ipx_qm,mutau_lep1_ipx,mutau_lep1_ipx_qm,'`
         #`'mutau_lep0_ipy,mutau_lep0_ipy_qm,mutau_lep1_ipy,mutau_lep1_ipy_qm,'`
         #`'mutau_lep0_ipz,mutau_lep0_ipz_qm,mutau_lep1_ipz,mutau_lep1_ipz_qm'
@@ -129,8 +129,8 @@ args=(
        # 3. good_old_abcd: estimates QCD contribution by taking events from same sign region and transfer factors from inv. lep iso
          
         #--hist-hooks good_old_abcd #ff_method_dr_closure_test
-        --general-settings "cms-label=pw"
-        --process-settings "h_ggf_htt_cpo,unstack,scale=stack,color=#28348e:h_ggf_htt_mm,unstack,scale=stack,color=#2b663c:h_ggf_htt_sm,unstack,scale=stack,color=#d62839"
+        --general-settings "yscale=log,cms-label=pw"
+        --process-settings "h_ggf_htt_cpo,unstack,scale=1,color=#FF0000:h_ggf_htt_sm,unstack,scale=1,color=#0000FF"
         "${@:2}"
     )
 echo law run cf.PlotVariables1D "${args[@]}"

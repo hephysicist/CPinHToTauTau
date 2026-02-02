@@ -25,6 +25,7 @@ class hcp_model(HCPModelBase):
       
     def init_proc_map(self) -> None:
         # mapping of process names in the datacard ("combine name") to configs and process names in a dict
+        
         name_map = dict([
             ("ZL",'dy_ll_m50'),
             ("ZTT",'dy_tt_m50'),
