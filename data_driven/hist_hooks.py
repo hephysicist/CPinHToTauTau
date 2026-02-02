@@ -176,7 +176,23 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         from cmsdb.processes.qcd import jet_fakes,qcd
         output = {}
         for config, hists in inputs.items():
-            sr_cats = [c for c in config.categories.names() if ('_sr' in c) and ('prompt' in c) and ('tau2' in c) and ('no_mt' not in c) ]
+            if task.get_task_family() == 'cf.CreateDatacards':
+                sr_cats = [task.branch_data.config_data[config.name].category]
+                incl_h = sum(list(hists.values()))
+                ax = incl_h.axes['shift']
+                shifts = [ax.value(i) for i in range(ax.size)]
+            else: 
+                sr_cats = []
+                decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
+                for the_cat in task.categories:
+                    
+                    for the_ch in decay_ch:
+                        if '_tau2' not in the_cat:
+                            sr_cats.append( '__'.join((the_cat,the_ch)))
+                        else:
+                            sr_cats.append(the_cat)
+                print(sr_cats)
+                shifts = [task.shift]
             for the_cat in sr_cats:
                 print(f'Applying fake factor method on {config.name} {the_cat}')
                 sr = config.get_category(the_cat) 
@@ -211,8 +227,9 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
             hists[qcd][...] = tmp_qcd
             hists[jet_fakes][...] = tmp_fakes
             
-            [wj_proc] = [p for p in hists.keys() if 'wj' in p.name]
-            del hists[wj_proc]   
+            wj_proc = [p for p in hists.keys() if p.name == 'w']
+            if len(wj_proc):
+                del hists[wj_proc[0]]   
             output[config] = hists
         return output
     
@@ -395,12 +412,10 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
     def make_inclusive_hists(task, inputs): #cf0p3
         ouputs = {}
         for config, hists in inputs.items():
-            #from IPython import embed; embed()
-            
             incl = task.categories
             #'cat_mutau_sr_no_mt' #'cat_mutau_sr'
             if 'ff_method' in task.hist_hooks:
-                bkg_type = 'prompt' #take prompt contribution form all hists and estimate jet fake contribution via transfer factor method
+                bkg_type = '' #take prompt contribution form all hists and estimate jet fake contribution via transfer factor method
             elif 'qcd' in task.hist_hooks:
                 bkg_type = ''
             else: 
@@ -417,8 +432,6 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                     for the_decay in decay_ch:
                         if bkg_type== '':
                             cat_name = '__'.join((incl,the_decay))
-                        else:
-                            cat_name = '__'.join((incl,bkg_type,the_decay))
                         print(f'Adding :{cat_name} for {p.name} from {config.name}')
                         loc_dict = {'category': hist.loc(cat_name),
                                     'shift': hist.loc(task.shift)}
