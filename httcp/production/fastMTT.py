@@ -23,9 +23,8 @@ import fastmtt_cpp
 from columnflow.production import Producer, producer
 from columnflow.production.util import attach_coffea_behavior
 
-from columnflow.util import maybe_import, dev_sandbox
-from columnflow.util import DotDict, InsertableDict
-from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column, flat_np_view
+from columnflow.util import maybe_import
+from columnflow.columnar_util import set_ak_column, flat_np_view
 from columnflow.columnar_util import optional_column as optional
 
 from httcp.util import get_lep_p4
@@ -80,10 +79,10 @@ def fastMTT(
 
     # Steering Parameters for the FastMTT algorithm
     verbosity = False # True = prints fastMTT infos in terminal
-    delta = 1.0/1.15 # regularization parameter delta
-    reg_order = 6.0  # regularization parameter order
-    mX = 125.10 # Higgs mass
-    widthX = 2.5 # window
+    delta = 1.0/1.15 # regularization parameter delta       1.0/1.15    1.0/1.2
+    reg_order = 6.0  # regularization parameter order       6.0         5.5
+    mX = 125.08 # Higgs mass                                125.10      125.08
+    widthX = 2.5 # window                                   2.5         2.0
     #if args.sample=='dy':
     #mX = 91.2 # Z boson mass
     #widthX = 4.0 # window
@@ -124,63 +123,82 @@ def fastMTT(
         fast_mtt_unflattened[the_var] = ak.unflatten(the_arr, ak.num(hcand.mass,axis=1)) 
     MTT_cpp_rest = ak.zip(fast_mtt_unflattened) # -> mass, x1, x1_BW, x1_cons, x2, x2_BW, x2_cons
 
-    ''' ATTENTION : x1_BW and x2_BW denote Boson Mass Window, not Breit Wigner ! 
-    
-        (Breit Wigner can be used in apply_fastMTT.py and 
-        ~/CPinHToTauTau/modules/ClassicsSVfit/python/FastMTT.py l.37)'''
+    ''' ATTENTION : x1_BW and x2_BW denote Boson Mass Window, not Breit Wigner. Breit Wigner is _cons ! '''
 
 
     # Extract reconstructed MTT Higgs mass and decay products properties
     hcand_features = ['pt', 'eta', 'phi'] #no 'px', 'py', 'pz', in lep so far (put can be used in apply_fastMTT.py)
-    leptons_corrected = {}
     
-    # Replace possible NaNs in lep0 mass with SM values
-    lep0_mass_defaults = {
-        'mutau': 0.10566,   # muon mass in GeV
-        'etau': 0.000511,   # electron mass in GeV
-        'tautau': 1.77686   # tau mass in GeV 
-        }
-    lep0_mass_threshold = 1e-7
+    # SM particle masses in GeV
+    tau_mass = 1.77686 # GeV
 
-    for lep_str in ['lep0', 'lep1']:
-        lep = getattr(hcand, lep_str)
+    def build_corrected_leptons(modifier_prefix): # '' , _BW, _cons '''
+        leptons_corrected = {}
 
-        modifier_key = 'x1' if lep_str == 'lep0' else 'x2'
-        modifier = MTT_cpp_rest[modifier_key]
+        for lep_str in ['lep0', 'lep1']:
+            lep = getattr(hcand, lep_str)
 
-        lep_dict = {}
+            # Choose x1 or x2 (with optional _BW)
+            key = ('x1' if lep_str == 'lep0' else 'x2') + modifier_prefix
+            modifier = MTT_cpp_rest[key]
 
-        for hcand_feature in hcand_features:
-            lep_dict[hcand_feature] = getattr(lep, hcand_feature) / modifier
+            # correct full Lorentz-vector scaling
+            lep_p4 = get_lep_p4(lep)
 
-        # Handle mass separately, as it is not a Lorentz vector component
-        lep_p4 = get_lep_p4(lep) # visible ['pt', 'eta', 'phi', 'mass']
-        lep_energy = lep_p4.energy
-        lep_dict['energy'] = lep_energy / modifier
+            # scaled spatial components & correct relativistic energy
+            px_mtt = lep_p4.px / modifier
+            py_mtt = lep_p4.py / modifier
+            pz_mtt = lep_p4.pz / modifier
 
-        lep_p4_mtt = ak.zip(lep_dict,
-                    with_name="PtEtaPhiELorentzVector",
-                    behavior=coffea.nanoevents.methods.vector.behavior)
+            energy_mtt = np.sqrt(px_mtt**2 + py_mtt**2 + pz_mtt**2 + tau_mass**2)
 
-        if lep_str == 'lep0':
-            lep_dict['mass'] = ak.where(lep_p4_mtt.mass < lep0_mass_threshold,
-                                            lep0_mass_defaults.get(ch_str, 0.0),
-                                            lep_p4_mtt.mass)
-        else:
-            lep_dict['mass'] = lep_p4_mtt.mass
+            lep_tau = ak.zip({
+                "px": px_mtt,
+                "py": py_mtt,
+                "pz": pz_mtt,
+                "energy": energy_mtt,
+            }, with_name="LorentzVector", behavior=coffea.nanoevents.methods.vector.behavior)
+
+            lep_dict = {
+                "pt": lep_tau.pt,
+                "eta": lep_tau.eta,
+                "phi": lep_tau.phi,
+                "energy": lep_tau.energy,
+                "mass": lep_tau.mass,
+            }
             
-        # Prepare the reconstructed tau leptons into new hcand columns | part 1/2
-        leptons_corrected[lep_str] = ak.zip(lep_dict)
+            # Mass fix if lepton mass is ~ 0
+            lep_mass_threshold = 1e-7
+            lep_dict['mass'] = ak.where(lep_dict["mass"] < lep_mass_threshold,
+                                        tau_mass,
+                                        lep_dict["mass"])
 
-    # Prepare the reconstructed tau leptons into new hcand columns | part 2/2
-    fastMTT = ak.zip({
-            'lep0': leptons_corrected['lep0'],
-            'lep1': leptons_corrected['lep1'],
-            'mass': fast_mtt_unflattened['mass'],
-        })
+            # Rebuild vector to compute corrected mass
+            leptons_corrected[lep_str] = ak.zip(
+                lep_dict,
+                with_name="PtEtaPhiELorentzVector",
+                behavior=coffea.nanoevents.methods.vector.behavior
+            )
+
+        # Prepare the reconstructed tau leptons into new hcand columns
+        return ak.zip({
+                'lep0': leptons_corrected['lep0'],
+                'lep1': leptons_corrected['lep1'],
+                'mass': fast_mtt_unflattened['mass'],
+                })
+                
+
+    # Standard version -> BDT : x1, x2
+    fastMTT_wo_contraint = build_corrected_leptons(modifier_prefix='')
+    # Boson Window version -> PhiCP : x1_BW, x2_BW
+    fastMTT_BW = build_corrected_leptons(modifier_prefix='_BW')
+    # cons -> resolution studies : x1_cons, x2_cons
+    fastMTT_cons = build_corrected_leptons(modifier_prefix='_cons')
 
     # Attach the new fastMTT entry to the corresponding hcand column
-    hcand['fastMTT'] = fastMTT
-    events = set_ak_column(events, f'hcand_{ch_str}', hcand)
+    hcand['fastMTT'] = fastMTT_wo_contraint
+    hcand['fastMTT_BW'] = fastMTT_BW
+    hcand['fastMTT_cons'] = fastMTT_cons
 
+    events = set_ak_column(events, f'hcand_{ch_str}', hcand)
     return events

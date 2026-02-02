@@ -149,6 +149,22 @@ def jet_veto(
     events = set_ak_column(events, "is_b_vetoed", event_mask)
     return events
 
+def jet_pt_selection(jets: ak.Array,
+                     eta_bins: list,
+                     pt_cuts: list):
+    jet_pt_mask = ak.zeros_like(jets.pt,dtype=np.bool)
+    eta_bin_prev = 0
+    pt = jets.pt
+    eta = abs(jets.eta)
+    for idx, (eta_bin, pt_cut) in enumerate(zip(eta_bins,pt_cuts)):
+            if idx==0: 
+                jet_pt_mask = jet_pt_mask | ((pt > pt_cut) & (eta <= eta_bin))
+            else: 
+                jet_pt_mask = jet_pt_mask | ((pt > pt_cut) & (
+                    (eta <= eta_bin) & (eta > eta_bin_prev)))
+            eta_bin_prev = eta_bin   
+    return ak.drop_none(ak.mask(jets, jet_pt_mask))
+
 
 @producer(
     uses={f"Jet.{var}" for var in
@@ -156,6 +172,7 @@ def jet_veto(
            ]} | {"hcand_*"},
     produces={
         "n_jets",
+        "n_jets_recoil",
         "lead_jet.*",
         "sublead_jet.*",
         "dijet.*",
@@ -194,15 +211,19 @@ def jet_pt_def(
         _jet_br, _lep_br = ak.unzip(ak.cartesian([presel_jet, lep], axis=1))
         jet_p4 = get_lep_p4(_jet_br)
         lep_p4 = get_lep_p4(_lep_br)
-        mask = mask & ak.fill_none((jet_p4.delta_r(lep_p4) > 0.4), False)
+        mask = mask & ak.fill_none((jet_p4.delta_r(lep_p4) > 0.5), False)
 
     jets = get_lep_p4(sorted_jets[mask])
-    jet_pt_mask = ((jets.pt > 20) & (abs(jets.eta) <= 2.5))
-    jet_pt_mask = jet_pt_mask | ((jets.pt > 50) & (
-        (abs(jets.eta) <= 3.0) & (abs(jets.eta) > 2.5)))
-    jet_pt_mask = jet_pt_mask | ((jets.pt > 30) & ((abs(jets.eta) > 3.0)))
-
-    sel_jets = ak.drop_none(ak.mask(jets, jet_pt_mask))
+    
+    #Selecting jets for MET recoil of the analysis
+    eta_bins = [2.5,3.0,4.7]
+    pt_cuts  = [30, 50, 30]
+    sel_jets_recoil = jet_pt_selection(jets, eta_bins, pt_cuts)
+    njets_recoil = ak.num(sel_jets_recoil, axis=1)
+    #Selecting jets for the main pipeline of the analysis
+    eta_bins = [2.5,3.0,4.7] 
+    pt_cuts  = [20, 50, 30]
+    sel_jets = jet_pt_selection(jets, eta_bins, pt_cuts)
     njets = ak.num(sel_jets, axis=1)
 
     lead_jet_p4 = ak.where(njets > 0,
@@ -248,6 +269,7 @@ def jet_pt_def(
     events = set_ak_column(events, 'sublead_jet', ak.zip(sublead_jet))
     events = set_ak_column(events, 'dijet', ak.zip(dijet))
     events = set_ak_column(events, 'n_jets', njets)
+    events = set_ak_column(events, 'n_jets_recoil', njets_recoil)
     return events
 
 
@@ -400,15 +422,15 @@ def is_pion(prods): return ((np.abs(prods.pdgId) == 211))
 
 def is_photon(prods): return prods.pdgId == 22
 
+def one_pion(prods): return (ak.sum(is_pion(prods),   axis=1) == 1)
 
-def has_one_pion(prods): return (ak.sum(is_pion(prods),   axis=1) == 1)
+def at_least_one_pion(prods): return (ak.sum(is_pion(prods),   axis=1) >= 1)
 
+def three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) == 3)
 
-def has_three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) == 3)
-
+def at_least_three_pions(prods): return (ak.sum(is_pion(prods),   axis=1) >= 3)
 
 def has_photons(prods): return (ak.sum(is_photon(prods), axis=1) > 0)
-
 
 def has_no_photons(prods): return (ak.sum(is_photon(prods), axis=1) == 0)
 
@@ -503,15 +525,15 @@ def add_tau_prods(
                 # DM0
                 tau = ak.firsts(tau)
                 mask = mask | ak.fill_none(
-                    tau.decayMode == 0, False) & has_one_pion(matched_tau_prods)#TODO: release this mask, make n_pions >=1
+                    tau.decayMode == 0, False) & at_least_one_pion(matched_tau_prods)#TODO: release this mask, make n_pions >=1
                 # DM1
-                mask = mask | ak.fill_none(tau.decayMode == 1, False) & has_one_pion(
+                mask = mask | ak.fill_none(tau.decayMode == 1, False) & at_least_one_pion(
                     matched_tau_prods) & has_photons(matched_tau_prods)#TODO: release this mask, make n_pions >=1
                 # DM10
                 mask = mask | ak.fill_none(
-                    tau.decayMode == 10, False) & has_three_pions(matched_tau_prods)#TODO: release this mask, make n_pions >=3
+                    tau.decayMode == 10, False) & at_least_three_pions(matched_tau_prods)#TODO: release this mask, make n_pions >=3
                 # DM11
-                mask = mask | ak.fill_none(tau.decayMode == 11, False) & has_three_pions(
+                mask = mask | ak.fill_none(tau.decayMode == 11, False) & at_least_three_pions(
                     matched_tau_prods) & has_photons(matched_tau_prods)#TODO: release this mask, make n_pions >=3
                 events = set_ak_column(
                     events, f'tau_decay_prods_{ch_str}_{lep_str}',  matched_tau_prods)
@@ -525,9 +547,7 @@ def add_tau_prods(
     )
 
 
-def egamma_mask(tauprod): return (
-    (np.abs(tauprod.pdgId) == 11) + (tauprod.pdgId == 22))
-
+def pi0_and_prods_mask(tauprod): return ((np.abs(tauprod.pdgId) == 11) + (tauprod.pdgId == 22) + (tauprod.pdgId == 111) )
 
 def pion_mask(tauprod): return np.abs(tauprod.pdgId) == 211
 
@@ -548,28 +568,65 @@ def pion_energy_split(
 ) -> ak.Array:
     channel = self.config_inst.channels.names()[0]
     tauprods = events[f'tau_decay_prods_{channel}_lep1']
-    charged_pion_mask = pion_mask(tauprods)
-    em_mask = egamma_mask(tauprods)
-    charged_pion = ak.firsts(get_lep_p4(tauprods[charged_pion_mask]), axis=1)
-    neutral_pion = get_lep_p4(tauprods[em_mask]).sum()
-
-    mask = (ak.num(charged_pion_mask, axis=1) > 0) & (
-        ak.num(em_mask, axis=1) > 0)
-    mask = mask & (charged_pion.E > 0) & (neutral_pion.E > 0)
-
+    pi0_and_prods = pi0_and_prods_mask(tauprods)
+    charged_pions =  ak.drop_none(ak.mask(tauprods,pion_mask(tauprods)))
+    sorted_charged_pions = charged_pions[ak.argsort(charged_pions.pt, ascending=False)]
+    charged_pion = get_lep_p4(ak.drop_none(ak.firsts(sorted_charged_pions, axis=1))) #it's safe to do like so, because we require at least one chared pion to be at the decay product array
+    neutral_pion = get_lep_p4(tauprods[pi0_and_prods]).sum()
+    mask = (ak.num(pi0_and_prods, axis=1) > 0) & (charged_pion.E > 0) & (neutral_pion.E > 0)
     pion_E_split = ak.where(mask,
                             np.abs(charged_pion.E - neutral_pion.E) /
                             (charged_pion.E + neutral_pion.E),
                             EMPTY_FLOAT)
+    
     pion_E_split = ak.fill_none(pion_E_split, EMPTY_FLOAT)
     events = set_ak_column_f32(events, "pion_E_split", pion_E_split)
     return events
 
 
+
+
+def get_part_by_idx(obj: ak.Array, idx_arr: ak.Array)-> ak.Array:
+    local_idx = ak.local_index(obj.pt)
+    idx_arr, local_idx = ak.broadcast_arrays(idx_arr, local_idx)
+    mask = idx_arr == local_idx
+    return ak.drop_none(ak.mask(obj,mask))
+
+
+def ensure_tau_is_from_h(GenPart: ak.Array, obj: ak.Array):
+    
+    def is_boson(obj: ak.Array)-> ak.Array: 
+        return (obj.pdgId == 25) | (obj.pdgId ==  23) #Take H and Z
+    def n_obj(obj: ak.Array)-> ak.Array: return ak.sum(ak.num(obj.pt)) 
+    is_from_boson = ak.zeros_like(obj.pt, dtype=np.bool_)
+    i = 0
+    while n_obj(obj) != ak.sum(is_from_boson):
+        print(f'Looking for tau from Higgs: iteration {i}')
+        mother_idx = ak.fill_none(ak.firsts(obj.genPartIdxMother,axis=1),-9999)
+        mother = get_part_by_idx(GenPart, mother_idx)
+        is_from_boson = ak.fill_none(ak.firsts(is_boson(mother)),False)        
+        obj = ak.where(is_from_boson,
+                       obj,
+                       mother)
+        i +=1
+    print(f'Found {ak.sum(is_from_boson)} taus coming from H/Z bosons')
+    if i==0: return obj
+    else: return ak.drop_none(ak.mask(obj, is_from_boson[..., np.newaxis]))
+    
+
+def unit(v): return ak.where(v.mag > 0, v/v.mag, v/1.)    
+
+def get_meson_mask(obj: ak.Array, charged_only=False, neutral_only=False)-> ak.Array:
+    is_charged = ((np.abs(obj.pdgId) == 211) | (np.abs(obj.pdgId) == 321))
+    is_neutral = ((obj.pdgId == 111) | (obj.pdgId == 311) | (obj.pdgId == 130) | (obj.pdgId == 310))
+    if charged_only:  return is_charged
+    if neutral_only:  return is_neutral
+    else: return is_charged | is_neutral
+
 @producer(
     uses={"hcand_*"
-          } | {"GenPart.*", "GenVtx.*"},
-    produces={"gen_lep.*"},
+          } | {"GenPart.*", "GenVtx.*","GenVisTau.*"},
+    produces={"gen_lep*","gentau_decay_prods_*","gen_vis_tau"},
     exposed=False,
 )
 def gen_lep_fields(
@@ -581,38 +638,86 @@ def gen_lep_fields(
     hcand = events[f'hcand_{ch_name}']
     gentau = {}
     # Get index of the gen muon/electron
-
+    evt_mask = ak.ones_like(events.event, dtype=np.bool_)
     # Get the the 3-vector of gen vertex
-    gen_pv = get_vec_p3(events.GenVtx)
-    for the_lep in ['lep0', 'lep1']:
+    gen_pv = get_vec_p3(events.GenVtx)   
+    for lep in ['lep0', 'lep1']:     
         # Get index of the gen object that corresponds to the object from the selected dilepton pair
-        gen_lep_idx = hcand[the_lep].genPartIdx
-        # Get the gen object itself
-        gen_lep = events.GenPart[gen_lep_idx]
-        # Get secondary vertex of tau->lep decay
-        
-        gen_sv = get_vec_p3(gen_lep, 'v')
-        gen_lep_vec = get_lep_p4(gen_lep).to_3D().to_pxpypz()
-        # Coffea unit method does not work, so I implemented my own method
-        def unit(v): return ak.where(v.mag > 0, v/v.mag, v/1.)
-        gen_lep_dir = unit(gen_lep_vec)
+        gen_lep_idx = ak.firsts(hcand[lep].genPartIdx, axis=1)
+        if lep == 'lep0': # in case of muon its v-vector is already treated as SV
+           
+            gen_mu = get_part_by_idx(events.GenPart,gen_lep_idx)
+            tauprod = gen_mu
+            
+            gen_sv = get_vec_p3(gen_mu, 'v')
+            print(lep)
+            gen_tau = ensure_tau_is_from_h(events.GenPart,gen_mu)
+            evt_mask = evt_mask & ak.num(gen_tau.pt, axis=1)>0
+        else:
+            gen_vis_tau = get_part_by_idx(events.GenVisTau,gen_lep_idx)
+            tauprod = gen_vis_tau
+            
+            gen_tau_idx = ak.fill_none(ak.firsts(gen_vis_tau.genPartIdxMother, axis=1),-9999) #-1 does not work because protons have genPartIdxMother=-1
+            gen_tau_idx_br, _ = ak.broadcast_arrays(gen_tau_idx, events.GenPart.pt)
+            gen_tau_prod_mask = gen_tau_idx_br == events.GenPart.genPartIdxMother
+            gen_lep_doughter = events.GenPart[gen_tau_prod_mask][:,:1]
+            gen_sv = get_vec_p3(gen_lep_doughter, 'v')
+            
+            print(lep)
+            gen_tau = ensure_tau_is_from_h(events.GenPart,
+                                           get_part_by_idx(events.GenPart,gen_tau_idx)) # gen tau can also radiate photons, we need to find one coming from boson
+           
+            gen_tau_mask = ak.num(gen_tau.pt, axis=1)>0
+            meson_mask =  get_meson_mask(events.GenPart) & gen_tau_prod_mask #Yes, we also take kaons, but ther number is very small in comparison with pions
+            decay_prods = events.GenPart[meson_mask]
+            
+            decay_prods['charge'] = ak.where(get_meson_mask(decay_prods,charged_only=True), 
+                                             np.sign(decay_prods.pdgId), #NB pdgId is positive for pi+ and negative for pi-!!!
+                                             ak.zeros_like(decay_prods.pdgId))
+            
+            decay_prods['mass'] = ak.where(get_meson_mask(decay_prods,charged_only=True),
+                                            0.13957061, #mass for the pi plus minus
+                                            decay_prods.mass)
+            decay_prods['mass'] = ak.where(get_meson_mask(decay_prods,neutral_only=True),
+                                            0.1349770, #mass for the pi zero
+                                            decay_prods.mass)
+            dp_mask = ak.num(decay_prods.pt,axis=1)>0 
+            evt_mask = evt_mask & (ak.num(gen_tau.pt, axis=1)>0) & dp_mask
+           
         # Estimate tau trajectory by substracting coordinates of primary vertex from secondary vertex
-        tau_trajectory = gen_sv - gen_pv
-        # Calculate component of tau 3-vector, that is parallel to the decay product direction
-        tau_proj = tau_trajectory.dot(gen_lep_dir)
-        # Calculate Impact parameter vector as the normal component of the tau trajectory to the decay product flight direction
-        gen_ip_vec = tau_trajectory - tau_proj * gen_lep_dir
-        # Check for nans
-        nan_mask = np.isnan(gen_ip_vec.mag)
-        if ak.any(nan_mask):
-            logger.warning(
-                f"Obtained nan values while calculating gen impact parameter variable! Imputing them with EMPTY_FLOAT"
-            )
-            gen_ip_vec = ak.where(nan_mask,
-                                  EMPTY_FLOAT*ak.ones_like(gen_ip_vec),
-                                  gen_ip_vec)
-        gentau[the_lep] = gen_lep
+        tau_path = gen_sv - gen_pv
+        gen_lep_p3 = unit(get_lep_p4(tauprod).to_3D().to_pxpypz())
+        tau_proj = tau_path.dot(gen_lep_p3)
+        gen_ip_vec = tau_path - tau_proj * gen_lep_p3
+        evt_mask = evt_mask & (ak.fill_none(ak.num(gen_ip_vec, axis=1) > 0,False))
+        gentau[lep] = gen_tau
+        gentau[lep]['charge'] = ak.values_astype(-1*np.sign(gen_tau.pdgId), np.int16)#NB pdgId is positive for particles and negative for antiparticles!!!
+        if lep=='lep1':
+            gentau[lep]['mass'] = ak.full_like(gen_tau.pt, 1.77686)
+        else:
+            gentau[lep]['mass'] = ak.full_like(gen_tau.pt, 0.105658)
         for the_comp in ['x', 'y', 'z']:
-            gentau[the_lep][f'gen_ip_{the_comp}'] = gen_ip_vec[the_comp]
-    events = set_ak_column(events, f"gen_lep",  ak.zip(gentau))
+            gentau[lep][f'IP{the_comp}'] = ak.drop_none(ak.mask(gen_ip_vec[the_comp], 
+                                                                (ak.num(gentau[lep].pt, axis=1)>0)[..., np.newaxis]))
+    #Adding missing fields that were appended to the gen_lep during function processing
+    
+    masked_gentau = {}        
+    for lep in ['lep0', 'lep1']: 
+        masked_gentau[lep] = ak.drop_none(ak.mask(gentau[lep], evt_mask[..., np.newaxis]))
+    #TODO implement dilepton features
+    #lep0 = get_lep_p4(masked_gentau['lep0'])
+    #lep1 = get_lep_p4(masked_gentau['lep1'])
+    #pair = lep0+lep1
+    
+    #masked_gentau['mass']   = ak.where(pair.mass > 0, pair.mass , EMPTY_FLOAT)
+    # masked_gentau['pt_vis'] = ak.where(pair.pt > 0, pair.pt , EMPTY_FLOAT)
+    # delta_r = ak.flatten(lep0.metric_table(lep1), axis=2)
+    # masked_gentau['delta_r'] = ak.where(delta_r > 0, delta_r , EMPTY_FLOAT)
+    
+    masked_gen_vis_tau = ak.drop_none(ak.mask(gen_vis_tau, evt_mask[..., np.newaxis]))
+    
+    masked_decay_prods = ak.drop_none(ak.mask(decay_prods, evt_mask[..., np.newaxis]))
+    events = set_ak_column(events, f"gen_lep",  ak.zip(masked_gentau))
+    events = set_ak_column(events, f"gen_vis_tau", masked_gen_vis_tau)
+    events = set_ak_column(events, f"gentau_decay_prods_{ch_name}_lep1", masked_decay_prods)
     return events

@@ -39,9 +39,12 @@ def gen_parton_top(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     # find parton-level top quarks
     abs_id = abs(events.GenPart.pdgId)
     t = events.GenPart[abs_id == 6]
-    bit = 13 # It is crucial that the pT value used when you calculate the weights is derived from the 'isLastCopy' definition of the parton-level top quark (after radiation and before decay) in Pythia8
-    bit_mask = 1<<(bit-1)
-    Filter_Bits = ((t.statusFlags & bit_mask) != 0)
+    is_last_copy_mask = 1<<13 #https://cms-xpog.docs.cern.ch/autoDoc/NanoAODv13/2023HiggsGG/doc_VBFHtoGG_M-120_TuneCP5_13p6TeV_amcatnlo-pythia8_Run3Summer22EENanoAODv13-133X_mcRun3_2022_realistic_postEE_ForNanov13_v1-v1.html
+    from_hard_process_mask = 1<<8
+    
+    
+    bit_mask = is_last_copy_mask | from_hard_process_mask
+    Filter_Bits = ((t.statusFlags & bit_mask) == bit_mask)
     t = t[Filter_Bits]
     t = t[~ak.is_none(t, axis=1)]
 
@@ -95,26 +98,31 @@ def top_pt_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 
     :param events: awkward array containing events to process
     """
-    for variation in ("", "_up", "_down"):
-        weight = ak.ones_like(events.event, dtype=np.float32)
-        if self.dataset_inst.has_tag("ttbar"):
-            # get SF function parameters from config
-            params = self.get_top_pt_config()
-            # check the number of gen tops
-            if ak.any(ak.num(events.GenPartonTop, axis=1) != 2):
-                logger.warning("There are events with != 2 GenPartonTops. This producer should only run for ttbar")
-            
-            # clamp top pT < 500 GeV
-            pt_clamped = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)
-            # evaluate SF function
-            sf = np.exp(params[f"a{variation}"] + params[f"b{variation}"] * pt_clamped)
-            extrapolation_sf_13p6 = 0.991 + 0.000075 * pt_clamped #Extrapolation suggested by top group to go from 13 TeV to 13.6 TeV
-            sf = sf*extrapolation_sf_13p6
-            # compute weight from SF product for top and anti-top
-            weight = np.sqrt(np.prod(sf, axis=1))
-
-        # write out weights
-        events = set_ak_column(events, f"top_pt_weight{variation}", ak.fill_none(weight, 1.0))
-
+    weight = {}
+    for var in ['','_up','_down']:
+        weight[var] = ak.ones_like(events.event, dtype=np.float32)
+    if self.dataset_inst.has_tag("ttbar"):
+        # get SF function parameters from config
+        params = self.get_top_pt_config()
+        # check the number of gen tops
+        if ak.any(ak.num(events.GenPartonTop, axis=1) != 2):
+            logger.warning("There are events with != 2 GenPartonTops. This producer should only run for ttbar")
+        
+        # clamp top pT < 500 GeV
+        top_pT = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)
+        # evaluate SF function
+        sf = 0.103 * np.exp(-0.0118 * top_pT) - 0.000134 * top_pT + 0.973
+        
+        #sf = np.exp(params[f"a{variation}"] + params[f"b{variation}"] * pt_clamped)
+        extrapolation_sf_13p6 = 0.991 + 0.000075 * top_pT #Extrapolation suggested by top group to go from 13 TeV to 13.6 TeV
+        sf = sf*extrapolation_sf_13p6
+        # compute weight from SF product for top and anti-top
+        weight[''] = np.sqrt(np.prod(sf, axis=1))
+        weight['_up'] =  1. + 2.*abs(weight['']-1.)
+        weight['_down'] = 1. - 2.*abs(weight['']-1.)
+        #down variation is already set to 1.0
+    # write out weights
+    for var in ['','_up','_down']:
+        events = set_ak_column(events, f"top_pt_weight{var}", ak.fill_none(weight[var], 1.0))
     return events
 
