@@ -85,97 +85,130 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
     """
     Add histogram hooks to a configuration.
     """
+   
     flat_tf = True
     def qcd_estimation(task, inputs): #cf0p3
         output = {}
         for config, hists in inputs.items():
-            sr_cats = [c for c in config.categories.names() if '_sr' in c]
-            for the_cat in sr_cats:
-                print(f'producing qcd for {the_cat}')
-                sr = config.get_category(the_cat)
-                d = {}
-                mc = {}
-                cr_cat = ''
-                for reg_name, full_name in sr.aux['abcd_regs'].items():   
-                    loc_dict = {'category': hist.loc(full_name),'shift': hist.loc(task.shift)}
-                    full_d = get_data_hist(hists)
-                    full_mc = get_mc_hist(hists)   
-                    if full_name in list(full_d.axes[0]): d[reg_name] = get_data_hist(hists)[loc_dict]
-                    if full_name in list(full_mc.axes[0]): mc[reg_name] = get_mc_hist(hists)[loc_dict]
-                    if reg_name == 'dr_num': cr_cat = full_name
-                        
-                from cmsdb.processes.qcd import qcd
-                h_donor_name  = list(hists.keys())[0]
-                if qcd not in hists.keys():
-                    hists[qcd] = hists[h_donor_name].copy().reset()
-                    tmp_arr = hists[qcd].view()
-                if 'ar' in d.keys() and not d['ar'].empty():
-                    if flat_tf:
-                        tf = 1
-                        #num = ak.sum(d['dr_num'].values() - mc['dr_num'].values())
-                        #den = ak.sum(d['dr_den'].values() - mc['dr_den'].values())
-                        #if (num > 0) and (den > 0):
-                        #    tf = num/den
-                        #else:
-                        #    tf = 1. 
+            if task.get_task_family() == 'cf.CreateDatacards':
+                sr_cats = [task.branch_data.config_data[config.name].category]
+                incl_h = sum(list(hists.values()))
+                ax = incl_h.axes['shift']
+                shifts = [ax.value(i) for i in range(ax.size)]
+            else: 
+                sr_cats = []
+                decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
+                for the_cat in task.categories:
                     
-                    else:
-                        num = d['dr_num'].values() - mc['dr_num'].values()
-                        den = d['dr_den'].values() - mc['dr_den'].values()
-
-                        # mask = ((num > 0) & (den > 0))
-                    
-                        # tf = num/den
-                        # tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
-                
-                        # tf_err2 = ((np.sum(d['dr_num'].variances()) + np.sum(mc['dr_num'].variances()))/den**2 + 
-                        #     tf**2/den**2 *(np.sum(d['dr_den'].variances()) + np.sum(mc['dr_den'].variances())))
-                    
-                    val = np.maximum(d['ar'].values() - mc['ar'].values(), 0.) * tf
-                    var = (d['ar'].view().variance + mc['ar'].view().variance) * tf**2
-                  
-                    tmp_arr[find_idxs(hists[qcd], the_cat, task.shift)].value = val
-                    tmp_arr[find_idxs(hists[qcd], the_cat, task.shift)].variance = var
-                    if len(cr_cat):
-                        if ('dr_den' in d.keys()) and ('dr_den' in mc.keys()):  
-                            cr_val = np.maximum(d['dr_den'].values() - mc['dr_den'].values(), 0)
-                            cr_var = d['dr_den'].variances() - mc['dr_den'].variances()
-                        elif ('dr_den' in d.keys()):
-                            cr_val = d['dr_den'].values() 
-                            cr_var = d['dr_den'].variances()
+                    for the_ch in decay_ch:
+                        if '_tau2' not in the_cat:
+                            sr_cats.append( '__'.join((the_cat,the_ch)))
                         else:
-                            cr_val = 0
-                            cr_var = 0
-                        tmp_arr[find_idxs(hists[qcd], cr_cat, task.shift)].value = cr_val
-                        tmp_arr[find_idxs(hists[qcd], cr_cat, task.shift)].variance = cr_var
-                else:
-                    print("*** WARNING: AR data histogam doesn't exist or empty! ***")
+                            sr_cats.append(the_cat)
+                print(sr_cats)
+                shifts = [task.shift]
+            for shift in shifts:
+                for the_cat in sr_cats:
+                    print(f'producing qcd for {the_cat}, shift: {shift}')
+                    sr = config.get_category(the_cat)
+                    d = {}
+                    mc = {}
+                    cr_cat = ''
+                    for reg_name, full_name in sr.aux['abcd_regs'].items():   
+                        loc_dict = {'category': hist.loc(full_name),'shift': hist.loc(shift)}
+                        full_d = get_data_hist(hists)
+                        full_mc = get_mc_hist(hists)   
+                        if full_name in list(full_d.axes[0]): d[reg_name] = get_data_hist(hists)[loc_dict]
+                        if full_name in list(full_mc.axes[0]): mc[reg_name] = get_mc_hist(hists)[loc_dict]
+                        if reg_name == 'dr_num': cr_cat = full_name
+                            
+                    from cmsdb.processes.qcd import qcd
+                    h_donor_name  = list(hists.keys())[0]
+                    if qcd not in hists.keys():
+                        hists[qcd] = hists[h_donor_name].copy().reset()
+                        tmp_arr = hists[qcd].view()
+                    if 'ar' in d.keys() and not d['ar'].empty():
+                        if flat_tf:
+                            tf = 1
+                            #num = ak.sum(d['dr_num'].values() - mc['dr_num'].values())
+                            #den = ak.sum(d['dr_den'].values() - mc['dr_den'].values())
+                            #if (num > 0) and (den > 0):
+                            #    tf = num/den
+                            #else:
+                            #    tf = 1. 
+                        
+                        else:
+                            num = d['dr_num'].values() - mc['dr_num'].values()
+                            den = d['dr_den'].values() - mc['dr_den'].values()
+
+                            # mask = ((num > 0) & (den > 0))
+                        
+                            # tf = num/den
+                            # tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
+                    
+                            # tf_err2 = ((np.sum(d['dr_num'].variances()) + np.sum(mc['dr_num'].variances()))/den**2 + 
+                            #     tf**2/den**2 *(np.sum(d['dr_den'].variances()) + np.sum(mc['dr_den'].variances())))
+                        val = np.maximum(d['ar'].values() - mc['ar'].values(), 0.) * tf
+                        var = (d['ar'].view().variance + mc['ar'].view().variance) * tf**2
+                    
+                        tmp_arr[find_idxs(hists[qcd], the_cat, shift)].value = val
+                        tmp_arr[find_idxs(hists[qcd], the_cat, shift)].variance = var
+                        if len(cr_cat):
+                            if ('dr_den' in d.keys()) and ('dr_den' in mc.keys()):  
+                                cr_val = np.maximum(d['dr_den'].values() - mc['dr_den'].values(), 0)
+                                cr_var = d['dr_den'].variances() - mc['dr_den'].variances()
+                            elif ('dr_den' in d.keys()):
+                                cr_val = d['dr_den'].values() 
+                                cr_var = d['dr_den'].variances()
+                            else:
+                                cr_val = 0
+                                cr_var = 0
+                            tmp_arr[find_idxs(hists[qcd], cr_cat, shift)].value = cr_val
+                            tmp_arr[find_idxs(hists[qcd], cr_cat, shift)].variance = cr_var
+                    else:
+                        print("*** WARNING: AR data histogam doesn't exist or empty! ***")
                     
             hists[qcd][...] = tmp_arr
             output[config] = hists
-            return output
+        return output
     
     def ff_method(task, inputs): #cf0p3
         from cmsdb.processes.qcd import jet_fakes,qcd
         output = {}
         for config, hists in inputs.items():
-            sr_cats = [c for c in config.categories.names() if ('_sr' in c) and ('no_mt' not in c) ]
+            if task.get_task_family() == 'cf.CreateDatacards':
+                sr_cats = [task.branch_data.config_data[config.name].category]
+                incl_h = sum(list(hists.values()))
+                ax = incl_h.axes['shift']
+                shifts = [ax.value(i) for i in range(ax.size)]
+            else: 
+                sr_cats = []
+                decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
+                for the_cat in task.categories:
+                    
+                    for the_ch in decay_ch:
+                        if '_tau2' not in the_cat:
+                            sr_cats.append( '__'.join((the_cat,the_ch)))
+                        else:
+                            sr_cats.append(the_cat)
+                print(sr_cats)
+                shifts = [task.shift]
             for the_cat in sr_cats:
-                print(f'Applying fake factor method on {the_cat}')
-                sr = config.get_category(the_cat)
+                print(f'Applying fake factor method on {config.name} {the_cat}')
+                sr = config.get_category(the_cat) 
+                sr.label = sr.label.replace('prompt lep.', '') + f'\njet fakes from FF'
                 data = get_data_hist(hists)
                 mc = get_mc_hist(hists)
-               
                 locator = lambda reg:  {'category': hist.loc(sr.aux['ff_regs'][reg]),'shift': hist.loc(task.shift)}
-                
+                def fake_locator(reg):
+                    ar_string = sr.aux['ff_regs'][reg]
+                    af_fakes_string = ar_string.replace('prompt','jet_fakes')
+                    return {'category': hist.loc(af_fakes_string),'shift': hist.loc(task.shift)}
                 data_qcd = data[locator('ar_qcd')]
                 mc_qcd = mc[locator('ar_qcd')]
                 data_wj = data[locator('ar_wj')]
                 mc_wj = mc[locator('ar_wj')]
-                #from IPython import embed; embed()
-                yields = calc_yields(hists, locator('ar_yields'), locator('ar_yields_fakes'))
-                
-                
+                yields = calc_yields(hists, locator('ar_yields'), fake_locator('ar_yields'))
                 h_donor_name  = list(hists.keys())[0]
                 if qcd not in hists.keys():
                     hists[qcd] = hists[h_donor_name].copy().reset()
@@ -194,10 +227,11 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
             hists[qcd][...] = tmp_qcd
             hists[jet_fakes][...] = tmp_fakes
             
-            [wj_proc] = [p for p in hists.keys() if 'wj' in p.name]
-            del hists[wj_proc]   
+            wj_proc = [p for p in hists.keys() if p.name == 'w']
+            if len(wj_proc):
+                del hists[wj_proc[0]]   
             output[config] = hists
-            return output
+        return output
     
     def ff_closure_test(task, inputs): #cf0p3
         from cmsdb.processes.qcd import jet_fakes,qcd
@@ -223,10 +257,10 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                         tmp_fakes[find_idxs(hists[jet_fakes], num, task.shift)].value = np.maximum(h_d.values() - h_mc.values(), 0)
                         tmp_fakes[find_idxs(hists[jet_fakes], num, task.shift)].variance = h_d.variances() + h_mc.variances()
                         hists[proc][...] = tmp_fakes
-                    if name == 'wj':
-                        p_list = [p for p in hists.keys() if 'wj' in p.name]
-                        if len(p_list):
-                            del hists[p_list[0]]          
+                    # if name == 'wj':
+                    #     p_list = [p for p in hists.keys() if 'wj' in p.name]
+                    #     if len(p_list):
+                    #         del hists[p_list[0]]          
             output[config] = hists
             return output
     
@@ -347,7 +381,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
                     for the_cat in sr_cats:
                         loc_dict = {'category': hist.loc(the_cat),'shift': hist.loc(task.shift)}
                         tmp_arr[find_idxs(h, the_cat, task.shift)].value[-5:] = 0
-                        tmp_arr[find_idxs(h, the_cat, task.shift)].variance[-5:] = 0
+                        tmp_arr[find_idxs(h, the_cat, task.shift)].variance[-5:] = 1
 
                     out_h[p][...] = tmp_arr
             ouputs[config] = out_h
@@ -376,35 +410,43 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
     
     
     def make_inclusive_hists(task, inputs): #cf0p3
-        
         ouputs = {}
         for config, hists in inputs.items():
-            incl = 'cat_mutau_sr'
-            bkg_type = ['prompt','jet_fakes']
-            hig_cats = ['hig__cat0','hig__cat1', 'hig__cat2'] 
+            incl = task.categories
+            #'cat_mutau_sr_no_mt' #'cat_mutau_sr'
+            if 'ff_method' in task.hist_hooks:
+                bkg_type = '' #take prompt contribution form all hists and estimate jet fake contribution via transfer factor method
+            elif 'qcd' in task.hist_hooks:
+                bkg_type = ''
+            else: 
+                bkg_type = ''
+            print(f"Using {bkg_type} subcategories to make inclusive hists.")
+            
             decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
             out_h = hists.copy()
-            for p, h in hists.items():
-                tmp_arr = h.view()
-                subhists = []
-                for bkg in bkg_type:
-                    if p.is_data and bkg=='jet_fakes': 
-                        print('Not adding data second time')
-                        continue #Otherwise we double count data from prompt cats and from the jet_fakes cats
-                    for the_cat in hig_cats:
-                        for the_decay in decay_ch:
-                            cat_name = '__'.join((incl,bkg,the_cat,the_decay))
-                            print(f'Adding :{cat_name} for {p.name} from {config.name}')
-                            loc_dict = {'category': hist.loc(cat_name),
-                                        'shift': hist.loc(task.shift)}
-                            if cat_name in h.axes[0]:
-                                subhists.append(h[loc_dict])
-                            else:
-                                print(f"WARNING: didn't find {cat_name} for {p.name} from {config.name}")
-                incl_h = sum(subhists)
-                tmp_arr[find_idxs(h, incl, task.shift)].value = incl_h.view().value
-                tmp_arr[find_idxs(h, incl, task.shift)].variance = incl_h.view().variance
-                out_h[p][...] = tmp_arr
+            for incl in task.categories:
+                print(f'Preparing hists for {incl} from {config.name}')
+                for p, h in hists.items():
+                    tmp_arr = h.view()
+                    subhists = []
+                    for the_decay in decay_ch:
+                        if bkg_type== '':
+                            cat_name = '__'.join((incl,the_decay))
+                        print(f'Adding :{cat_name} for {p.name} from {config.name}')
+                        loc_dict = {'category': hist.loc(cat_name),
+                                    'shift': hist.loc(task.shift)}
+                        if cat_name in h.axes[0]:
+                            subhists.append(h[loc_dict])
+                        else:
+                            print(f"WARNING: didn't find {cat_name} for {p.name} from {config.name}")
+                    if len(subhists):
+                        incl_h = sum(subhists)
+                        tmp_arr[find_idxs(h, incl, task.shift)].value = incl_h.view().value
+                        tmp_arr[find_idxs(h, incl, task.shift)].variance = incl_h.view().variance
+                    else: 
+                        tmp_arr[find_idxs(h, incl, task.shift)].value = 0
+                        tmp_arr[find_idxs(h, incl, task.shift)].variance = 0
+                    out_h[p][...] = tmp_arr
             ouputs[config] = out_h
         return ouputs
 
@@ -413,7 +455,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         for config, hists in inputs.items():
             incl = 'cat_mutau_sr'
             #subcats = ['cat_mutau_sr','cat_mutau_abcd_dr_num'] #to plot iso inclusive
-            subcats = ['cat_mutau_sr','cat_mutau_dr_num_wj'] #to plot mt inclusive
+            subcats = ['cat_mutau_dr_num_wj__prompt','cat_mutau_dr_num_wj__jet_fakes'] #to plot mt inclusive
             out_h = hists.copy()
             for p, h in hists.items():
                 tmp_arr = h.view()
@@ -456,6 +498,6 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         "blind_sr"                  : blind_sr,
         "ensure_zl_hist"            : ensure_zl_hist,
         "order"                     : order_hists,
-       "incl"                       : make_inclusive_hists,
-       "add_cats"                   : add_cats,
+        "incl"                       : make_inclusive_hists,
+        "add_cats"                   : add_cats,
        }
