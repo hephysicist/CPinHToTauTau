@@ -774,9 +774,9 @@ def add_run3(ana: od.Analysis,
         "trigger_weight_mutau_nom": [],
         "stitching_weight": [],
     })
-    for dataset in cfg.datasets:
-        if dataset.has_tag("ttbar"):
-            dataset.x.event_weights = {"top_pt_weight": get_shifts("top_pt")} 
+    #for dataset in cfg.datasets:
+        #if dataset.has_tag("ttbar"):
+        #    dataset.x.event_weights = {"top_pt_weight": get_shifts("top_pt")} 
     # thisdir = os.path.dirname(os.path.abspath(__file__))
     
     # with open(os.path.join(thisdir, "jec_sources.yaml"), "r") as f:
