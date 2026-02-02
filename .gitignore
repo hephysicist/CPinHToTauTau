@@ -37,14 +37,7 @@ data
 .setups
 .mypy_cache
 .vscode
-<<<<<<< HEAD
-<<<<<<< HEAD
-.python-version
-=======
 .python-version
 .__afs*
 delete.txt
->>>>>>> 020cec6a4120e7de06a52791433b3eb6a8da248b
-=======
-.python-version
->>>>>>> 86c16ad414d58874583607ebf439016c42331363
+
