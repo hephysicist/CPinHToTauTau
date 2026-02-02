@@ -5,14 +5,13 @@ Exemplary calibration methods.
 """
 import functools
 import itertools
-
+import law
 from columnflow.calibration import Calibrator, calibrator
 from columnflow.production.cms.seeds import deterministic_seeds
 from columnflow.util import maybe_import, DotDict
 from law.util import InsertableDict
 from columnflow.columnar_util import set_ak_column, flat_np_view
 from columnflow.types import Any
-import law
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -54,7 +53,7 @@ def electron_smearing_scaling(self: Calibrator, events: ak.Array, **kwargs) -> a
                                                             r9,
                                                             et,
                                                             )
-
+        
         electron_scaling_nom = self.electron_scaling_corrector.evaluate(*electron_scaling_args(events, syst))
 
         events = set_ak_column_f32(events, "Electron.pt", electron_pt * electron_scaling_nom)
@@ -94,7 +93,7 @@ def electron_smearing_scaling_requires(
     task: law.Task,
     reqs: dict[str, DotDict[str, Any]],
     **kwargs,
-    ) -> None:
+    )-> None:
     if "external_files" in reqs:
         return
     
@@ -119,3 +118,6 @@ def electron_smearing_scaling_setup(
     )
     self.electron_scaling_corrector = correction_set[self.config_inst.x.electron_sf.scale.corrector]
     self.electron_smearing_corrector = correction_set[self.config_inst.x.electron_sf.smearing.corrector]
+    
+    # self.electron_scaling_corrector = correction_set["Scale"]
+    # self.electron_smearing_corrector = correction_set["Smearing"]

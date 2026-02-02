@@ -136,3 +136,29 @@ def OC_lepton_veto(
     events = set_ak_column(events, "OC_lepton_veto", OC_lepton_veto) 
     return events, SelectionResult(
         steps={"OC_lepton_veto": OC_lepton_veto})
+    
+@selector(
+    uses={
+        "LHEPart.pdgId",
+    },
+    exposed=False,
+)
+def bugged_DY_sample_event_veto(
+        self: Selector,
+        events: ak.Array,
+        **kwargs,
+) -> tuple[ak.Array, SelectionResult]:
+    import law
+    logger = law.logger.get_logger(__name__)
+
+    n_taus = ak.sum(abs(events.LHEPart.pdgId) == 15, axis=-1)
+    zero_taus = (n_taus == 0)
+    dataset_name = self.dataset_inst.name
+
+    removed = int(ak.sum(~zero_taus))
+    total = len(events)
+    logger.warning(f"[{dataset_name}] Removed {removed}/{total} events with taus")
+
+    events = set_ak_column(events, "bugged_DY_sample_event_veto", zero_taus) 
+    return events, SelectionResult(
+        steps={"bugged_DY_sample_event_veto": zero_taus})

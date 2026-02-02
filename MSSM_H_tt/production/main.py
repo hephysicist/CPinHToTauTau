@@ -7,6 +7,7 @@ from columnflow.production import Producer, producer
 from columnflow.production.categories import category_ids
 from columnflow.production.normalization import normalization_weights
 from columnflow.production.cms.pileup import pu_weight
+from columnflow.reduction.util import create_collections_from_masks
 from columnflow.production.cms.seeds import deterministic_seeds
 from columnflow.reduction.util import create_collections_from_masks
 from columnflow.util import maybe_import
@@ -14,17 +15,21 @@ from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 from columnflow.columnar_util import optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
 
-from MSSM_H_tt.production.weights import muon_weight, tau_weight, get_mc_weight, zpt_weight, electron_weight, trigger_sf
+from MSSM_H_tt.production.weights import muon_weight, tau_weight, get_mc_weight, electron_weight, trigger_sf #zpt_weight
 from MSSM_H_tt.production.sample_split import split_dy
 from MSSM_H_tt.production.generatorZ import generatorZ
 from MSSM_H_tt.production.dilepton_features import hcand_fields,hcand_mt
-
+from MSSM_H_tt.production.z_pt_reweighting import zpt_weight
 from MSSM_H_tt.production.aux_columns import jet_pt_def,jets_taggable,number_b_jet
 from columnflow.production.cms.btag import btag_weights
 from MSSM_H_tt.production.top_pt_weight import top_pt_weight, gen_parton_top
 from MSSM_H_tt.production.D_zeta import D_zeta
 from MSSM_H_tt.production.met_recoil_correction import gen_boson, met_recoil
 from MSSM_H_tt.production.bdt_score import mssm_bdt_score
+from MSSM_H_tt.production.fast_mtt import fast_mtt
+from MSSM_H_tt.production.pt_H import pt_H
+from MSSM_H_tt.production.stitching_weights import stitching_weight
+#from MSSM_H_tt.production.DY_recoil_unc import DY_pTll_recoil_unc
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 coffea = maybe_import("coffea")
@@ -62,6 +67,9 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         met_recoil,
         trigger_sf,
         mssm_bdt_score,
+        fast_mtt,
+        pt_H,
+        stitching_weight,
         #DY_pTll_recoil_unc,
         },
     produces={
@@ -91,6 +99,9 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         met_recoil,
         trigger_sf,
         mssm_bdt_score,
+        fast_mtt,
+        pt_H,
+        stitching_weight,
         #DY_pTll_recoil_unc,     
     },
     # whether weight producers should be added and called
@@ -108,14 +119,22 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     print("Producing D_zeta features...")
     events = self[D_zeta](events, **kwargs)
     print("Producing Hcand features...")
-    events = self[hcand_fields](events, **kwargs) 
+    events = self[hcand_fields](events, **kwargs)
+    print("Producing mT distributions...") 
+    events = self[hcand_mt](events, **kwargs) 
+    print("Producing fast_mtt features...")
+    events = self[fast_mtt](events,**kwargs)
+    print("Producing pt_H features...")
+    events = self[pt_H](events,**kwargs)
+    print("Producing bdt scores...")
+    events = self[mssm_bdt_score](events, **kwargs)
+    print("Producing category ids...")
     events = self[category_ids](events, **kwargs)
     
     if (self.dataset_inst.is_mc & (self.config_inst.channels.names()[0] != 'emu')):
         if ak.any(['dy' in proc for proc in processes]):
             print("Splitting Drell-Yan dataset...")
             events = self[split_dy](events,**kwargs)
-    
     
     print("Producing D_zeta features...")
     events = self[D_zeta](events, **kwargs)
@@ -160,10 +179,11 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         if (dataset_inst := getattr(self, "dataset_inst", None)) and dataset_inst.has_tag("ttbar"):
             print("Producing Top pT weights...")
             events = self[top_pt_weight](events, **kwargs)
-    print("Producing mT distributions...") 
-    events = self[hcand_mt](events, **kwargs)
-    print("Producing bdt scores...")
-    events = self[mssm_bdt_score](events, **kwargs)
-
+        if self.dataset_inst.name in self.config_inst.x.stitch_samples:
+            print("Producing stitching weights...")
+            events = self[stitching_weight](events,**kwargs)
+        else:
+            events = set_ak_column_f32(events,"stitching_weight",ak.ones_like(events.event, dtype=np.float32))
+            
     return events
     

@@ -57,6 +57,8 @@ def add_categories(config: od.Config,
                     reg_map_tagged = dict(zip(reg_map.keys(), map(add_tag, reg_map.values())))
                     kwargs['aux'][aux_key] = reg_map_tagged
                 else:
+                    if aux_key == 'fit_var' and isinstance(aux_content, str):
+                        aux_content = [aux_content]
                     kwargs['aux'][aux_key] = aux_content
         if ('aux' in child_cat.keys()) and parent_cat.aux:
             for (aux_key, aux_content) in child_cat['aux'].items():
@@ -199,17 +201,14 @@ def add_categories(config: od.Config,
                         'label': f"\n mu pi",
                         'aux'       : {'fit_var': 'phi_cp_mu_pi'},
                         },
-
         "tau2rho"    : {'selection': ["pnet_dm1", "hps_dm1", "pion_E_split_cut", "tau_has_em_prods"],
                         'label': f"\n mu rho",
                         'aux'       : {'fit_var': 'phi_cp_mu_rho'},
                         },
-
         "tau2a1"    : {'selection': ["pnet_dm2", "hps_dm1","pion_E_split_cut","tau_has_em_prods"],
                         'label': f"\n mu a1 1pr",
                         'aux'       : {'fit_var': 'phi_cp_mu_a1_1pr'},
                         },
-
         "tau2a1_3pr": {'selection': ["pnet_dm10","has_refit_sv"],
                         'label': f"\n mu a1 3pr",
                         'aux'       : {'fit_var': 'phi_cp_mu_a1_3pr_dp'},

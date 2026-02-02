@@ -6,8 +6,8 @@ Config-related object definitions and utils.
 
 from __future__ import annotations
 
-from typing import Callable, Any, Sequence
-
+from typing import Callable, Sequence
+from columnflow.types import Any
 from order import UniqueObject, TagMixin
 from order.util import typed
 

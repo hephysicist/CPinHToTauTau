@@ -2,7 +2,12 @@
 	path = modules/columnflow
 	url = https://github.com/DesyTau/columnflow.git
     branch = master
+    # branch = production
 [submodule "modules/cmsdb"]
 	path = modules/cmsdb
 	url = https://github.com/DesyTau/cmsdb.git
-	branch = desy_dev
+    branch = desy_dev
+[submodule "modules/ClassicsSVfit"]
+	path = modules/ClassicsSVfit
+	url = https://github.com/mathilde-t/ClassicSVfit.git
+	branch = fastMTT_DPG

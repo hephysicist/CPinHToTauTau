@@ -21,6 +21,7 @@ from httcp.production.generatorZ import genZ
 from httcp.production.met_recoil import gen_boson, met_recoil
 from httcp.production.dilepton_features import hcand_fields
 
+#from httcp.production.apply_fastMTT import apply_fastMTT
 from httcp.production.phi_cp import phi_cp
 from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split,gen_lep_fields
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top

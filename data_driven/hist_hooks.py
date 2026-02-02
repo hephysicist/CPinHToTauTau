@@ -470,6 +470,27 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
             ouputs[config] = out_h
         return ouputs
     
+    def flatten_dy(task, hists, category_inst):
+        if not hists:
+            return hists
+        for the_reg, h_single_reg in hists.items():
+            if ('fake' in the_reg) or ('gtau' in the_reg):
+                pass
+            else:
+                dy_procs = [p for p in h_single_reg.keys() if p.is_mc and 'dy' in p.name]
+                for p in dy_procs:
+                    dy_hist = h_single_reg[p].copy()
+                    if not dy_hist.empty():
+                        mean_val = np.average(dy_hist.view().value, axis=1)
+                        variance =np.average(dy_hist.view().variance, axis=1)/dy_hist.shape[-1]
+                        #print(f"Perform dy flattening for {the_reg}")
+                        #print(f"Before: {hists[the_reg][p].view().value}")
+                        hists[the_reg][p].view().value = mean_val
+                        hists[the_reg][p].view().variance = variance
+                        #print(f"After: {hists[the_reg][p].view().value}")
+                    else:
+                        print(f"DY histogram is empty for {the_reg}")
+        return hists
 
     def order_hists(task, inputs): #cf0p3
         ouputs = {}

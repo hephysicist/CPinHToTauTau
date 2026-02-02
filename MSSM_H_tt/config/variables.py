@@ -83,7 +83,7 @@ def keep_columns(cfg: od.Config) -> None:
         } | {
             "GenTau.*", "GenTauProd.*", "nJet", "N_b_jets", "n_jets", 
             "leading_jet_pt","subleading_jet_pt","leading_jet_eta","subleading_jet_eta","leading_jet_phi","subleading_jet_phi","delta_eta_jj","mjj","n_jets_tag",
-            "all_triggers_id", "triggerID_e", "triggerID_mu", "triggerID_tau", "D_zeta",
+            "all_triggers_id", "triggerID_e", "triggerID_mu", "triggerID_tau", "D_zeta", "LHE.Njets", "LHE.NpNLO"
         } | {
             f"hcandprod.{var}" for var in [
                 "pt", "eta", "phi", "mass", "charge",
@@ -413,7 +413,13 @@ def add_highlevel_features(cfg: od.Config) -> None:
         binning=(90, -300,150),
         x_title="$D_{\\zeta}$"
     )  
-    
+    cfg.add_variable(
+        name="pt_H",
+        expression="pt_H",
+        null_value=EMPTY_FLOAT,
+        binning=(25,0,250),
+        x_title="$p_{T}(H)$"
+    )  
     
 
 def add_weight_features(cfg: od.Config) -> None:
@@ -717,21 +723,93 @@ def add_dilepton_features(cfg: od.Config) -> None:
                 binning=(32*bin_split_factor, -3.2, 3.2),
                 x_title=rf"{lep_str} $\phi$",
             )
-def add_mssm_bdt_output(cfg: od.Config) -> None:    
-    for the_var in ['sig','tt','dy','wj']:
+            ## FastMTT variables
+
+            cfg.add_variable(
+                name=f"hcand_{ch_str}_fastMTT_{lep}_px",
+                expression=f"hcand_{ch_str}.fastMTT.{lep}.px",
+                null_value=EMPTY_FLOAT,
+                binning=(42, -10., 200.),
+                unit="GeV",
+                x_title=f"{lep} " + r"$p_{x}^{fastMTT}$",
+            )
+            cfg.add_variable(
+                name=f"hcand_{ch_str}_fastMTT_{lep}_py",
+                expression=f"hcand_{ch_str}.fastMTT.{lep}.py",
+                null_value=EMPTY_FLOAT,
+                binning=(42, -10., 200.),
+                unit="GeV",
+                x_title=f"{lep} " + r"$p_{y}^{fastMTT}$",
+            )
+            cfg.add_variable(
+                name=f"hcand_{ch_str}_fastMTT_{lep}_pz",
+                expression=f"hcand_{ch_str}.fastMTT.{lep}.pz",
+                null_value=EMPTY_FLOAT,
+                binning=(42, -10., 200.),
+                unit="GeV",
+                x_title=f"{lep} " + r"$p_{z}^{fastMTT}$",
+            )
+            cfg.add_variable(
+                name=f"hcand_{ch_str}_fastMTT_{lep}_pt",
+                expression=f"hcand_{ch_str}.fastMTT.{lep}.pt",
+                null_value=EMPTY_FLOAT,
+                binning=(40, 0., 200.),
+                unit="GeV",
+                x_title=f"{lep} " + r"$p_{T}^{fastMTT}$",
+            )
+            cfg.add_variable(
+                name=f"hcand_{ch_str}_fastMTT_{lep}_eta",
+                expression=f"hcand_{ch_str}.fastMTT.{lep}.eta",
+                null_value=EMPTY_FLOAT,
+                binning=(25, -3.0, 3.0),
+                unit="GeV",
+                x_title=f"{lep} " + r"$\eta^{fastMTT}$",
+            )
+            cfg.add_variable(
+                name=f"hcand_{ch_str}_fastMTT_{lep}_phi",
+                expression=f"hcand_{ch_str}.fastMTT.{lep}.phi",
+                null_value=EMPTY_FLOAT,
+                binning=(32, -3.2, 3.2),
+                unit="GeV",
+                x_title=f"{lep} " + r"$\phi^{fastMTT}$",
+            )
+            cfg.add_variable(
+                name=f"hcand_{ch_str}_fastMTT_{lep}_mass",
+                expression=f"hcand_{ch_str}.fastMTT.{lep}.mass",
+                null_value=EMPTY_FLOAT,
+                binning=(50, 0.01, 3.0),
+                unit="GeV",
+                x_title=f"{lep} " + r"$m^{fastMTT}$",
+            )
         cfg.add_variable(
-                name=f"bdt_raw_score_{the_var}",
-                expression=f"bdt_raw_score_{the_var}",
-                binning=(30, 0., 1.),
-                x_title=f"raw BDT score for {the_var}",
-            )
+            name=f"hcand_{ch_str}_fastMTT_mass",
+            expression=f"hcand_{ch_str}.fastMTT.mass",
+            null_value=EMPTY_FLOAT,
+            binning=(40, 0.0, 200.0),
+            unit="GeV",
+            x_title=r"$mass^{fastMTT}$",
+        )
+        
+def add_mssm_bdt_output(cfg: od.Config) -> None:
+  # per-mass variables
+  from MSSM_H_tt.config.mass_points import read_bdt_masses
+  MASS_POINTS = read_bdt_masses()
+  for m in MASS_POINTS:
+    for the_var in ['sig', 'tt', 'dy', 'wj']:
+      cfg.add_variable(
+        name=f"bdt_raw_score_{the_var}_M{m}",
+        expression=f"bdt_raw_score_{the_var}_M{m}",
+        binning=(30, 0.25, 1.),
+        x_title=f"raw BDT score for {the_var} (M={m} GeV)",
+      )
     cfg.add_variable(
-                name=f"bdt_cat",
-                expression=f"bdt_cat",
-                binning=(4,-0.5,3.5),
-                discrete_x=True,
-                x_title=f"BDT class",
-            )
+      name=f"bdt_cat_M{m}",
+      expression=f"bdt_cat_M{m}",
+      binning=(4, -0.5, 3.5),
+      discrete_x=True,
+      x_title=f"BDT class (M={m})",
+    )
+
 
 def add_variables(cfg: od.Config) -> None:
     """

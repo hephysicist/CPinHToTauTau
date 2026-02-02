@@ -12,6 +12,8 @@ from httcp.util import get_lep_p4, get_ip_p4
 from httcp.production.PolarimetricA1 import PolarimetricA1
 from httcp.production.gef import unit, rotate_to_gj_max 
 
+from httcp.production.PolarimetricA1 import PolarimetricA1
+
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 coffea = maybe_import("coffea")
