@@ -220,7 +220,12 @@ def D_zeta_cut_mid(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Ar
 def D_zeta_cut_high(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     mask = (events.D_zeta >= 30)
     return events, mask
-    
+
+@categorizer(uses={'D_zeta'})
+def D_zeta_cut(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
+    mask = (events.D_zeta >= -80)
+    return events, mask
+  
 @categorizer(uses={'event', 'hcand_*'})
 def tau_no_fakes(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Array, ak.Array]:
     channel = self.config_inst.channels.names()[0] #We are processing a single channel at once
@@ -230,14 +235,14 @@ def tau_no_fakes(self: Categorizer, events: ak.Array, **kwargs) -> tuple[ak.Arra
         mask = ak.ones_like(events.event, dtype=np.bool_)
     return events, mask
 
-def _bdt_cat(self: Categorizer, events: ak.Array, cat_id, **kwargs) -> tuple[ak.Array, ak.Array]:
-    mask = (events.bdt_cat==cat_id)
-    return events, ak.fill_none(mask,False)
+# def _bdt_cat(self: Categorizer, events: ak.Array, cat_id, **kwargs) -> tuple[ak.Array, ak.Array]:
+#     mask = (events.bdt_cat==cat_id)
+#     return events, ak.fill_none(mask,False)
 
-for cat_id, the_name in enumerate(["sig", "dy", "tt", "wj"]):
-    tmp_func = lambda self, events, **kwargs: _bdt_cat(self, events, cat_id=cat_id, **kwargs)
-    globals()[f'bdt_cat_{the_name}'] = categorizer(copy_function(tmp_func,f'bdt_cat_{the_name}'),
-                                               uses={'event', 'bdt_cat'}, )
+# for cat_id, the_name in enumerate(["sig", "dy", "tt", "wj"]):
+#     tmp_func = lambda self, events, **kwargs: _bdt_cat(self, events, cat_id=cat_id, **kwargs)
+#     globals()[f'bdt_cat_{the_name}'] = categorizer(copy_function(tmp_func,f'bdt_cat_{the_name}'),
+#                                                uses={'event', 'bdt_cat'}, )
 
 # Higgs BDT score categories --------------------------------------------------
 
@@ -248,11 +253,17 @@ def _bdt_cat_mass(self: Categorizer, events: ak.Array, cat_id: int, mass: int, *
 
 from MSSM_H_tt.config.mass_points import read_bdt_masses
 MASS_POINTS = read_bdt_masses()
+
+# must match the class ordering used in the BDT (0..3)
+BDT_CLASS_LABELS = ["ggh", "bbh", "dy", "tt"]  # "wj", "st", "mb"
+
 for mass in MASS_POINTS:
-  for cat_id, the_name in enumerate(["sig", "dy", "tt", "wj"]):
+  for cat_id, the_name in enumerate(BDT_CLASS_LABELS):
     # capture loop vars via defaults to avoid late-binding
-    tmp_func = (lambda self, events, _cat_id=cat_id, _mass=mass, **kwargs:
-                  _bdt_cat_mass(self, events, cat_id=_cat_id, mass=_mass, **kwargs))
+    tmp_func = (
+      lambda self, events, _cat_id=cat_id, _mass=mass, **kwargs:
+        _bdt_cat_mass(self, events, cat_id=_cat_id, mass=_mass, **kwargs)
+    )
     globals()[f'bdt_cat_{the_name}_M{mass}'] = categorizer(
       copy_function(tmp_func, f'bdt_cat_{the_name}_M{mass}'),
       uses={'event', f'bdt_cat_M{mass}'},

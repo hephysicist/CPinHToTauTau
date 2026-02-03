@@ -63,23 +63,23 @@ def add_run3(ana: od.Analysis,
         elif tag == "preEE"     : 
             out_tag = "Summer22"
             e_sf_tag = "2022Re-recoBCD"
-            e_scale_corrector = "2022Re-recoBCD_ScaleJSON"
-            e_smearing_corrector = "2022Re-recoBCD_SmearingJSON"
+            e_scale_corrector = "EGMScale_EleEtaR9_2022preEE" #"2022Re-recoBCD_ScaleJSON"
+            e_smearing_corrector = "EGMSmearAndSyst_EleEtaR9_2022preEE" #"2022Re-recoBCD_SmearingJSON"
         elif tag == "postEE"    : 
             out_tag = "Summer22EE"
             e_sf_tag = "2022Re-recoE+PromptFG"
-            e_scale_corrector = "2022Re-recoE+PromptFG_ScaleJSON"
-            e_smearing_corrector = "2022Re-recoE+PromptFG_SmearingJSON"
+            e_scale_corrector = "EGMScale_EleEtaR9_2022postEE" #"2022Re-recoE+PromptFG_ScaleJSON"
+            e_smearing_corrector = "EGMSmearAndSyst_EleEtaR9_2022postEE"#2022Re-recoE+PromptFG_SmearingJSON"
         elif tag == "preBPix"   : 
             out_tag = "Summer23"
             e_sf_tag = "2023PromptC"
-            e_scale_corrector = "2022Re-recoE+PromptFG_ScaleJSON"
-            e_smearing_corrector = "2022Re-recoE+PromptFG_SmearingJSON"
+            e_scale_corrector = "EGMScale_EleEtaR9_2023preBPIX" #"2022Re-recoE+PromptFG_ScaleJSON"
+            e_smearing_corrector = "EGMSmearAndSyst_EleEtaR9_2023preBPIX" #2022Re-recoE+PromptFG_SmearingJSON"
         elif tag == "postBPix"  : 
             out_tag = "Summer23BPix"
             e_sf_tag = "2023PromptD"
-            e_scale_corrector = "2022Re-recoE+PromptFG_ScaleJSON"
-            e_smearing_corrector = "2022Re-recoE+PromptFG_SmearingJSON"
+            e_scale_corrector = "EGMScale_EleEtaR9_2023postBPIX" #"2022Re-recoE+PromptFG_ScaleJSON"
+            e_smearing_corrector = "EGMSmearAndSyst_EleEtaR9_2023postBPIX" #2022Re-recoE+PromptFG_SmearingJSON"
         elif tag == "preVFP"    : out_tag = "preVFP_UL"
         elif tag == "postVFP"   : out_tag = "postVFP_UL"    
         return out_tag, e_sf_tag, e_scale_corrector, e_smearing_corrector, tag
@@ -757,6 +757,30 @@ def add_run3(ana: od.Analysis,
             "b_up": -0.0005 * 1.5,
             "b_down": -0.0005 * 0.5,
         }
+    # top pt reweighting
+    # https://twiki.cern.ch/twiki/bin/view/CMS/TopPtReweighting?rev=31
+    # theory-based method preferred
+    # from MSSM_H_tt.production.top_pt_weight import TopPtWeightFromTheoryConfig
+    # cfg.x.top_pt_weight = TopPtWeightFromTheoryConfig(params={
+    #     "a": 0.103,
+    #     "b": -0.0118,
+    #     "c": -0.000134,
+    #     "d": 0.973,
+    # })
+    # data-based method preferred
+    # from columnflow.production.cms.top_pt_weight import TopPtWeightFromDataConfig
+    # cfg.x.top_pt_weight = TopPtWeightFromDataConfig(
+    #     params={
+    #         "a": 0.0615,
+    #         "a_up": 0.0615 * 1.5,
+    #         "a_down": 0.0615 * 0.5,
+    #         "b": -0.0005,
+    #         "b_up": -0.0005 * 1.5,
+    #         "b_down": -0.0005 * 0.5,
+    #     },
+    #     pt_max=500.0,
+    # )
+
 
     ################################
     # luminosity and normalization #
@@ -789,7 +813,11 @@ def add_run3(ana: od.Analysis,
         })
     else:
         assert False
- 
+    
+    # minimum bias cross section in mb (milli) for creating PU weights, values from
+    # https://twiki.cern.ch/twiki/bin/view/CMS/PileupJSONFileforData?rev=52#Recommended_cross_section
+    cfg.x.minbias_xs = Number(69.2, 0.046j)
+   
     # names of muon correction sets and working points
     # (used in the muon producer)   
   
@@ -981,14 +1009,13 @@ def add_run3(ana: od.Analysis,
     # json file paths
     ################################################################################################       
      
-    jsonpog_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_latest/POG/"
-    jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
-    #corr_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/"
+    jsonpog_dir = "/eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_latest/POG/"
+    jsonpog_tau_dir = "/eos/user/a/anigamov/htt_corrections_mirror/jsonpog-integration_tau_latest/POG"
     corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/"
-    stiching_eos_path = "/eos/user/j/jmalvaso/SWAN_projects/higgs_MSSM/"
+    # stiching_eos_path = "/eos/user/j/jmalvaso/SWAN_projects/higgs_MSSM/"
     #CMS Analysis Corrections Documentation: https://cms-analysis-corrections.docs.cern.ch/
     json_acd_path="/cvmfs/cms-griddata.cern.ch/cat/metadata/" 
-    
+    sz_path = "/afs/cern.ch/user/d/dmroy/public/ZpT_RecCorr_V5"
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
         2023 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"
@@ -1002,45 +1029,22 @@ def add_run3(ana: od.Analysis,
         "pu_sf"                    : (f"{json_acd_path}LUM/{json_acd_tag}/latest/puWeights.json.gz", "v2"),
         "muon_correction"          : f"{json_acd_path}MUO/{json_acd_tag}/latest/muon_Z.json.gz",
         "HLT_mu_eff"               : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
-        # "electron_scaling_smearing": f"{json_acd_path}EGM/{json_acd_tag}/latest/electronSS.json.gz",
-        # "electron_idiso"           : f"{json_acd_path}EGM/{json_acd_tag}/latest/electron.json.gz",
-        # "electron_trigger"         : f"{json_acd_path}EGM/{json_acd_tag}/latest/electronHlt.json.gz",
-        "electron_scaling_smearing": f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
-        "electron_idiso"           : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
-        "electron_trigger"         : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
-        "tau_correction"           : f"{jsonpog_tau_dir}TAU/{cfg.x.year}_{tau_tag}/tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}.json.gz",
+        "electron_scaling_smearing": f"{json_acd_path}EGM/{json_acd_tag}/latest/electronSS_EtDependent.json.gz",
+        "electron_idiso"           : f"{json_acd_path}EGM/{json_acd_tag}/latest/electron.json.gz",
+        "electron_trigger"         : f"{json_acd_path}EGM/{json_acd_tag}/latest/electronHlt.json.gz",
+        #"electron_scaling_smearing": f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
+        #"electron_idiso"           : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
+        #"electron_trigger"         : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
+        "tau_correction"           : f"{json_acd_path}TAU/{json_acd_tag}/latest/tau.json.gz", #tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}
         "zpt_weight"              : (f"{corr_dir}dy_ptll/DY_pTll_weights_{cfg.x.year}{campaign.x.tag}.json.gz","v2"),
+        #"jet_jerc"                 : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
         "jet_jerc"                 : (f"{json_acd_path}JME/{json_acd_tag}/latest/jet_jerc.json.gz", "v2"),
         "jet_veto_map"             : (f"{json_acd_path}JME/{json_acd_tag}/latest/jetvetomaps.json.gz", "v2"),
         "btag_sf_corr"             : (f"{json_acd_path}BTV/{json_acd_tag}/latest/btagging.json.gz", "v2"),
-        "met_recoil"               : (f"{corr_dir}/hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
-        "stitching_correction"     : (f"{stiching_eos_path}stitching.corr.json", "v2"),
+        #"met_recoil"               : (f"{corr_dir}/hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
+        "met_recoil"               : (f"{corr_dir}dy_ptll/Recoil_corrections_{cfg.x.year}{campaign.x.tag}.json.gz", "v2"),
     })
     #/eos/user/a/anigamov/htt_corrections_mirror/dy_ptll'
-    
-    # cfg.x.external_files = DotDict.wrap({
-    #     "lumi": {
-    #         "golden": (golden_ls[year], "v1"),
-    #         "normtag": ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json", "v1"), #/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags
-    #     },
-
-    #     "pu_sf"                    : (f"{jsonpog_dir}LUM/{cfg.x.year}_{tag}/puWeights.json.gz", "v2"),
-    #     "muon_correction"          : f"{jsonpog_dir}MUO/{cfg.x.year}_{tag}/muon_Z.json.gz",
-    #     "HLT_mu_eff"               : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
-    #     "electron_scaling_smearing": f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
-    #     "electron_idiso"           : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
-    #     "electron_trigger"         : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
-    #     "tau_correction"           : f"{jsonpog_tau_dir}TAU/{cfg.x.year}_{tau_tag}/tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}.json.gz",
-    #     "zpt_weight"              : (f"{corr_dir}dy_ptll/DY_pTll_weights_{cfg.x.year}{campaign.x.tag}.json.gz","v2"),
-    #     # "zpt_weight"             : f"{corr_dir}zpt_reweighting_LO_2022.root",
-    #     "jet_jerc"                 : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
-    #     "jet_veto_map"             : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
-    #     "btag_sf_corr"             : (f"{jsonpog_dir}BTV/{cfg.x.year}_{tag}/btagging.json.gz", "v2"),
-    #     "met_recoil"               : (f"{corr_dir}/hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
-    #     "stitching_correction"     : (f"{stiching_eos_path}stitching.corr.json", "v2"),
-    #     #"met_phi_corr"            : (f"{jsonpog_dir}JME/{cfg.x.year}{tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
-    # })
-
     # --------------------------------------------------------------------------------------------- #
     # electron settings
     # names of electron correction sets and working points
@@ -1111,25 +1115,37 @@ def add_run3(ana: od.Analysis,
  
     cfg.add_shift(name="nominal", id=0)
 
-    cfg.add_shift(name="tau_up", id=1, type="shape")
-    cfg.add_shift(name="tau_down", id=2, type="shape")
-    add_shift_aliases(cfg, "tau", {"tau_weight": "tau_weight_{direction}"})
+    cfg.add_shift(name="tau_weight_down", id=1, type="shape")
+    cfg.add_shift(name="tau_weight_up", id=2, type="shape")
+    add_shift_aliases(cfg, "tau_weight", {"tau_weight": "tau_weight_{direction}"})
     
-    cfg.add_shift(name="mu_up", id=3, type="shape")
-    cfg.add_shift(name="mu_down", id=4, type="shape")
-    add_shift_aliases(cfg, "mu", {"muon_weight": "muon_weight_{direction}"})
+    cfg.add_shift(name="muon_weight_down", id=3, type="shape")
+    cfg.add_shift(name="muon_weight_up", id=4, type="shape")
+    add_shift_aliases(cfg, "muon_weight", {"muon_weight": "muon_weight_{direction}"})
+
+    cfg.add_shift(name="electron_weight_down", id=8, type="shape")
+    cfg.add_shift(name="electron_weight_up", id=9, type="shape")
+    add_shift_aliases(cfg, "electron_weight", {"electron_weight": "electron_weight_{direction}"})
     
-    cfg.add_shift(name="electron_up", id=8, type="shape")
-    cfg.add_shift(name="electron_down", id=9, type="shape")
-    add_shift_aliases(cfg, "electron", {"electron_weight": "electron_weight_{direction}"})
+    cfg.add_shift(name="top_pt_weight_down", id=10, type="shape")
+    cfg.add_shift(name="top_pt_weight_up", id=11, type="shape")
+    add_shift_aliases(cfg, "top_pt_weight", {"top_pt_weight": "top_pt_weight_{direction}"})
     
-    cfg.add_shift(name="top_pt_up", id=10, type="shape")
-    cfg.add_shift(name="top_pt_down", id=11, type="shape")
-    add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"})
+    cfg.add_shift(name="Trigger_SF_weight_down", id=12, type="shape")
+    cfg.add_shift(name="Trigger_SF_weight_up", id=13, type="shape")
+    add_shift_aliases(cfg, "Trigger_SF_weight", {"Trigger_SF_weight": "Trigger_SF_weight_{direction}"})
     
-    cfg.add_shift(name="Trigger_SF_up", id=12, type="shape")
-    cfg.add_shift(name="Trigger_SF_down", id=13, type="shape")
-    add_shift_aliases(cfg, "Trigger_SF", {"Trigger_SF_weight": "Trigger_SF_weight_{direction}"})
+    cfg.add_shift(name="zpt_weight_down", id=14, type="shape")
+    cfg.add_shift(name="zpt_weight_up", id=15, type="shape")
+    add_shift_aliases(cfg, "zpt_weight", {"zpt_weight": "zpt_weight_{direction}"})
+    
+    cfg.add_shift(name="pu_weight_down", id=16, type="shape")
+    cfg.add_shift(name="pu_weight_up", id=17, type="shape")
+    add_shift_aliases(cfg,"pu_weight",{"pu_weight": "pu_weight_{direction}"})
+    
+    # cfg.add_shift(name="btag_weight_SF_up", id=15, type="shape")
+    # cfg.add_shift(name="btag_weight_SF_down", id=16, type="shape")
+    # add_shift_aliases(cfg, "btag_weight_SF", {"btag_weight_SF_nom": "btag_weight_SF_nom_{direction}"})
     
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
@@ -1138,16 +1154,18 @@ def add_run3(ana: od.Analysis,
         "normalization_weight": [],
         # "filter_weight": [],
         # "mc_weight":[],
-        "tau_weight_nom": get_shifts("tau"),
-        "pu_weight": [],
-        "zpt_weight":[],
-        "muon_weight_nom": get_shifts("mu"),
-        "electron_weight_nom": get_shifts("electron"), 
-        "top_pt_weight" : [],       
+        "tau_weight": get_shifts("tau_weight"),
+        "pu_weight": get_shifts("pu_weight"),
+        "zpt_weight":get_shifts("zpt_weight"),
+        "muon_weight": get_shifts("muon_weight"),
+        "electron_weight": get_shifts("electron_weight"), 
+        "top_pt_weight" : get_shifts("top_pt_weight"),     
+        "pu_weight": get_shifts("pu_weight"),
         "btag_weight_SF_nom": [],
-        "Trigger_SF_nom": [],
+        "Trigger_SF_weight": get_shifts("Trigger_SF_weight"),
         "stitching_weight": [],
     })
+
     # thisdir = os.path.dirname(os.path.abspath(__file__))
     
     # with open(os.path.join(thisdir, "jec_sources.yaml"), "r") as f:
@@ -1244,9 +1262,7 @@ def add_run3(ana: od.Analysis,
                                 "DYto2Tau_MLL_50_0J_amcatnloFXFX": "NLO",
                                 "DYto2Tau_MLL_50_1J_amcatnloFXFX": "NLO",
                                 "DYto2Tau_MLL_50_2J_amcatnloFXFX": "NLO",
-
                                 # W + jets (MG5 MLM ~ LO)
-                                # "WtoLNu_amcatnloFXFX" : "NLO",
                                 "WtoLNu_1J_madgraphMLM": "LO",
                                 "WtoLNu_2J_madgraphMLM": "LO",
                                 "WtoLNu_3J_madgraphMLM": "LO",
@@ -1255,7 +1271,6 @@ def add_run3(ana: od.Analysis,
                             })
     stitch_samples = [
             "DYto2L_M_50_amcatnloFXFX",
-            # "DYto2L_M_50_amcatnloFXFX_ext1",
             "DYto2L_M_50_0J_amcatnloFXFX",
             "DYto2L_M_50_1J_amcatnloFXFX",
             "DYto2L_M_50_2J_amcatnloFXFX",
@@ -1271,7 +1286,6 @@ def add_run3(ana: od.Analysis,
     bugged_DYto2Tau_samples = [
             "DYto2L_M_10to50_amcatnloFXFX",
             "DYto2L_M_50_amcatnloFXFX",
-            # "DYto2L_M_50_amcatnloFXFX_ext1",
             "DYto2L_M_50_0J_amcatnloFXFX",
             "DYto2L_M_50_1J_amcatnloFXFX",
             "DYto2L_M_50_2J_amcatnloFXFX",

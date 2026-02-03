@@ -14,7 +14,7 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
 
 @producer(
     uses={"GenZ.*"},
-    produces={"zpt_weight"}, #, "zpt_weight_up", "zpt_weight_down", "zpt_weight_nunc"},
+    produces={"zpt_weight", "zpt_weight_up", "zpt_weight_down", "zpt_weight_nunc"},
     mc_only=True,
 )
 def zpt_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
@@ -52,10 +52,11 @@ def zpt_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 
         up_mat = ak.Array(np.stack(ups, axis=1)) if ups else ak.Array(np.empty((n, 0), dtype=np.float32))
         down_mat = ak.Array(np.stack(downs, axis=1)) if downs else ak.Array(np.empty((n, 0), dtype=np.float32))
+    sf_like = ak.broadcast_arrays(sf_nom[:, None], up_mat)[0]
     events = set_ak_column(events, "zpt_weight", sf_nom, value_type=np.float32)
-    # events = set_ak_column(events, "zpt_weight_up", up_mat, value_type=np.float32)
-    # events = set_ak_column(events, "zpt_weight_down", down_mat, value_type=np.float32)
-    # events = set_ak_column(events, "zpt_weight_nunc", ak.full_like(events.event, nunc, dtype=np.int32), value_type=np.int32)
+    events = set_ak_column(events, "zpt_weight_up", sf_nom + np.sqrt(ak.sum((sf_like-up_mat)**2, axis=1)), value_type=np.float32)
+    events = set_ak_column(events, "zpt_weight_down", sf_nom - np.sqrt(ak.sum((sf_like-down_mat)**2, axis=1)), value_type=np.float32)
+    events = set_ak_column(events, "zpt_weight_nunc", ak.full_like(events.event, nunc, dtype=np.int32), value_type=np.int32)
     return events
 
 
@@ -89,4 +90,3 @@ def zpt_weight_setup(
     cset = cl.CorrectionSet.from_file(full_path)
     self.zpt_corr = cset["DY_pTll_reweighting"]
     self.zpt_nunc_corr = cset["DY_pTll_reweighting_N_uncertainty"]
-

@@ -14,7 +14,7 @@ np = maybe_import("numpy")
 ak = maybe_import("awkward")
 
 import law
-import os
+
 logger = law.logger.get_logger(__name__)
 
 # https://github.com/scikit-hep/awkward/issues/489\#issuecomment-711090923
@@ -43,13 +43,12 @@ def ak_random(*args, rand_func: Callable) -> ak.Array:
 
 
 def propagate_met(
-    jet_pt1: ak.Array,
+    jet_pt1: (ak.Array),
     jet_phi1: ak.Array,
     jet_pt2: ak.Array,
     jet_phi2: ak.Array,
     met_pt1: ak.Array,
     met_phi1: ak.Array,
-    events: ak.Array,
 ) -> tuple[ak.Array, ak.Array]:
     """
     Helper function to compute new MET based on per-jet pts and phis before and after a correction.
@@ -108,58 +107,16 @@ def propagate_met(
     # Count the number of infinite values
     crazy_PuppiMET_count = ak.sum(crazy_PuppiMET_values_mask)
     
-    event_number = events.event
-    event_lumiblock = events.luminosityBlock
-    event_run = events.run
-    event_number_crazy_met = event_number[crazy_PuppiMET_values_mask]
-    event_lumiblock_crazy_met = event_run[crazy_PuppiMET_values_mask]
-    event_run_crazy_met = event_run[crazy_PuppiMET_values_mask]
-
     if crazy_PuppiMET_count > 0:
-    # Replace crazy MET values with 1000 in met_pt1
+        # Replace infinite values with 0
         met_pt1 = ak.where(~crazy_PuppiMET_values_mask, met_pt1, 1000)
 
-        # Create header and separator for the table
-        header = f"{'Index':<10} {'Event Number':<15} {'Lumiblock':<15} {'Run Number':<15} {'Crazy Value':<15}\n"
-        separator = "-" * 70 + "\n"
-        table_lines = header + separator
-
-        # Convert the arrays to lists
-        indices      = crazy_PuppiMET_indices.tolist()
-        event_numbers = event_number_crazy_met.tolist()
-        lumiblocks   = event_lumiblock_crazy_met.tolist()
-        run_numbers  = event_run_crazy_met.tolist()
-        crazy_values = crazy_PuppiMET_values.tolist()
-
-        # Construct each row of the table
-        for idx, ev_num, lumi, run, crazy_val in zip(indices, event_numbers, lumiblocks, run_numbers, crazy_values):
-            table_lines += f"{idx:<10} {ev_num:<15} {lumi:<15} {run:<15} {crazy_val:<15}\n"
-        table_lines += separator
-        # --- Check if the file exists and if it needs updating ---
-        file_name = "crazy_met_warning.txt"
-        update_file = True  # Assume we need to update by default.
-
-        # if os.path.exists(file_name):
-        #     with open(file_name, "r") as file:
-        #         existing_content = file.read()
-        #     # Compare the current content with the new table_lines
-        #     if existing_content == table_lines:
-        #         update_file = False
-        #         logger.info(f"File '{file_name}' already contains the latest information. No update needed.")
-
-        # if update_file:
-        #     with open(file_name, "a") as file:
-        #         file.write(table_lines)
-        #     if os.path.exists(file_name):
-        #         logger.info(f"File '{file_name}' has been created/updated with the new information.")
-
-        # --- Log a warning including a note about the file ---
+        # Raise a warning about the replacement
         logger.warning(
-            f"Warning: Found and replaced {crazy_PuppiMET_count} crazy value(s) in 'RawPuppiMET.pt' with 1000.\n"
-            f"Detailed event information has been saved in '{file_name}'.\n"
-            f"We will get rid of these events in the selection step."
-        )
-
+            f"Warning: Found and replaced {crazy_PuppiMET_count} crazy value(s) {crazy_PuppiMET_values.tolist()} in 'RawPuppiMET.pt' with 1000.\n"
+            f"Indices in the chuck: {crazy_PuppiMET_indices.tolist()}\n"
+            f"We will get rid of these events in the selection step")
+        
     # propagate to met
     met_px2 = met_pt1 * np.cos(met_phi1) - (jet_px2 - jet_px1)
     met_py2 = met_pt1 * np.sin(met_phi1) - (jet_py2 - jet_py1)

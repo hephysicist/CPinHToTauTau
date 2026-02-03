@@ -6,15 +6,16 @@ Jet energy corrections and jet resolution smearing.
 from pprint import pprint
 
 import functools
-import law
+
 from columnflow.types import Any
 from columnflow.calibration import Calibrator, calibrator
 from MSSM_H_tt.calibration.util import ak_random, propagate_met
 from columnflow.production.util import attach_coffea_behavior
-from columnflow.util import maybe_import, DotDict
-from law.util import InsertableDict
+from columnflow.util import maybe_import
+from law.util import InsertableDict, DotDict
 from columnflow.columnar_util import set_ak_column, layout_ak_array, optional_column as optional
-from columnflow.types import Any
+import law
+
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 correctionlib = maybe_import("correctionlib")
@@ -159,13 +160,13 @@ def get_jec_config_default(self) -> DotDict:
 @calibrator(
     uses={
         "Jet.pt", "Jet.eta", "Jet.phi", "Jet.mass", "Jet.area", "Jet.rawFactor",
-        "Jet.jetId", "run", "luminosityBlock", "event",
+        "Jet.jetId", "run",
         optional("fixedGridRhoFastjetAll"),
         optional("Rho.fixedGridRhoFastjetAll"),
         attach_coffea_behavior,
     },
     produces={
-        "Jet.pt", "Jet.mass", "Jet.rawFactor",
+        "Jet.pt", "Jet.phi", "Jet.mass", "Jet.rawFactor",
     },
     # custom uncertainty sources, defaults to config when empty
     uncertainty_sources=None,
@@ -243,20 +244,20 @@ def jec(
     events = set_ak_column_f32(events, "Jet.pt_raw", events.Jet.pt * (1 - events.Jet.rawFactor))
     events = set_ak_column_f32(events, "Jet.mass_raw", events.Jet.mass * (1 - events.Jet.rawFactor))
     
-    def correct_jets(pt, phi, area, eta, rho, evaluator_key="jec"):
+    def correct_jets(area, eta, pt, rho, phi, run, evaluator_key="jec"):
         # variable naming convention
         variable_map = {
             "JetA": area,
             "JetEta": eta,
             "JetPt": pt,
-            "JetPhi": phi,
             "Rho": ak.values_astype(rho, np.float32),
+            "JetPhi": phi,
+            "run": ak.values_astype(run, np.int32),          
         }
 
         # apply all correctors sequentially, updating the pt each time
         full_correction = ak.ones_like(pt, dtype=np.float32)
         
-
         for corrector in self.evaluators[evaluator_key]:
             # determine correct inputs (change depending on corrector)
             inputs = [
@@ -283,11 +284,12 @@ def jec(
     if self.propagate_met:
         # get correction factors
         jec_factors_subset_type1_met = correct_jets(
-            pt=events.Jet.pt_raw,
-            phi=events.Jet.phi,
-            eta=events.Jet.eta,
             area=events.Jet.area,
+            eta=events.Jet.eta,
+            pt=events.Jet.pt_raw,
             rho=rho,
+            phi=events.Jet.phi,
+            run=events.run,
             evaluator_key="jec_subset_type1_met",
         )
         
@@ -310,9 +312,17 @@ def jec(
         eta=events.Jet.eta,
         area=events.Jet.area,
         rho=rho,
+        run=events.run,
         evaluator_key="jec",
     )
-
+    # map jet phi into [-pi, pi] 
+    jet_phi_nc = events.Jet.phi
+    jet_phi = ak.where(
+            np.abs(jet_phi_nc) > np.pi,
+            jet_phi_nc - 2 * np.pi * np.sign(jet_phi_nc),
+            jet_phi_nc)
+    events = set_ak_column_f32(events, "Jet.phi", jet_phi)
+    
     # apply full jet correction
     events = set_ak_column_f32(events, "Jet.pt", events.Jet.pt_raw * jec_factors)
     events = set_ak_column_f32(events, "Jet.mass", events.Jet.mass_raw * jec_factors)
@@ -329,6 +339,7 @@ def jec(
 
         # propagate changes to PuppiMET, starting from jets corrected with subset of JEC levels
         # (recommendation is to propagate only L2 corrections and onwards)
+
         met_pt, met_phi = propagate_met(
             jetsum_pt_subset_type1_met,
             jetsum_phi_subset_type1_met,
@@ -336,8 +347,7 @@ def jec(
             jetsum_phi_all_levels,
             events.RawPuppiMET.pt,
             events.RawPuppiMET.phi,
-            events,
-            )
+        )
         
         events = set_ak_column_f32(events, "PuppiMET.pt", met_pt)
         events = set_ak_column_f32(events, "PuppiMET.phi", met_phi)
@@ -346,7 +356,7 @@ def jec(
     variable_map = {
         "JetEta": events.Jet.eta,
         "JetPt": events.Jet.pt_raw,
-         "JetPhi": events.Jet.phi,
+        "JetPhi": events.Jet.phi,
     }
 
     # jet energy uncertainty components
@@ -373,7 +383,6 @@ def jec(
                 events.Jet[met_prop_mask].phi,
                 met_pt,
                 met_phi,
-                events,
             )
             met_pt_down, met_phi_down = propagate_met(
                 jetsum_pt_all_levels,
@@ -382,7 +391,6 @@ def jec(
                 events.Jet[met_prop_mask].phi,
                 met_pt,
                 met_phi,
-                events,
             )
             
             events = set_ak_column_f32(events, f"PuppiMET.pt_jec_{name}_up", met_pt_up)
@@ -543,4 +551,3 @@ def jec_setup(
 
 # custom jec calibrator that only runs nominal correction
 jec_nominal = jec.derive("jec_nominal", cls_dict={"uncertainty_sources": []})
-
