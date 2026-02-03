@@ -9,6 +9,9 @@ Updated for 7-class training:
   1: bbH_tautau  -> "bbh"
   2: DY          -> "dy"
   3: TT          -> "tt"
+  4: W+Jets      -> "wj"
+  5: SingleTop   -> "st"
+  6: MultiBoson  -> "mb"
 """
 import law
 import luigi
@@ -41,7 +44,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
 from MSSM_H_tt.config.mass_points import read_bdt_masses
 MASS_POINTS = read_bdt_masses()
 
-BDT_EOS_BASE = "/eos/user/j/jmalvaso/MSSM_H_tt_store_test/bdt_runs/"
+BDT_EOS_BASE = "/eos/user/j/jmalvaso/MSSM_H_tt_store/bdt_runs/"
 
 def _even_path(mass: int) -> str:
     return f"{BDT_EOS_BASE}M{mass}/bst_model_M{mass}_even.json"
@@ -55,13 +58,16 @@ BDT_LABELS = [
     "bbh",  # 1: bbH_tautau
     "dy",   # 2: DY
     "tt",   # 3: TT
+    "wj",   # 4: W+Jets
+    "st",   # 5: SingleTop
+    "mb",   # 6: MultiBoson
 ]
 
 # list of feature names and order used in training (excluding "event")
 BDT_FEATURES = [
     "D_zeta",
-    "pt_1",   
-    "pt_2",     
+    "pt_1",
+    "pt_2",
     "abs_eta_1",
     "abs_eta_2",
     "met_pt",
@@ -77,15 +83,10 @@ BDT_FEATURES = [
     "jpt_2",
     "jeta_1",
     "jeta_2",
-    "bjpt_1",
-    "bjpt_2",
-    "bjeta_1",
-    "bjeta_2",
-    "mb_jb_jb",
     "n_jets",
     "n_bjets",
     "pt_H",
-    "fastMTT"
+    "fastMTT",
 ]
 
 # -------------------------------------------------------------------------
@@ -95,7 +96,6 @@ BDT_FEATURES = [
     uses={
         "event",
         "hcand*", "PuppiMET*", "lead_jet.*", "sublead_jet.*",
-        "lead_b_jet.*", "sublead_b_jet.*", "di_b_jet.mass",
         "n_jets", "N_b_jets",
     },
     produces=(
@@ -114,7 +114,7 @@ def mssm_bdt_score(
     **kwargs,
 ) -> ak.Array:
     """
-    Returns per-mass 4-class BDT scores and per-mass winning-category indices for each Higgs candidate.
+    Returns per-mass 7-class BDT scores and per-mass winning-category indices for each Higgs candidate.
     """
     ch_str = self.config_inst.channels.names()[0]
 
@@ -152,14 +152,10 @@ def mssm_bdt_score(
         "jpt_2":      flat_np_view(events.sublead_jet.pt),
         "jeta_1":     flat_np_view(events.lead_jet.eta),
         "jeta_2":     flat_np_view(events.sublead_jet.eta),
-        "bjpt_1":    flat_np_view(events.lead_b_jet.pt),
-        "bjpt_2":    flat_np_view(events.sublead_b_jet.pt),
-        "bjeta_1":   flat_np_view(events.lead_b_jet.eta),
-        "bjeta_2":   flat_np_view(events.sublead_b_jet.eta),
-        "mb_jb_jb":  flat_np_view(events.di_b_jet.mass),
         "n_jets":     flat_np_view(events.n_jets),
         "n_bjets":    flat_np_view(events.N_b_jets),
         "pt_H":       flat_np_view(events.pt_H),
+        # additional feature used in the 7-class training
         "fastMTT":    flat_np_view(hcand.fastMTT.mass, axis=1),
     }
 

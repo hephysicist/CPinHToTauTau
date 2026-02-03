@@ -25,51 +25,56 @@ class hcp_model(HCPModelBase):
         # mapping of process names in the datacard ("combine name") to configs and process names in a dict
         # NOTE: each value is now a list to support multiple processes per combine name
         process_vs_dataset_names = {
-            "vv": [
-                "www",
-                "wwz",
-                "zzz",
+        "vv": [
+            "ww",
+            "wz",
+            "zz",
             ],
-            "vvv": [
-                "ww",
-                "wz",
-                "zz",
+        "vvv": [
+            "www",
+            "wwz",
+            "zzz"
             ],
-            "tt": [
-                "tt_dl",
-                "tt_fh",
-                "tt_sl",
+        "tt": [
+            "tt_dl",
+            "tt_fh",
+            "tt_sl",
             ],
-            "st": [
-                "st_twchannel_tbar_fh",
-                "st_twchannel_t_fh",
-                "st_twchannel_tbar_dl",
-                "st_twchannel_tbar_sl",
-                "st_twchannel_t_dl",
-                "st_twchannel_t_sl",
+        "st": [
+            "TbarWplusto4Q",
+            "TWminusto4Q",
+            "TbarWplusto2L2Nu", 
+            "TbarWplustoLNu2Q",
+            "TWminusto2L2Nu", 
+            "TWminustoLNu2Q", 
             ],
-            "SM_higgs": [
-                "h_ggf_htt",
-                "h_vbf_htt",
+        "SM_higgs": [
+            "h_ggf_htt_sm_prod_sm",
+            "h_vbf_htt_sm",
             ],
-            "vh_htt": [
-                "zh_htt",
-                "wh_htt",
+        "vh_htt": [
+            "zh_htt_flat",
+            "wph_htt_flat",
+            "wmh_htt_flat"
             ],
-            "w_lnu": [
-                "w_lnu",
+        "wj": [         
+            "wj",
+            "wj_1j",
+            "wj_2j",
+            "wj_3j",
+            "wj_4j",     
             ],
-            "dy_tautau": [
-                "dy_tautau_m50toinf_0j",
-                "dy_tautau_m50toinf_1j",
-                "dy_tautau_m50toinf_2j",
+        "dy_tt_m50": [
+            "dy_tt_m50_0j",
+            "dy_tt_m50_1j",
+            "dy_tt_m50_2j",
             ],
-            "dy_ll": [
-                "dy_m10to50",
-                "dy_m50toinf_0j",
-                "dy_m50toinf_1j",
-                "dy_m50toinf_2j",
-                "dy_m50toinf",
+        "dy_lep": [
+            "dy_lep_m10to50",
+            "dy_ll_m50_0j",
+            "dy_ll_m50_1j",
+            "dy_ll_m50_2j",
+            "dy_ll_m50",  
             ],
         }
 
@@ -78,6 +83,7 @@ class hcp_model(HCPModelBase):
             process_vs_dataset_names["QCD"] = ["qcd"]
 
         MASS_POINTS = read_bdt_masses()
+        MASS_POINTS = [100]
         for m in MASS_POINTS:
             g = f"h_ggf_htt_{m}"
             b = f"bbh_htt_{m}"
@@ -90,26 +96,34 @@ class hcp_model(HCPModelBase):
             self.proc_map[combine_name] = proc_names
 
     def init_categories(self) -> None:
-        ch = self.config[0].channels.names()[0]
+        ch = self.config[0][0].channels.names()[0]
         lep_name = ch.replace('tau', '')
         data_datasets = []
-        for the_dataset in self.config[0].datasets.names():
+        for the_dataset in self.config[0][0].datasets.names():
             if f"data_{lep_name}_" in the_dataset:
                 data_datasets.append(the_dataset)
 
         MASS_POINTS = read_bdt_masses()
         for mass in MASS_POINTS:
             self.add_category(
-                f"cat_emu_sr__bdt_sig_M{mass}",
-                config_category=f"cat_emu_sr__bdt_sig_M{mass}",
-                config_variable=f"bdt_raw_score_sig_M{mass}",
+                f"cat_emu_sr__bdt_ggh_M{mass}",
+                config_category=f"cat_emu_sr__bdt_ggh_M{mass}",
+                config_variable=f"bdt_raw_score_ggh_M{mass}",
+                config_data_datasets=data_datasets,
+                mc_stats=True,
+                empty_bin_value=0.0,
+            )
+            self.add_category(
+                f"cat_emu_sr__bdt_bbh_M{mass}",
+                config_category=f"cat_emu_sr__bdt_bbh_M{mass}",
+                config_variable=f"bdt_raw_score_ggh_M{mass}",
                 config_data_datasets=data_datasets,
                 mc_stats=True,
                 empty_bin_value=0.0,
             )
 
     def init_processes(self) -> None:
-        config_inst = self.config[0]
+        config_inst = self.config[0][0]
 
         for combine_name, procs in self.proc_map.items():
             # normalize to a list

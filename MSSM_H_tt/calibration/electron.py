@@ -5,12 +5,13 @@ Exemplary calibration methods.
 """
 import functools
 import itertools
-import law
+
 from columnflow.calibration import Calibrator, calibrator
 from columnflow.production.cms.seeds import deterministic_seeds
 from columnflow.util import maybe_import, DotDict
 from law.util import InsertableDict
 from columnflow.columnar_util import set_ak_column, flat_np_view
+import law
 from columnflow.types import Any
 
 np = maybe_import("numpy")
@@ -23,7 +24,7 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
 ###############################################################
 
 @calibrator(
-    uses={"Electron.pt","Electron.r9","Electron.eta", "Electron.seedGain", "Electron.scEtOverPt", "run", 
+    uses={"Electron.pt","Electron.r9","Electron.eta", "Electron.seedGain", "Electron.scEtOverPt", "run", "Electron.deltaEtaSC"
     },
     produces={
         "Electron.pt",
@@ -32,37 +33,38 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
 )
 def electron_smearing_scaling(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     # fail when running on data
-    if self.dataset_inst.is_data:    
-        syst = "total_correction" 
-        gain = events.Electron.seedGain #int
-        run = events.run #real
-        eta = events.Electron.eta #real
-        r9 = events.Electron.r9 #real
-        et = events.Electron.scEtOverPt #real
-
-        electron_pt = events.Electron.pt
-        
+    if self.dataset_inst.is_data:
+        # syst = "total_correction" 
+        # gain = flat_np_view(events.Electron.seedGain) #int
+        # run_br, _ = ak.broadcast_arrays(events.run, events.Electron.pt)
+        # run = flat_np_view(run_br) #real
+        eta = flat_np_view(events.Electron.eta + events.Electron.deltaEtaSC) #real
+        r9 = flat_np_view(events.Electron.r9) #real
+        # et = flat_np_view(events.Electron.scEtOverPt) #real
+        electron_pt = flat_np_view(events.Electron.pt)
+        arr_shape = ak.num(events.Electron.pt, axis=1)
         #Create get energy scale correction for each tau
         electron_scaling_nom = np.ones_like(electron_pt, dtype=np.float32)
 
         if self.config_inst.x.year in [2022,2023]:
-            electron_scaling_args = lambda events, syst: ( syst,
-                                                            gain,
-                                                            run,
-                                                            eta,
-                                                            r9,
-                                                            et,
-                                                            )
-        
-        electron_scaling_nom = self.electron_scaling_corrector.evaluate(*electron_scaling_args(events, syst))
-
-        events = set_ak_column_f32(events, "Electron.pt", electron_pt * electron_scaling_nom)
+            electron_scaling_args = lambda events: (eta,r9)
+            # electron_scaling_args = lambda events, syst: ( syst,
+            #                                                 gain,
+            #                                                 run,
+            #                                                 eta,
+            #                                                 r9,
+            #                                                 et,
+            #                                                 )
+        electron_scaling_nom = self.electron_scaling_corrector.evaluate(*electron_scaling_args(events))
+        corrected_pt = ak.unflatten(electron_pt * electron_scaling_nom, arr_shape)
+        events = set_ak_column_f32(events, "Electron.pt", corrected_pt)
     
     elif self.dataset_inst.is_mc:
         
-        syst = "rho"  
-        eta =events.Electron.eta 
-        r9 = events.Electron.r9 
+        # syst = "rho"  
+        syst = "smear"
+        eta = (events.Electron.eta + events.Electron.deltaEtaSC)
+        r9  =  events.Electron.r9 
         electron_pt = events.Electron.pt
         #Create get energy scale correction for each electron
         electron_smearing_nom = np.ones_like(electron_pt, dtype=np.float32)
@@ -81,8 +83,6 @@ def electron_smearing_scaling(self: Calibrator, events: ak.Array, **kwargs) -> a
 
         # Apply random smearing
         smearing = rng.normal(loc=1., scale=electron_smearing_nom_flat)
-        
-
         events = set_ak_column_f32(events, "Electron.pt", ak.unflatten(electron_pt * smearing, arr_shape))
 
     return events
@@ -108,7 +108,7 @@ def electron_smearing_scaling_setup(
     inputs: dict[str, Any],
     reader_targets: law.util.InsertableDict,
     **kwargs,
-    ) -> None:
+) -> None:
     bundle = reqs["external_files"]
     import correctionlib
     correctionlib.highlevel.Correction.__call__ = correctionlib.highlevel.Correction.evaluate
@@ -116,8 +116,7 @@ def electron_smearing_scaling_setup(
     correction_set = correctionlib.CorrectionSet.from_string(
         bundle.files.electron_scaling_smearing.load(formatter="gzip").decode("utf-8"),
     )
+    
     self.electron_scaling_corrector = correction_set[self.config_inst.x.electron_sf.scale.corrector]
     self.electron_smearing_corrector = correction_set[self.config_inst.x.electron_sf.smearing.corrector]
     
-    # self.electron_scaling_corrector = correction_set["Scale"]
-    # self.electron_smearing_corrector = correction_set["Smearing"]

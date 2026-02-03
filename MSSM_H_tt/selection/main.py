@@ -28,10 +28,9 @@ from MSSM_H_tt.selection.lepton_pair import pair_selection
 from MSSM_H_tt.selection.lepton_veto import single_lepton_veto, second_lepton_veto, OC_lepton_veto, bugged_DY_sample_event_veto
 from MSSM_H_tt.selection.higgscand import new_higgscand, mask_nans
 from MSSM_H_tt.selection.met_nanoAOD_filters import met_nanoAOD_filters
-from MSSM_H_tt.production.aux_columns import channel_id
 from MSSM_H_tt.selection.jets import jet_veto_map
 from MSSM_H_tt.production.btag import btag_weight
-from MSSM_H_tt.production.aux_columns import jets_taggable
+from MSSM_H_tt.production.aux_columns import jets_taggable, channel_id, create_jetID_masks
 from MSSM_H_tt.selection.met_cov_check import met_cov_check
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -55,6 +54,7 @@ coffea = maybe_import("coffea")
         tau_selection,
         pair_selection,
         channel_id,
+        create_jetID_masks,
         single_lepton_veto,
         second_lepton_veto,
         OC_lepton_veto,
@@ -81,6 +81,7 @@ coffea = maybe_import("coffea")
         tau_selection,
         pair_selection,
         channel_id,
+        create_jetID_masks,
         single_lepton_veto,
         second_lepton_veto,
         OC_lepton_veto,
@@ -181,6 +182,9 @@ def main(
                                  domatch=True,
                                  **kwargs)
     results += hcand_res
+    
+    #produce masks for tight_jetID and tight_jet_id_lep_veto
+    events = self[create_jetID_masks](events, **kwargs)
     
     #produce channel id column (legacy)
     events = self[channel_id](events)

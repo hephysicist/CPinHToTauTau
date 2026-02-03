@@ -47,59 +47,7 @@ https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookNanoAOD?rev=99#Weigths
     # store the column
     events = set_ak_column(events, "mc_weight", mc_weight, value_type=np.float32)
 
-    return events
-
-###########################
-#### Z pt reweighting #####
-###########################
-@producer(
-    uses={
-        "GenZ.*",
-    },
-    produces={
-        "zpt_weight"
-    },
-    mc_only=True,
-)
-def zpt_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
-
-    # is within range
-    is_outside_range = (
-        ((events.GenZ.pt == 0.0) & (events.GenZ.mass == 0.0))
-        | ((events.GenZ.pt >= 600.0) | (events.GenZ.mass >= 1000.0))
-    )
-
-    sf_nom = ak.ones_like(events.event,dtype=np.float32)
-    
-    # for safety
-    zm  = ak.where(events.GenZ.mass > 1000.0, 999.99, events.GenZ.mass)
-    zpt = ak.where(events.GenZ.pt > 600.0, 599.99, events.GenZ.pt)
-
-    processes = self.dataset_inst.processes.names()
-    if ak.any(['dy' in proc for proc in processes]):
-        sf_nom = ak.where(is_outside_range,
-                          1.0,
-                          self.zpt_corrector(self,zm,zpt))
-
-    events = set_ak_column(events, "zpt_weight", sf_nom, value_type=np.float32)
-    return events
-
-@zpt_weight.setup
-def zpt_weight_setup(
-    self: Producer,
-    task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    inputs: dict[str, Any],
-    reader_targets: law.util.InsertableDict,
-) -> None:
-    from coffea.lookup_tools import extractor
-    ext = extractor()
-    full_fname = self.config_inst.x.external_files.zpt_weight
-    ext.add_weight_sets([f'zpt_weight zptmass_histo {full_fname}'])
-    ext.finalize()
-    self.evaluator = ext.make_evaluator()
-    self.zpt_corrector = lambda self, mass, pt: self.evaluator['zpt_weight'](mass,pt)
-                        
+    return events   
 
 ### MUON WEIGHT CALCULATOR ###
 
@@ -109,11 +57,11 @@ def zpt_weight_setup(
     },
     produces={
         name
-        for shift in ["nom", "up", "down"]
+        for shift in ["", "_up", "_down"]
         for name in (
-            f"muon_weight_{shift}",
-            f"muon_Data_eff_{shift}",
-            f"muon_MC_eff_{shift}",
+            f"muon_weight{shift}",
+            f"muon_Data_eff{shift}",
+            f"muon_MC_eff{shift}",
         )
     },
     mc_only=True,
@@ -169,22 +117,15 @@ def muon_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) -> a
                     shaped_eff            = ak.unflatten(flat_eff, ak.num(muon.pt, axis=1))                    
                     MC_eff_values[the_shift] = MC_eff_values[the_shift] * ak.fill_none(ak.firsts(shaped_eff,axis=1), 0)
                     MC_eff_values[the_shift] =  ak.where(O_mu, MC_eff_values[the_shift],0)  
-    rename_systs = {"nominal" : "nom",
-                    "systup"  : "up",
-                    "systdown": "down"
-    }             
+    rename_systs = {"nominal" :'',
+                    "systup"  : '_up',
+                    "systdown": '_down'
+    }   
     for the_shift in shifts: 
-        events = set_ak_column_f32(events, f"muon_weight_{rename_systs[the_shift]}", sf_values[the_shift])
+        events = set_ak_column_f32(events, f"muon_weight{rename_systs[the_shift]}", sf_values[the_shift])
     for the_shift in shifts_eff: 
-        events = set_ak_column_f32(events, f"muon_Data_eff_{rename_systs[the_shift]}", Data_eff_values[the_shift])
-        events = set_ak_column_f32(events, f"muon_MC_eff_{rename_systs[the_shift]}", MC_eff_values[the_shift])
-    #Setting up and down variations, only stat uncertainties for now
-    events = set_ak_column_f32(events, f"muon_Data_eff_up", Data_eff_values["systup"])
-    events = set_ak_column_f32(events, f"muon_Data_eff_down", Data_eff_values["systdown"])
-    events = set_ak_column_f32(events, f"muon_MC_eff_up", MC_eff_values["systup"])
-    events = set_ak_column_f32(events, f"muon_MC_eff_down", MC_eff_values["systdown"])
-
-
+        events = set_ak_column_f32(events, f"muon_Data_eff{rename_systs[the_shift]}", Data_eff_values[the_shift])
+        events = set_ak_column_f32(events, f"muon_MC_eff{rename_systs[the_shift]}", MC_eff_values[the_shift])
     return events
 
 @muon_weight.requires
@@ -240,11 +181,10 @@ def muon_weight_setup(
         name
         for shift in ["nom", "up", "down"]
         for name in (
-            f"electron_weight_{shift}",
             f"electron_Data_eff_{shift}",
             f"electron_MC_eff_{shift}",
         )
-    },
+    }|{ "electron_weight", "electron_weight_up", "electron_weight_down" },
     mc_only=True,
 )
 def electron_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) -> ak.Array:
@@ -332,13 +272,12 @@ def electron_weight(self: Producer, events: ak.Array, do_syst: bool,  **kwargs) 
                     shaped_eff            = ak.unflatten(flat_eff, ak.num(electron.pt, axis=1))                    
                     MC_eff_values[the_shift] = MC_eff_values[the_shift] * ak.fill_none(ak.firsts(shaped_eff,axis=1), 0)
                     MC_eff_values[the_shift] =  ak.where(O_e, MC_eff_values[the_shift],0)
-    
-    rename_systs = {"sf" : "nom",
-                    "sfup"  : "up",
-                    "sfdown": "down"
+    rename_systs = {"sf" :'',
+                    "sfup"  : '_up',
+                    "sfdown": '_down'
     }
     for the_shift in shifts: 
-        events = set_ak_column_f32(events, f"electron_weight_{rename_systs[the_shift]}", sf_values[the_shift])
+        events = set_ak_column_f32(events, f"electron_weight{rename_systs[the_shift]}", sf_values[the_shift])
     for the_shift in shifts_eff: 
         events = set_ak_column_f32(events, f"electron_Data_eff_{the_shift}", Data_eff_values[the_shift])
     for the_shift in shifts_eff: 
@@ -390,19 +329,19 @@ def electron_weight_setup(
 ################################
 @producer(
     uses={
-        'event', 'triggerID*'},
+        'event', 'triggerID*', 'hcand*'},
     produces={
-         f"Trigger_SF_{shift}"
-        for shift in ["nom", "up", "down"]
+         f"Trigger_SF_weight{shift}"
+        for shift in ["", "_up", "_down"]
     },
     mc_only=True,
 )
 def trigger_sf(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
 
     # Nominal
-    muon_Data_eff_nom  = events.muon_Data_eff_nom
+    muon_Data_eff_nom  = events.muon_Data_eff
     electron_Data_eff_nom = events.electron_Data_eff_nom
-    muon_MC_eff_nom  = events.muon_MC_eff_nom
+    muon_MC_eff_nom  = events.muon_MC_eff
     electron_MC_eff_nom = events.electron_MC_eff_nom
     # Up
     muon_Data_eff_up  = events.muon_Data_eff_up
@@ -418,6 +357,26 @@ def trigger_sf(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     # Define triggers passed masks
     Pass_mu_trig = ak.where(events.triggerID_mu > 0, 1, 0)
     Pass_e_trig  = ak.where(events.triggerID_e >  0, 1, 0)
+    ele = events.hcand_emu.lep0
+    muon = events.hcand_emu.lep1
+    ele_HLT_pt_mask = ele.pt >  31
+    muon_HLT_pt_mask = muon.pt > 26
+    #Set eff to 0 if pt is under threshold
+    # Nominal
+    muon_Data_eff_nom  = ak.where(ak.flatten(muon_HLT_pt_mask), muon_Data_eff_nom, 0)
+    electron_Data_eff_nom =  ak.where(ak.flatten(ele_HLT_pt_mask), electron_Data_eff_nom, 0)
+    muon_MC_eff_nom  = ak.where(ak.flatten(muon_HLT_pt_mask), muon_MC_eff_nom, 0)
+    electron_MC_eff_nom = ak.where(ak.flatten(ele_HLT_pt_mask), electron_MC_eff_nom, 0)
+    # Up
+    muon_Data_eff_up  = ak.where(ak.flatten(muon_HLT_pt_mask), muon_Data_eff_up, 0)
+    electron_Data_eff_up = ak.where(ak.flatten(ele_HLT_pt_mask), electron_Data_eff_up, 0)
+    muon_MC_eff_up  = ak.where(ak.flatten(muon_HLT_pt_mask), muon_MC_eff_up, 0)
+    electron_MC_eff_up = ak.where(ak.flatten(ele_HLT_pt_mask), electron_MC_eff_up, 0)
+    # Down
+    muon_Data_eff_down  = ak.where(ak.flatten(muon_HLT_pt_mask), muon_Data_eff_down, 0)
+    electron_Data_eff_down = ak.where(ak.flatten(ele_HLT_pt_mask), electron_Data_eff_down, 0)
+    muon_MC_eff_down  = ak.where(ak.flatten(muon_HLT_pt_mask), muon_MC_eff_down, 0)
+    electron_MC_eff_down = ak.where(ak.flatten(ele_HLT_pt_mask), electron_MC_eff_down, 0)
     
     # SF evaluation
     # nom 
@@ -458,9 +417,9 @@ def trigger_sf(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     # SF_down       =  eff_data_down/eff_MC_down
 
     #Saving the columns 
-    events = set_ak_column_f32(events, f"Trigger_SF_nom", SF_nom)
-    events = set_ak_column_f32(events, f"Trigger_SF_up", SF_nom + delta_SF )
-    events = set_ak_column_f32(events, f"Trigger_SF_down", SF_nom - delta_SF)
+    events = set_ak_column_f32(events, f"Trigger_SF_weight", SF_nom)
+    events = set_ak_column_f32(events, f"Trigger_SF_weight_up", SF_nom + delta_SF )
+    events = set_ak_column_f32(events, f"Trigger_SF_weight_down", SF_nom - delta_SF)
 
     return events
 
@@ -472,8 +431,8 @@ def trigger_sf(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         'event', 'hcand_*',
     },
     produces={
-        f"tau_weight_{shift}"
-        for shift in ["nom", "up", "down"]
+        f"tau_weight{shift}"
+        for shift in ["", "_up", "_down"]
     },
     mc_only=True,
 )
@@ -572,8 +531,11 @@ https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/849c6a6efef907f403
 
                     ch_mask = ak.num(tau, axis=1) > 0
                     shaped_sf = ak.unflatten(per_ch_sf, ak.num(tau.pt, axis=1))
-                    sf_values = sf_values * ak.fill_none(ak.firsts(shaped_sf,axis=1), 1.)       
-        events = set_ak_column(events,f"tau_weight_{shift}",sf_values,value_type=np.float32)
+                    sf_values = sf_values * ak.fill_none(ak.firsts(shaped_sf,axis=1), 1.)
+        rename_systs = {"nom" :'',
+                    "up"  : '_up',
+                    "down": '_down'}       
+        events = set_ak_column(events,f"tau_weight{rename_systs[shift]}",sf_values,value_type=np.float32)
                                     
     return events
 

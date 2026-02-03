@@ -15,18 +15,19 @@ from columnflow.columnar_util import EMPTY_FLOAT, Route, set_ak_column
 from columnflow.columnar_util import optional_column as optional
 from columnflow.production.util import attach_coffea_behavior
 
-from MSSM_H_tt.production.weights import muon_weight, tau_weight, get_mc_weight, electron_weight, trigger_sf #zpt_weight
+from MSSM_H_tt.production.weights import muon_weight, tau_weight, get_mc_weight, electron_weight, trigger_sf 
 from MSSM_H_tt.production.sample_split import split_dy
 from MSSM_H_tt.production.generatorZ import generatorZ
 from MSSM_H_tt.production.dilepton_features import hcand_fields,hcand_mt
 from MSSM_H_tt.production.z_pt_reweighting import zpt_weight
-from MSSM_H_tt.production.aux_columns import jet_pt_def,jets_taggable,number_b_jet
+from MSSM_H_tt.production.aux_columns import jet_pt_def,jets_taggable,number_b_jet,create_jetID_masks
 from columnflow.production.cms.btag import btag_weights
+from MSSM_H_tt.production.btag_SF import btag_weight_SF
 from MSSM_H_tt.production.top_pt_weight import top_pt_weight, gen_parton_top
 from MSSM_H_tt.production.D_zeta import D_zeta
 from MSSM_H_tt.production.met_recoil_correction import gen_boson, met_recoil
 from MSSM_H_tt.production.bdt_score import mssm_bdt_score
-from MSSM_H_tt.production.fast_mtt import fast_mtt
+from MSSM_H_tt.production.fastMTT import fastMTT
 from MSSM_H_tt.production.pt_H import pt_H
 from MSSM_H_tt.production.stitching_weights import stitching_weight
 #from MSSM_H_tt.production.DY_recoil_unc import DY_pTll_recoil_unc
@@ -57,9 +58,11 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         hcand_mt,
         category_ids,
         number_b_jet,
+        create_jetID_masks,
         jet_pt_def,
         jets_taggable,
         btag_weights,
+        btag_weight_SF,
         gen_parton_top,
         top_pt_weight,
         D_zeta,
@@ -67,7 +70,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         met_recoil,
         trigger_sf,
         mssm_bdt_score,
-        fast_mtt,
+        fastMTT,
         pt_H,
         stitching_weight,
         #DY_pTll_recoil_unc,
@@ -89,9 +92,11 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         hcand_mt,
         category_ids,
         number_b_jet,
+        create_jetID_masks,
         jet_pt_def,
         jets_taggable,
         btag_weights,
+        btag_weight_SF,
         gen_parton_top,
         top_pt_weight,
         D_zeta,
@@ -99,7 +104,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         met_recoil,
         trigger_sf,
         mssm_bdt_score,
-        fast_mtt,
+        fastMTT,
         pt_H,
         stitching_weight,
         #DY_pTll_recoil_unc,     
@@ -111,9 +116,10 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     processes = self.dataset_inst.processes.names()
     # ensure coffea behaviors are loaded
     events = self[attach_coffea_behavior](events, **kwargs)
-    print("Producing jet variables for plotting...") 
+    print("Producing jet variables for plotting...")
+    events = self[create_jetID_masks](events, **kwargs)
     events = self[jet_pt_def](events, **kwargs)
-    events = self[jets_taggable](events, **kwargs)   
+    events = self[jets_taggable](events, **kwargs)  
     print("Producing Number of b-jets for categorization")
     events = self[number_b_jet](events, **kwargs)
     print("Producing D_zeta features...")
@@ -122,8 +128,8 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     events = self[hcand_fields](events, **kwargs)
     print("Producing mT distributions...") 
     events = self[hcand_mt](events, **kwargs) 
-    print("Producing fast_mtt features...")
-    events = self[fast_mtt](events,**kwargs)
+    print("Producing fastMTT features...")
+    events = self[fastMTT](events,**kwargs)
     print("Producing pt_H features...")
     events = self[pt_H](events,**kwargs)
     print("Producing bdt scores...")
@@ -169,7 +175,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
                     (abs(events.Jet.eta) < 2.5) & 
                     (events.Jet.jetId & 0b10 == 0b10))
         events = self[btag_weights](events,jet_mask= jet_mask,**kwargs)
-        # events = self[btag_weight_SF](events,do_syst = True,**kwargs)
+        events = self[btag_weight_SF](events,do_syst = True,**kwargs)
         print("Producing GenPartonTop...")
         events = self[gen_parton_top](events, **kwargs)
         top_pt_weight_dummy = ak.where(events.GenPartonTop.pt > 500.0, 500.0, events.GenPartonTop.pt)

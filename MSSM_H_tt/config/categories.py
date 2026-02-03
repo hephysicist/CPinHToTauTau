@@ -120,7 +120,7 @@ def add_categories(config: od.Config,
     base_selection = [f'cat_{channel}']
     
     category_map  = DotDict.wrap({
-        "sr"            : { 'selection' : ["lep_iso", "os_charge"],
+        "sr"            : { 'selection' : ["lep_iso", "os_charge", "D_zeta_cut"],
                             'label'     : "signal region",
                             'aux'       : {
                                            #qcd estimation categories
@@ -148,9 +148,9 @@ def add_categories(config: od.Config,
         #                     'aux'       : {'apply_ff': ''}},
         # "ar_yields"      : {'selection' : ["lep_iso", "os_charge"],},
         #categories for QCD estimation via classic ABCD method 
-        "abcd_ar"       : { 'selection' : ["lep_iso", "ss_charge"], 'label' : "same sign region"},
-        "abcd_dr_num"   : { 'selection' : ["lep_inv_iso", "os_charge"]},
-        "abcd_dr_den"   : { 'selection' : ["lep_inv_iso", "ss_charge"]},
+        "abcd_ar"       : { 'selection' : ["lep_iso", "ss_charge","D_zeta_cut"], 'label' : "same sign region"},
+        "abcd_dr_num"   : { 'selection' : ["lep_inv_iso", "os_charge","D_zeta_cut"]},
+        "abcd_dr_den"   : { 'selection' : ["lep_inv_iso", "ss_charge","D_zeta_cut"]},
         
         # "sr_no_mt"      : { 'selection' : ["lep_iso", "os_charge"],
         #                     'label'     : "signal region no mt",
@@ -173,30 +173,70 @@ def add_categories(config: od.Config,
     from MSSM_H_tt.config.mass_points import read_bdt_masses
     MASS_POINTS = read_bdt_masses()
     
+    # bdt_cats_map = DotDict.wrap({})
+    # for m in MASS_POINTS:
+    #     bdt_cats_map[f"bdt_sig_M{m}"] = DotDict.wrap({
+    #         'selection': [f"bdt_cat_sig_M{m}"],
+    #         'label': f" \n bdt cat sig (M={m})",
+    #     })
+    #     bdt_cats_map[f"bdt_dy_M{m}"] = DotDict.wrap({
+    #         'selection': [f"bdt_cat_dy_M{m}"],
+    #         'label': f" \n bdt cat dy (M={m})",
+    #     })
+    #     bdt_cats_map[f"bdt_tt_M{m}"] = DotDict.wrap({
+    #         'selection': [f"bdt_cat_tt_M{m}"],
+    #         'label': f" \n bdt cat tt (M={m})",
+    #     })
+    #     bdt_cats_map[f"bdt_wj_M{m}"] = DotDict.wrap({
+    #         'selection': [f"bdt_cat_wj_M{m}"],
+    #         'label': f" \n bdt cat wj (M={m})",
+    #     })
+    
+    child_category_map  = DotDict.wrap({
+        "nj0"    : {'selection' : ["Zero_b_jets"], 'label'     : f" \n $n_{{jets}}= 0$",},
+        "nj1"    : {'selection' : ["At_least_1_b_jets"], 'label'     : f" \n $n_{{jets}}>= 1$",},  
+        })
+    
+    create_child_categories(config,
+                        parent_categories=config.categories.names(),
+                        child_category_map=child_category_map)
+    # MASS_POINTS = [100]
     bdt_cats_map = DotDict.wrap({})
     for m in MASS_POINTS:
-        bdt_cats_map[f"bdt_sig_M{m}"] = DotDict.wrap({
-            'selection': [f"bdt_cat_sig_M{m}"],
-            'label': f" \n bdt cat sig (M={m})",
+        bdt_cats_map[f"bdt_ggh_M{m}"] = DotDict.wrap({
+            "selection": [f"bdt_cat_ggh_M{m}"],
+            "label": f" \n bdt cat ggh (M={m})",
+        })
+        bdt_cats_map[f"bdt_bbh_M{m}"] = DotDict.wrap({
+            "selection": [f"bdt_cat_bbh_M{m}"],
+            "label": f" \n bdt cat bbh (M={m})",
         })
         bdt_cats_map[f"bdt_dy_M{m}"] = DotDict.wrap({
-            'selection': [f"bdt_cat_dy_M{m}"],
-            'label': f" \n bdt cat dy (M={m})",
+            "selection": [f"bdt_cat_dy_M{m}"],
+            "label": f" \n bdt cat dy (M={m})",
         })
         bdt_cats_map[f"bdt_tt_M{m}"] = DotDict.wrap({
-            'selection': [f"bdt_cat_tt_M{m}"],
-            'label': f" \n bdt cat tt (M={m})",
+            "selection": [f"bdt_cat_tt_M{m}"],
+            "label": f" \n bdt cat tt (M={m})",
         })
-        bdt_cats_map[f"bdt_wj_M{m}"] = DotDict.wrap({
-            'selection': [f"bdt_cat_wj_M{m}"],
-            'label': f" \n bdt cat wj (M={m})",
-        })
+        # bdt_cats_map[f"bdt_wj_M{m}"] = DotDict.wrap({
+        #     "selection": [f"bdt_cat_wj_M{m}"],
+        #     "label": f" \n bdt cat wj (M={m})",
+        # })
+        # bdt_cats_map[f"bdt_st_M{m}"] = DotDict.wrap({
+        #     "selection": [f"bdt_cat_st_M{m}"],
+        #     "label": f" \n bdt cat st (M={m})",
+        # })
+        # bdt_cats_map[f"bdt_mb_M{m}"] = DotDict.wrap({
+        #     "selection": [f"bdt_cat_mb_M{m}"],
+        #     "label": f" \n bdt cat mb (M={m})",
+        # })
 
 
-    create_child_categories(
-    config,
-    parent_categories=config.categories.names(),
-    child_category_map=bdt_cats_map)
+    # create_child_categories(
+    # config,
+    # parent_categories=config.categories.names(),
+    # child_category_map=bdt_cats_map)
     # if channel=='emu':
     #     #debugging
     #     from IPython import embed; embed()

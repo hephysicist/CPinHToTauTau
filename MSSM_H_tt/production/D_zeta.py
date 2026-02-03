@@ -20,7 +20,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
 @producer(
     uses={ f"PuppiMET.{var}" for var in 
         ["pt", "phi",]} | {"hcand_*"},
-    produces={"D_zeta"},
+    produces={"D_zeta", "D_zeta_check"},
     exposed=False,
 )
 def D_zeta(
@@ -55,6 +55,9 @@ def D_zeta(
     d_zeta = p_zeta_miss - 0.85*p_zeta_vis
     
     d_zeta = ak.flatten(d_zeta)
-
+    d_zeta_mask = ((d_zeta > 0) & (d_zeta < 150))
+    d_zeta_check = ak.where(d_zeta_mask, d_zeta, EMPTY_FLOAT)
+    
+    events = set_ak_column(events, "D_zeta_check", d_zeta_check)
     events = set_ak_column(events, "D_zeta", d_zeta)
     return events
