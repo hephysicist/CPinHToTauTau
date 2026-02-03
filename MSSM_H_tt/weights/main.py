@@ -23,22 +23,40 @@ def main(self: WeightProducer, events: ak.Array, **kwargs) -> ak.Array:
     processes = self.dataset_inst.processes.names()
     
     weight = ak.Array(np.ones(len(events), dtype=np.float32))
+
+    _stitch_allow = set(self.config_inst.x.stitch_samples)
+
+    _dataset_name = getattr(self.dataset_inst, "name", "")
+
     for column in self.weight_columns:
-        if ((self.dataset_inst.has_tag("ttbar")^True) & (column == 'top_pt_weight')):
+        # keep your existing skip rule for top_pt_weight
+        if ((self.dataset_inst.has_tag("ttbar") ^ True) & (column == 'top_pt_weight')):
             print("===")
             print(weight)
-            print(Route(column).apply(events),column)
-            print("Skipping top_pt_weight for:", processes)
+            print(Route(column).apply(events), column)
+            print("Skipping top_pt_weight for:", _dataset_name)
             print(weight)
             print("===")
             continue
-        else :
-            print("======")
+
+        # NEW: only apply stitching_weights to the selected samples
+        if column == 'stitching_weights' and _dataset_name not in _stitch_allow:
+            print("===")
             print(weight)
-            weight = weight * Route(column).apply(events)
-            print(column, Route(column).apply(events),column)
+            print(Route(column).apply(events), column)
+            print("Skipping stitching_weights for:", _dataset_name)
             print(weight)
-            print("======")
+            print("===")
+            continue
+        
+        # default: apply the weight
+        print("======")
+        print(weight)
+        weight = weight * Route(column).apply(events)
+        print(column, Route(column).apply(events), column)
+        print(weight)
+        print("======")
+
 
     process_id = events.process_id
     Z_ee_weight = 1
@@ -65,6 +83,7 @@ def main_init(self: WeightProducer) -> None:
         "btag_weight_SF_nom",
         "top_pt_weight",
         "Trigger_SF_nom",
+        "stitching_weights",
     }
     self.uses |= self.weight_columns
     

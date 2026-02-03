@@ -116,4 +116,3 @@ def top_pt_weight(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         events = set_ak_column(events, f"top_pt_weight{variation}", ak.fill_none(weight, 1.0))
 
     return events
-

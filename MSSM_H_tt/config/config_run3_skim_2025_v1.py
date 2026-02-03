@@ -55,11 +55,11 @@ def add_run3(ana: od.Analysis,
         #Helper function to cast campaign tags to the tags used in POG groups for the scale factors
         year = campaign.x.year
         tag = campaign.x.tag
-        out_tag = ''
-        e_sf_tag = ''
-        e_scale_corrector = ''
-        e_smearing_corrector = '' 
-        if year in [2017,2018]  : out_tag = 'UL'
+        out_tag = ""
+        e_sf_tag = ""
+        e_scale_corrector = ""
+        e_smearing_corrector = "" 
+        if year in [2017,2018]  : out_tag = "UL"
         elif tag == "preEE"     : 
             out_tag = "Summer22"
             e_sf_tag = "2022Re-recoBCD"
@@ -85,7 +85,23 @@ def add_run3(ana: od.Analysis,
         return out_tag, e_sf_tag, e_scale_corrector, e_smearing_corrector, tag
         
     tag, e_sf_tag, e_scale_corrector, e_smearing_corrector, tau_tag = tag_caster(campaign)
-    
+
+    # Map Run 3 eras to ACD metadata release tags used in /cat/metadata
+    acd_tag_map = {
+        (2022, "preEE"):   "Run3-22CDSep23-Summer22-NanoAODv12",
+        (2022, "postEE"):  "Run3-22EFGSep23-Summer22EE-NanoAODv12",
+        (2023, "preBPix"): "Run3-23CSep23-Summer23-NanoAODv12",
+        (2023, "postBPix"): "Run3-23DSep23-Summer23BPix-NanoAODv12",
+    }
+
+    try:
+        json_acd_tag = acd_tag_map[(year, campaign.x.tag)]
+    except KeyError as e:
+        raise RuntimeError(f"No json_acd_tag mapping for year={year}, tag={campaign.x.tag}") from e
+
+    # (optional) expose on cfg for downstream visibility/debugging
+    cfg.x.json_acd_tag = json_acd_tag
+
     # add processes we are interested in
     
     process_names = [
@@ -96,25 +112,19 @@ def add_run3(ana: od.Analysis,
         "data_egamma",
         "data_muoneg",
         "data_singlemu",
-        #Drell-Yan
+        # DY->ll
         "dy_lep",
-        "dy_z2ee",
-        "dy_z2mumu",
-        "dy_z2tautau",
-        # "dy_lep_m10to50",
-        #W + jets
-        "wj",
-        #diboson
-        "vv", #diboson inclusive
-        "ww",
-        "wz",
-        "zz",
-        #ttbar
-        "tt",#ttbar inclusive
-        "tt_sl",
-        "tt_dl",
-        "tt_fh",
-        #single top
+        "dy_lep_m10to50",
+        "dy_ll_m50_0j",
+        "dy_ll_m50_1j",
+        "dy_ll_m50_2j",
+        "dy_ll_m50",  
+        # DY->tautau
+        "dy_tt_m50",
+        "dy_tt_m50_0j",
+        "dy_tt_m50_1j",
+        "dy_tt_m50_2j",
+        # single top
         "st",
         #single top t-channel        
         "st_tchannel_tbar",
@@ -123,16 +133,49 @@ def add_run3(ana: od.Analysis,
         "st_schannel_t_lep",
         "st_schannel_tbar_lep",
         # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        "st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
         "st_twchannel_tbar_fh",
-    ]
-    signal_masses = [60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 160, 180, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1400, 1600, 1800, 2000, 2300, 2600, 2900, 3200, 3500]
-    for mass in signal_masses:
+        "st_twchannel_t_fh",
+        "st_twchannel_tbar_dl",
+        "st_twchannel_tbar_sl",
+        "st_twchannel_t_dl",
+        "st_twchannel_t_sl",
+        # tt
+        "tt",
+        "tt_dl",
+        "tt_fh",
+        "tt_sl",
+        # SM H->tautau 
+        "h_ggf_htt_sm_prod_sm",
+        "h_vbf_htt_sm",
+        # vh_htt
+        "vh_htt",
+        "zh_htt_flat",
+        "wph_htt_flat",
+        "wmh_htt_flat",
+        # W + jets
+        "wj",
+        "wj_1j",
+        "wj_2j",
+        "wj_3j",
+        "wj_4j",
+        # vv 
+        "vv",
+        "ww",
+        "wz",
+        "zz",
+        # vvv
+        "vvv",
+        "www",
+        "wwz",
+        "zzz"
+        ]
+
+    from MSSM_H_tt.config.mass_points import read_bdt_masses
+    MASS_POINTS = read_bdt_masses()
+
+    for mass in MASS_POINTS:
         process_names.append(f"h_ggf_htt_{mass}")
+        process_names.append(f"bbh_htt_{mass}")
 
     for process_name in process_names:
         # add the process
@@ -153,34 +196,54 @@ def add_run3(ana: od.Analysis,
         "data_mu_D",
         "data_tau_C",
         "data_tau_D",
-        #Drell-Yan
-        "dy_lep_madgraph",
-        # "dy_lep_m10to50",
-        #W+jets
-        "wj_incl_madgraph",
-        #Diboson
-        "ww",
-        "wz",
-        "zz",
-        #ttbar
-        "tt_sl",
-        "tt_dl",
-        "tt_fh",
-        #single top t-channel
-        "st_tchannel_tbar",
-        "st_tchannel_t",
-        #single top s-channel
-        "st_schannel_tbar_lep",
-        "st_schannel_t_lep",
-        # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        "st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
-        "st_twchannel_tbar_fh",
-        #signal
+        # DY->ll
+        "DYto2L_M_10to50_amcatnloFXFX",
+        "DYto2L_M_50_0J_amcatnloFXFX",
+        "DYto2L_M_50_1J_amcatnloFXFX",
+        "DYto2L_M_50_2J_amcatnloFXFX",
+        "DYto2L_M_50_amcatnloFXFX",
+        # DY->tautau
+        "DYto2Tau_MLL_50_0J_amcatnloFXFX",
+        "DYto2Tau_MLL_50_1J_amcatnloFXFX",
+        "DYto2Tau_MLL_50_2J_amcatnloFXFX",
+        # SM ggH->tautau
+        "GluGluHto2Tau_UncorrelatedDecay_SM_UnFiltered_ProdAndDecay",
+        # Single top
+        "TbarWplusto4Q",
+        "TWminusto4Q",
+        "TbarWplusto2L2Nu", 
+        "TbarWplustoLNu2Q",
+        "TWminusto2L2Nu", 
+        "TWminustoLNu2Q", 
+        # tt
+        "TTto2L2Nu",
+        "TTto4Q",
+        "TTtoLNu2Q",
+        # SM VBFH->tautau
+        "VBFHto2Tau_UncorrelatedDecay_UnFiltered",
+        # WH->tautau
+        "WminusHto2Tau_UncorrelatedDecay_UnFiltered",
+        "WplusHto2Tau_UncorrelatedDecay_UnFiltered",
+        # W+jets                        
+        # "WtoLNu_amcatnloFXFX",                  
+        "WtoLNu_1J_madgraphMLM",
+        "WtoLNu_2J_madgraphMLM",
+        "WtoLNu_3J_madgraphMLM",
+        "WtoLNu_4J_madgraphMLM",
+        "WtoLNu_madgraphMLM",
+        # Diboson
+        "WW",
+        "WZ",
+        "ZZ",
+        # Triboson
+        "WWW_4F",
+        "WWZ_4F",
+        "WZZ",
+        "ZZZ",
+        # ZH->tautau
+        "ZHto2Tau_UncorrelatedDecay_UnFiltered",
         ]
+
 
     dataset_names_2022postEE = [
         #data
@@ -196,33 +259,52 @@ def add_run3(ana: od.Analysis,
         "data_tau_E",
         "data_tau_F",
         "data_tau_G",
-        #Drell-Yan
-        "dy_lep_madgraph",
-        # "dy_lep_m10to50",
-        #W+jets
-        "wj_incl_madgraph",
-        #Diboson
-        "ww",
-        "wz",
-        "zz",
-        #ttbar
-        "tt_sl",
-        "tt_dl",
-        "tt_fh",
-        #single top t-channel
-        "st_tchannel_tbar",
-        "st_tchannel_t",
-        #single top s-channel
-        "st_schannel_tbar_lep",
-        "st_schannel_t_lep",
-        # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        #"st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
-        "st_twchannel_tbar_fh",
-        #signal
+        # DY->ll
+        "DYto2L_M_10to50_amcatnloFXFX",
+        "DYto2L_M_50_0J_amcatnloFXFX",
+        "DYto2L_M_50_1J_amcatnloFXFX",
+        "DYto2L_M_50_2J_amcatnloFXFX",
+        "DYto2L_M_50_amcatnloFXFX",
+        # DY->tautau
+        "DYto2Tau_MLL_50_0J_amcatnloFXFX",
+        "DYto2Tau_MLL_50_1J_amcatnloFXFX",
+        "DYto2Tau_MLL_50_2J_amcatnloFXFX",
+        # SM ggH->tautau
+        "GluGluHto2Tau_UncorrelatedDecay_SM_UnFiltered_ProdAndDecay",
+        # Single top
+        "TbarWplusto4Q",
+        "TWminusto4Q",
+        "TbarWplusto2L2Nu", 
+        "TbarWplustoLNu2Q",
+        "TWminusto2L2Nu", 
+        "TWminustoLNu2Q", 
+        # tt
+        "TTto2L2Nu",
+        "TTto4Q",
+        "TTtoLNu2Q",
+        # SM VBFH->tautau
+        "VBFHto2Tau_UncorrelatedDecay_UnFiltered",
+        # WH->tautau
+        "WminusHto2Tau_UncorrelatedDecay_UnFiltered",
+        "WplusHto2Tau_UncorrelatedDecay_UnFiltered",
+        # W+jets                          
+        # "WtoLNu_amcatnloFXFX",                  
+        "WtoLNu_1J_madgraphMLM",
+        "WtoLNu_2J_madgraphMLM",
+        "WtoLNu_3J_madgraphMLM",
+        "WtoLNu_4J_madgraphMLM",
+        "WtoLNu_madgraphMLM",
+        # Diboson
+        "WW",
+        "WZ",
+        "ZZ",
+        # Triboson
+        "WWW_4F",
+        "WWZ_4F",
+        "WZZ",
+        "ZZZ",
+        # ZH->tautau
+        "ZHto2Tau_UncorrelatedDecay_UnFiltered",
         ]
     
     dataset_names_2023preBPix = [
@@ -233,33 +315,52 @@ def add_run3(ana: od.Analysis,
         "data_muoneg_Cv4",
         "data_mu_Cv123",
         "data_mu_Cv4",
-        #Drell-Yan
-        "dy_lep_madgraph",
-        # "dy_lep_m10to50",
-        #W+jets
-        "wj_incl_madgraph",
-        #Diboson
-        "ww",
-        "wz",
-        "zz",
-        #ttbar
-        "tt_sl",
-        "tt_dl",
-        "tt_fh",
-        #single top t-channel
-        "st_tchannel_tbar",
-        "st_tchannel_t",
-        #single top s-channel
-        "st_schannel_tbar_lep",
-        "st_schannel_t_lep",
-        # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        "st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
-        "st_twchannel_tbar_fh",
-        #signal
+        # DY->ll
+        "DYto2L_M_10to50_amcatnloFXFX",
+        "DYto2L_M_50_0J_amcatnloFXFX",
+        "DYto2L_M_50_1J_amcatnloFXFX",
+        "DYto2L_M_50_2J_amcatnloFXFX",
+        "DYto2L_M_50_amcatnloFXFX",
+        # DY->tautau
+        "DYto2Tau_MLL_50_0J_amcatnloFXFX",
+        "DYto2Tau_MLL_50_1J_amcatnloFXFX",
+        "DYto2Tau_MLL_50_2J_amcatnloFXFX",
+        # SM ggH->tautau
+        "GluGluHto2Tau_UncorrelatedDecay_SM_UnFiltered_ProdAndDecay",
+        # Single top
+        "TbarWplusto4Q",
+        "TWminusto4Q",
+        "TbarWplusto2L2Nu", 
+        "TbarWplustoLNu2Q",
+        "TWminusto2L2Nu", 
+        "TWminustoLNu2Q", 
+        # tt
+        "TTto2L2Nu",
+        "TTto4Q",
+        "TTtoLNu2Q",
+        # SM VBFH->tautau
+        "VBFHto2Tau_UncorrelatedDecay_UnFiltered",
+        # WH->tautau
+        "WminusHto2Tau_UncorrelatedDecay_UnFiltered",
+        "WplusHto2Tau_UncorrelatedDecay_UnFiltered",
+        # W+jets                          
+        # "WtoLNu_amcatnloFXFX",                  
+        "WtoLNu_1J_madgraphMLM",
+        "WtoLNu_2J_madgraphMLM",
+        "WtoLNu_3J_madgraphMLM",
+        "WtoLNu_4J_madgraphMLM",
+        "WtoLNu_madgraphMLM",
+        # Diboson
+        "WW",
+        "WZ",
+        "ZZ",
+        # Triboson
+        "WWW_4F",
+        "WWZ_4F",
+        "WZZ",
+        "ZZZ",
+        # ZH->tautau
+        "ZHto2Tau_UncorrelatedDecay_UnFiltered",
         ]
     
     dataset_names_2023postBPix = [
@@ -267,39 +368,62 @@ def add_run3(ana: od.Analysis,
         "data_egamma_D",
         "data_muoneg_D",
         "data_mu_D",
-        #Drell-Yan
-        "dy_lep_madgraph",
-        # "dy_lep_m10to50",
-        #W+jets
-        "wj_incl_madgraph",
-        #Diboson
-        "ww",
-        "wz",
-        "zz",
-        #ttbar
-        "tt_sl",
-        "tt_dl",
-        "tt_fh",
-        #single top t-channel
-        "st_tchannel_tbar",
-        "st_tchannel_t",
-        #single top s-channel
-        "st_schannel_tbar_lep",
-        "st_schannel_t_lep",
-        # single top tW channel
-        "st_twchannel_t_fh",
-        "st_twchannel_t_sl",
-        "st_twchannel_t_dl",
-        "st_twchannel_tbar_sl",
-        "st_twchannel_tbar_dl",
-        "st_twchannel_tbar_fh",
-        #signal
+        # DY->ll
+        "DYto2L_M_10to50_amcatnloFXFX",
+        "DYto2L_M_50_0J_amcatnloFXFX",
+        "DYto2L_M_50_1J_amcatnloFXFX",
+        "DYto2L_M_50_2J_amcatnloFXFX",
+        "DYto2L_M_50_amcatnloFXFX",
+        # DY->tautau
+        "DYto2Tau_MLL_50_0J_amcatnloFXFX",
+        "DYto2Tau_MLL_50_1J_amcatnloFXFX",
+        "DYto2Tau_MLL_50_2J_amcatnloFXFX",
+        # SM ggH->tautau
+        "GluGluHto2Tau_UncorrelatedDecay_SM_UnFiltered_ProdAndDecay",
+        # Single top
+        "TbarWplusto4Q",
+        "TWminusto4Q",
+        "TbarWplusto2L2Nu", 
+        "TbarWplustoLNu2Q",
+        "TWminusto2L2Nu", 
+        "TWminustoLNu2Q", 
+        # tt
+        "TTto2L2Nu",
+        "TTto4Q",
+        "TTtoLNu2Q",
+        # SM VBFH->tautau
+        "VBFHto2Tau_UncorrelatedDecay_UnFiltered",
+        # WH->tautau
+        "WminusHto2Tau_UncorrelatedDecay_UnFiltered",
+        "WplusHto2Tau_UncorrelatedDecay_UnFiltered",
+        # W+jets                           
+        # "WtoLNu_amcatnloFXFX",                  
+        "WtoLNu_1J_madgraphMLM",
+        "WtoLNu_2J_madgraphMLM",
+        "WtoLNu_3J_madgraphMLM",
+        "WtoLNu_4J_madgraphMLM",
+        "WtoLNu_madgraphMLM",
+        # Diboson
+        "WW",
+        "WZ",
+        "ZZ",
+        # Triboson
+        "WWW_4F",
+        "WWZ_4F",
+        "WZZ",
+        "ZZZ",
+        # ZH->tautau
+        "ZHto2Tau_UncorrelatedDecay_UnFiltered",
         ]
-    for mass in signal_masses:
+    for mass in MASS_POINTS:
         dataset_names_2022preEE.append(f"h_ggf_htt_{mass}")
         dataset_names_2022postEE.append(f"h_ggf_htt_{mass}")
         dataset_names_2023preBPix.append(f"h_ggf_htt_{mass}")
         dataset_names_2023postBPix.append(f"h_ggf_htt_{mass}")
+        dataset_names_2022preEE.append(f"bbh_htt_{mass}")
+        dataset_names_2022postEE.append(f"bbh_htt_{mass}")
+        dataset_names_2023preBPix.append(f"bbh_htt_{mass}")
+        dataset_names_2023postBPix.append(f"bbh_htt_{mass}")
 
     dataset_era = {
         "Summer22": dataset_names_2022preEE,
@@ -308,14 +432,17 @@ def add_run3(ana: od.Analysis,
         "Summer23BPix" : dataset_names_2023postBPix
     }
     dataset_names = dataset_era[tag]
-  
+
     for dataset_name in dataset_names:
         # add the dataset
         dataset = cfg.add_dataset(campaign.get_dataset(dataset_name))
-        if dataset_name.startswith("h_"):
+        if dataset_name.startswith("h_ggf_htt_"):
             dataset.add_tag("signal")
             dataset.add_tag("is_mc")
-        if dataset.name.startswith("tt_"):
+        if dataset_name.startswith("bbh_htt_"):
+            dataset.add_tag("signal")
+            dataset.add_tag("is_mc")
+        if dataset.name.startswith("TTto"):
             dataset.add_tag({"has_top", "ttbar", "tt"})    
         # for testing purposes, limit the number of files to 1
         for info in dataset.info.values():
@@ -337,8 +464,10 @@ def add_run3(ana: od.Analysis,
     # default objects, such as calibrator, selector, producer, ml model, inference model, etc
     cfg.x.default_calibrator = "main"
     cfg.x.default_selector = "main"
+    cfg.x.default_reducer = "cf_default"
     cfg.x.default_producer = "main"
     cfg.x.default_weight_producer = "main"
+    cfg.x.default_hist_producer = "httcp_hist_producer"
     cfg.x.default_ml_model = None
     cfg.x.default_inference_model = "example"
     cfg.x.default_categories = ("incl",)
@@ -347,27 +476,96 @@ def add_run3(ana: od.Analysis,
     # process groups for conveniently looping over certain processs
     # (used in wrapper_factory and during plotting)
     cfg.x.process_groups = {
-        "data" : ["data_mu", "data_tau","data_e"],
-        "vv"   : ["ww", "wz", "zz"],
-        "tt"   : ["tt_sl","tt_dl","tt_fh"],
-        "st"   : ["st_tchannel_tbar","st_tchannel_t","st_schannel_tbar_lep","st_schannel_t_lep",
-               "st_twchannel_t_fh","st_twchannel_t_sl","st_twchannel_t_dl",
-               "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh","st_schannel_t_lep","st_schannel_tbar_lep"],
-    "h_ggf_htt_masses": ["h_ggf_htt_60","h_ggf_htt_65","h_ggf_htt_70",
-                         "h_ggf_htt_75","h_ggf_htt_80","h_ggf_htt_85",
-                         "h_ggf_htt_90","h_ggf_htt_95","h_ggf_htt_100",
-                         "h_ggf_htt_105","h_ggf_htt_110","h_ggf_htt_115",
-                         "h_ggf_htt_120","h_ggf_htt_125","h_ggf_htt_130",
-                         "h_ggf_htt_135","h_ggf_htt_140","h_ggf_htt_160",
-                         "h_ggf_htt_180","h_ggf_htt_200","h_ggf_htt_250",
-                         "h_ggf_htt_300","h_ggf_htt_350","h_ggf_htt_400",
-                         "h_ggf_htt_450","h_ggf_htt_500","h_ggf_htt_600",
-                         "h_ggf_htt_700","h_ggf_htt_800","h_ggf_htt_900",
-                         "h_ggf_htt_1000","h_ggf_htt_1100","h_ggf_htt_1200",
-                         "h_ggf_htt_1400","h_ggf_htt_1600","h_ggf_htt_1800",
-                         "h_ggf_htt_2000","h_ggf_htt_2300","h_ggf_htt_2600",
-                         "h_ggf_htt_2900","h_ggf_htt_3200","h_ggf_htt_3500"],
-    }
+        "data" : [
+            "data_mu", 
+            "data_tau",
+            "data_e",
+            "data_egamma",
+            "data_muoneg",
+            "data_singlemu"
+            ],
+        "vv": [
+            "ww",
+            "wz",
+            "zz",
+            ],
+        "vvv": [
+            "www",
+            "wwz",
+            "zzz"
+            ],
+        "tt": [
+            "tt_dl",
+            "tt_fh",
+            "tt_sl",
+            ],
+        "st": [
+            "TbarWplusto4Q",
+            "TWminusto4Q",
+            "TbarWplusto2L2Nu", 
+            "TbarWplustoLNu2Q",
+            "TWminusto2L2Nu", 
+            "TWminustoLNu2Q", 
+            ],
+        "SM_higgs": [
+            "h_ggf_htt_sm_prod_sm",
+            "h_vbf_htt_sm",
+            ],
+        "vh_htt": [
+            "zh_htt_flat",
+            "wph_htt_flat",
+            "wmh_htt_flat"
+            ],
+        "wj": [         
+            "wj",
+            "wj_1j",
+            "wj_2j",
+            "wj_3j",
+            "wj_4j",     
+            ],
+        "dy_tt_m50": [
+            "dy_tt_m50_0j",
+            "dy_tt_m50_1j",
+            "dy_tt_m50_2j",
+            ],
+        "dy_lep": [
+            "dy_lep_m10to50",
+            "dy_ll_m50_0j",
+            "dy_ll_m50_1j",
+            "dy_ll_m50_2j",
+            "dy_ll_m50",  
+            ],
+        "h_ggf_htt_masses":["h_ggf_htt_60","h_ggf_htt_65","h_ggf_htt_70",
+                            "h_ggf_htt_75","h_ggf_htt_80","h_ggf_htt_85",
+                            "h_ggf_htt_90","h_ggf_htt_95","h_ggf_htt_100",
+                            "h_ggf_htt_105","h_ggf_htt_110","h_ggf_htt_115",
+                            "h_ggf_htt_120","h_ggf_htt_125","h_ggf_htt_130",
+                            "h_ggf_htt_135","h_ggf_htt_140","h_ggf_htt_160",
+                            "h_ggf_htt_180","h_ggf_htt_200","h_ggf_htt_250",
+                            "h_ggf_htt_300","h_ggf_htt_350","h_ggf_htt_400",
+                            "h_ggf_htt_450","h_ggf_htt_500","h_ggf_htt_600",
+                            "h_ggf_htt_700","h_ggf_htt_800","h_ggf_htt_900",
+                            "h_ggf_htt_1000","h_ggf_htt_1100","h_ggf_htt_1200",
+                            "h_ggf_htt_1400","h_ggf_htt_1600","h_ggf_htt_1800",
+                            "h_ggf_htt_2000","h_ggf_htt_2300","h_ggf_htt_2600",
+                            "h_ggf_htt_2900","h_ggf_htt_3200","h_ggf_htt_3500"
+                            ],
+        "bbh_htt_masses": ["bbh_htt_60","bbh_htt_65","bbh_htt_70",
+                            "bbh_htt_75","bbh_htt_80","bbh_htt_85",
+                            "bbh_htt_90","bbh_htt_95","bbh_htt_100",
+                            "bbh_htt_105","bbh_htt_110","bbh_htt_115",
+                            "bbh_htt_120","bbh_htt_125","bbh_htt_130",
+                            "bbh_htt_135","bbh_htt_140","bbh_htt_160",
+                            "bbh_htt_180","bbh_htt_200","bbh_htt_250",
+                            "bbh_htt_300","bbh_htt_350","bbh_htt_400",
+                            "bbh_htt_450","bbh_htt_500","bbh_htt_600",
+                            "bbh_htt_700","bbh_htt_800","bbh_htt_900",
+                            "bbh_htt_1000","bbh_htt_1100","bbh_htt_1200",
+                            "bbh_htt_1400","bbh_htt_1600","bbh_htt_1800",
+                            "bbh_htt_2000","bbh_htt_2300","bbh_htt_2600",
+                            "bbh_htt_2900","bbh_htt_3200","bbh_htt_3500"
+                            ],
+        }
 
     # dataset groups for conveniently looping over certain datasets
     # (used in wrapper_factory and during plotting)
@@ -606,18 +804,18 @@ def add_run3(ana: od.Analysis,
         "vs_jet"        : {"mutau": "Medium",
                            "etau": "Medium",
                            "tautau": "Medium"},
-        "vs_e_jet_wps"  : {'VVVLoose'   : 1,
-                           'VVLoose'    : 2,
-                           'VLoose'     : 3,
-                           'Loose'      : 4,
-                           'Medium'     : 5,
-                           'Tight'      : 6,
-                           'VTight'     : 7,
-                           'VVTight'    : 8},
-        "vs_mu_wps"     : {'VLoose' : 1,
-                           'Loose'  : 2,
-                           'Medium' : 3,
-                           'Tight'  : 4}
+        "vs_e_jet_wps"  : {"VVVLoose"   : 1,
+                           "VVLoose"    : 2,
+                           "VLoose"     : 3,
+                           "Loose"      : 4,
+                           "Medium"     : 5,
+                           "Tight"      : 6,
+                           "VTight"     : 7,
+                           "VVTight"    : 8},
+        "vs_mu_wps"     : {"VLoose" : 1,
+                           "Loose"  : 2,
+                           "Medium" : 3,
+                           "Tight"  : 4}
         })
 ################################################################################################
 # b tagging
@@ -787,6 +985,10 @@ def add_run3(ana: od.Analysis,
     jsonpog_tau_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/jsonpog-integration_tau_latest/POG/"
     #corr_dir = "/afs/cern.ch/user/a/anigamov/public/htt_corrections_mirror/"
     corr_dir = "/eos/user/a/anigamov/htt_corrections_mirror/"
+    stiching_eos_path = "/eos/user/j/jmalvaso/SWAN_projects/higgs_MSSM/"
+    #CMS Analysis Corrections Documentation: https://cms-analysis-corrections.docs.cern.ch/
+    json_acd_path="/cvmfs/cms-griddata.cern.ch/cat/metadata/" 
+    
     golden_ls = { 
         2022 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions22/Cert_Collisions2022_355100_362760_Golden.json", 
         2023 : "https://cms-service-dqmdc.web.cern.ch/CAF/certification/Collisions23/Cert_Collisions2023_366442_370790_Golden.json"
@@ -796,41 +998,48 @@ def add_run3(ana: od.Analysis,
         "lumi": {
             "golden": (golden_ls[year], "v1"),
             "normtag": ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json", "v1"), #/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags
-        },
-
-        "pu_sf"                    : (f"{jsonpog_dir}LUM/{cfg.x.year}_{tag}/puWeights.json.gz", "v2"),
-        "muon_correction"          : f"{jsonpog_dir}MUO/{cfg.x.year}_{tag}/muon_Z.json.gz",
+        }, 
+        "pu_sf"                    : (f"{json_acd_path}LUM/{json_acd_tag}/latest/puWeights.json.gz", "v2"),
+        "muon_correction"          : f"{json_acd_path}MUO/{json_acd_tag}/latest/muon_Z.json.gz",
         "HLT_mu_eff"               : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
+        # "electron_scaling_smearing": f"{json_acd_path}EGM/{json_acd_tag}/latest/electronSS.json.gz",
+        # "electron_idiso"           : f"{json_acd_path}EGM/{json_acd_tag}/latest/electron.json.gz",
+        # "electron_trigger"         : f"{json_acd_path}EGM/{json_acd_tag}/latest/electronHlt.json.gz",
         "electron_scaling_smearing": f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
         "electron_idiso"           : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
         "electron_trigger"         : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
         "tau_correction"           : f"{jsonpog_tau_dir}TAU/{cfg.x.year}_{tau_tag}/tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}.json.gz",
-        "zpt_weight"               : f"{corr_dir}zpt_reweighting_LO_2022.root",
-        "jet_jerc"                 : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
-        "jet_veto_map"             : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
-        "btag_sf_corr"             : (f"{jsonpog_dir}BTV/{cfg.x.year}_{tag}/btagging.json.gz", "v2"),
+        "zpt_weight"              : (f"{corr_dir}dy_ptll/DY_pTll_weights_{cfg.x.year}{campaign.x.tag}.json.gz","v2"),
+        "jet_jerc"                 : (f"{json_acd_path}JME/{json_acd_tag}/latest/jet_jerc.json.gz", "v2"),
+        "jet_veto_map"             : (f"{json_acd_path}JME/{json_acd_tag}/latest/jetvetomaps.json.gz", "v2"),
+        "btag_sf_corr"             : (f"{json_acd_path}BTV/{json_acd_tag}/latest/btagging.json.gz", "v2"),
         "met_recoil"               : (f"{corr_dir}/hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
-        #"met_phi_corr"            : (f"{jsonpog_dir}JME/{cfg.x.year}{tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
+        "stitching_correction"     : (f"{stiching_eos_path}stitching.corr.json", "v2"),
     })
+    #/eos/user/a/anigamov/htt_corrections_mirror/dy_ptll'
     
-    from pathlib import Path
-    #Insert here the mass you want to use 
-    cfg.x.bdt_mass = {
-            "mass": 100,
-        }
-    bdt_eos_path = "/eos/user/j/jmalvaso/SWAN_projects/XGBoost_MSSM/"
+    # cfg.x.external_files = DotDict.wrap({
+    #     "lumi": {
+    #         "golden": (golden_ls[year], "v1"),
+    #         "normtag": ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json", "v1"), #/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags
+    #     },
 
-    mass = cfg.x.bdt_mass["mass"]
-    even_path = f"{bdt_eos_path}M{mass}/bst_model_M{mass}_even.json"
-    odd_path  = f"{bdt_eos_path}M{mass}/bst_model_M{mass}_odd.json"
-
-    if not Path(even_path).is_file():
-        raise FileNotFoundError(f"Missing model (even) for mass {mass}: {even_path}")
-    if not Path(odd_path).is_file():
-        raise FileNotFoundError(f"Missing model (odd) for mass {mass}: {odd_path}")
-
-    cfg.x.external_files[f"ml_model_even_{mass}"] = even_path
-    cfg.x.external_files[f"ml_model_odd_{mass}"]  = odd_path
+    #     "pu_sf"                    : (f"{jsonpog_dir}LUM/{cfg.x.year}_{tag}/puWeights.json.gz", "v2"),
+    #     "muon_correction"          : f"{jsonpog_dir}MUO/{cfg.x.year}_{tag}/muon_Z.json.gz",
+    #     "HLT_mu_eff"               : f"{corr_dir}hleprare/TriggerScaleFactors/{cfg.x.year}{campaign.x.tag}/MuHlt_abseta_pt_wEff.json",
+    #     "electron_scaling_smearing": f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
+    #     "electron_idiso"           : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
+    #     "electron_trigger"         : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
+    #     "tau_correction"           : f"{jsonpog_tau_dir}TAU/{cfg.x.year}_{tau_tag}/tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}.json.gz",
+    #     "zpt_weight"              : (f"{corr_dir}dy_ptll/DY_pTll_weights_{cfg.x.year}{campaign.x.tag}.json.gz","v2"),
+    #     # "zpt_weight"             : f"{corr_dir}zpt_reweighting_LO_2022.root",
+    #     "jet_jerc"                 : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
+    #     "jet_veto_map"             : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jetvetomaps.json.gz", "v2"),
+    #     "btag_sf_corr"             : (f"{jsonpog_dir}BTV/{cfg.x.year}_{tag}/btagging.json.gz", "v2"),
+    #     "met_recoil"               : (f"{corr_dir}/hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
+    #     "stitching_correction"     : (f"{stiching_eos_path}stitching.corr.json", "v2"),
+    #     #"met_phi_corr"            : (f"{jsonpog_dir}JME/{cfg.x.year}{tag}/met{cfg.x.year}.json.gz", "v2"), #FIXME: there is no json present in the jsonpog-integration for this year, I retrieve the json frm: https://cms-talk.web.cern.ch/t/2022-met-xy-corrections/53414/2 but it seems corrupted
+    # })
 
     # --------------------------------------------------------------------------------------------- #
     # electron settings
@@ -838,23 +1047,23 @@ def add_run3(ana: od.Analysis,
     # (used in the electron_sf producer)
     # --------------------------------------------------------------------------------------------- #
     cfg.x.electron_sf = DotDict.wrap({
-        'ID': {'corrector': "Electron-ID-SF",
-               'year': e_sf_tag,
-               'wp':"wp90noiso"},
-        'scale': {'corrector': e_scale_corrector},
-        'smearing': {'corrector': e_smearing_corrector},
-        'trig': {'corrector': "Electron-HLT-SF",
-                 'year': e_sf_tag,
-                 'wp': "HLT_SF_Ele30_TightID"},
-        'xtrig': {'corrector': "Electron-HLT-SF",
-                  'year': e_sf_tag,
-                  'wp': "HLT_SF_Ele24_TightID"},
-        'MC_eff': {'corrector': "Electron-HLT-McEff",
-                  'year': e_sf_tag,
-                  'wp': "HLT_SF_Ele30_TightID"},
-        'Data_eff': {'corrector': "Electron-HLT-DataEff",
-                     'year': e_sf_tag,
-                     'wp': "HLT_SF_Ele30_TightID"},
+        "ID": {"corrector": "Electron-ID-SF",
+               "year": e_sf_tag,
+               "wp":"wp90noiso"},
+        "scale": {"corrector": e_scale_corrector},
+        "smearing": {"corrector": e_smearing_corrector},
+        "trig": {"corrector": "Electron-HLT-SF",
+                 "year": e_sf_tag,
+                 "wp": "HLT_SF_Ele30_TightID"},
+        "xtrig": {"corrector": "Electron-HLT-SF",
+                  "year": e_sf_tag,
+                  "wp": "HLT_SF_Ele24_TightID"},
+        "MC_eff": {"corrector": "Electron-HLT-McEff",
+                  "year": e_sf_tag,
+                  "wp": "HLT_SF_Ele30_TightID"},
+        "Data_eff": {"corrector": "Electron-HLT-DataEff",
+                     "year": e_sf_tag,
+                     "wp": "HLT_SF_Ele30_TightID"},
     })
     
     # --------------------------------------------------------------------------------------------- #
@@ -862,32 +1071,38 @@ def add_run3(ana: od.Analysis,
     # names of muon correction sets and working points
     # (used in the muon producer)
     # --------------------------------------------------------------------------------------------- #
-
+    cfg.x.muon_id_wp = 'Medium'
     cfg.x.muon_sf = DotDict.wrap({ 
                                   
-        'ID': {'corrector': "NUM_MediumID_DEN_TrackerMuons",
-               'year': f"{year}_{tag}"},
+       'ID': {'corrector': f"NUM_{cfg.x.muon_id_wp}ID_DEN_TrackerMuons",},
         
-        'iso': {'corrector': "NUM_TightPFIso_DEN_MediumID",
-                'year': f"{year}_{tag}"},
+        'iso': {'corrector': f"NUM_TightPFIso_DEN_{cfg.x.muon_id_wp}ID",},
         
-        'trig': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
-                 'year': f"{year}_{tag}"},
+        'trig': {'corrector': f"NUM_IsoMu24_DEN_CutBasedId{cfg.x.muon_id_wp}_and_PFIsoMedium",},
+                 #TODO Worging points for trig and iso does not match!
+                
+        "trig_mc_eff": {"corrector": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_MCeff",
+                 "year": f"{year}_{tag}"},
         
-        'trig_mc_eff': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_MCeff",
-                 'year': f"{year}_{tag}"},
+        "trig_data_eff": {"corrector": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff",
+                 "year": f"{year}_{tag}"},
         
-        'trig_data_eff': {'corrector': "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff",
-                 'year': f"{year}_{tag}"},
+        'xtrig': {'corrector': f"NUM_IsoMu20_DEN_CutBasedId{cfg.x.muon_id_wp}_and_PFIsoMedium",},
         
-        'xtrig': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight",
-                  'year': f"{year}_{tag}"},
+        "MC_eff_mutau": {"corrector": "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_MCeff"},
         
-        'MC_eff_mutau': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_MCeff"},
-        
-        'Data_eff_mutau': {'corrector': "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff"},
+        "Data_eff_mutau": {"corrector": "NUM_IsoMu20_DEN_CutBasedIdTight_and_PFIsoTight_DATAeff"},
     })
     
+    # --------------------------------------------------------------------------------------------- #
+    # stitching settings
+    # names of tau correction sets and working points
+    # (used in the stitching weights producer)
+    # --------------------------------------------------------------------------------------------- #
+    cfg.x.stitching_settings = DotDict.wrap({
+        "corrector": "stitch_weight",   # must match the name in your correction file
+        "era": f"{campaign.x.year}{campaign.x.tag}",     
+    })
     # target file size after MergeReducedEvents in MB
     cfg.x.reduced_file_size = 512.0
     
@@ -918,7 +1133,21 @@ def add_run3(ana: od.Analysis,
     
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
-
+    
+    cfg.x.event_weights = DotDict({
+        "normalization_weight": [],
+        # "filter_weight": [],
+        # "mc_weight":[],
+        "tau_weight_nom": get_shifts("tau"),
+        "pu_weight": [],
+        "zpt_weight":[],
+        "muon_weight_nom": get_shifts("mu"),
+        "electron_weight_nom": get_shifts("electron"), 
+        "top_pt_weight" : [],       
+        "btag_weight_SF_nom": [],
+        "Trigger_SF_nom": [],
+        "stitching_weight": [],
+    })
     # thisdir = os.path.dirname(os.path.abspath(__file__))
     
     # with open(os.path.join(thisdir, "jec_sources.yaml"), "r") as f:
@@ -970,7 +1199,7 @@ def add_run3(ana: od.Analysis,
     def set_version(cls, inst, params):
         # per default, use the version set on the command line
         version = inst.version 
-        return version if version else 'dev'
+        return version if version else "dev"
             
         
     cfg.x.versions = {
@@ -984,45 +1213,89 @@ def add_run3(ana: od.Analysis,
     }
     # channels
     # processing only one channel at once, electron calibration is channel dependent!
-    channel_id = {'etau'  : 1,
-                  'mutau' : 2,
-                  'emu'   : 3,
-                  'tautau': 4}
+    channel_id = {"etau"  : 1,
+                  "mutau" : 2,
+                  "emu"   : 3,
+                  "tautau": 4}
     cfg.add_channel(name=channel,   id=channel_id[channel])
     
     cfg.x.ch_objects = DotDict.wrap({
-        'etau'   : {'lep0' : 'Electron',
-                    'lep1' : 'Tau'    },
-        'mutau'  : {'lep0' : 'Muon',
-                    'lep1' : 'Tau'    },
-        'emu'    : {'lep0' : 'Electron',
-                    'lep1' : 'Muon'   },
-        'tautau' : {'lep0' : 'Tau',
-                    'lep1' : 'Tau'    },
+        "etau"   : {"lep0" : "Electron",
+                    "lep1" : "Tau"    },
+        "mutau"  : {"lep0" : "Muon",
+                    "lep1" : "Tau"    },
+        "emu"    : {"lep0" : "Electron",
+                    "lep1" : "Muon"   },
+        "tautau" : {"lep0" : "Tau",
+                    "lep1" : "Tau"    },
     })
 
     cfg.x.met_recoil = DotDict.wrap({
-        'datasets' : {'dy_lep_madgraph'  : "LO",
-                      'wj_incl_madgraph' : "LO"},
+        "datasets" : {},
     })
+    cfg.x.met_recoil["datasets"].update({
+                                # DY -> ll
+                                "DYto2L_M_50_0J_amcatnloFXFX": "NLO",
+                                "DYto2L_M_50_1J_amcatnloFXFX": "NLO",
+                                "DYto2L_M_50_2J_amcatnloFXFX": "NLO",
+                                "DYto2L_M_50_amcatnloFXFX": "NLO",
+                                " DYto2L_M_10to50_amcatnloFXFX":"NLO",
+                                # DY -> tautau (POWHEG + aMC@NLO)
+                                "DYto2Tau_MLL_50_0J_amcatnloFXFX": "NLO",
+                                "DYto2Tau_MLL_50_1J_amcatnloFXFX": "NLO",
+                                "DYto2Tau_MLL_50_2J_amcatnloFXFX": "NLO",
+
+                                # W + jets (MG5 MLM ~ LO)
+                                # "WtoLNu_amcatnloFXFX" : "NLO",
+                                "WtoLNu_1J_madgraphMLM": "LO",
+                                "WtoLNu_2J_madgraphMLM": "LO",
+                                "WtoLNu_3J_madgraphMLM": "LO",
+                                "WtoLNu_4J_madgraphMLM": "LO",
+                                "WtoLNu_madgraphMLM": "LO",
+                            })
+    stitch_samples = [
+            "DYto2L_M_50_amcatnloFXFX",
+            # "DYto2L_M_50_amcatnloFXFX_ext1",
+            "DYto2L_M_50_0J_amcatnloFXFX",
+            "DYto2L_M_50_1J_amcatnloFXFX",
+            "DYto2L_M_50_2J_amcatnloFXFX",
+            "WtoLNu_1J_madgraphMLM",
+            "WtoLNu_2J_madgraphMLM",
+            "WtoLNu_3J_madgraphMLM",
+            "WtoLNu_4J_madgraphMLM",
+            "WtoLNu_madgraphMLM",
+        ]
+
+    cfg.x.stitch_samples = stitch_samples
     
-    cfg.x.fake_factor_method = DotDict.wrap({
-    "axes": {'delta_r' : {
-                'var_route': [f'hcand_{channel}','delta_r'],
-                'ax_str'  : 'Variable([0.3,3,3.5,4,6], name="delta_r", label="Delta R", underflow=False, overflow=False)',
-                },
-             'N_jets'  : {
-                'var_route' : ['n_jets'],
-                'ax_str'  : 'Integer(0, 3, name="N_jets", label="Number of jets", underflow=False, overflow=False)',
-                },
-             "N_b_jets": {
-                'var_route' : ['N_b_jets'],
-                'ax_str'   : 'Integer(0, 2, name="N_b_jets", label="Number of b jets",underflow=False, overflow=False)',
-                },
-    },
-    "columns" : ['ff_weight_qcd'],
-    "shifts"  : ["up", "nominal", "down"]
-    })   
+    bugged_DYto2Tau_samples = [
+            "DYto2L_M_10to50_amcatnloFXFX",
+            "DYto2L_M_50_amcatnloFXFX",
+            # "DYto2L_M_50_amcatnloFXFX_ext1",
+            "DYto2L_M_50_0J_amcatnloFXFX",
+            "DYto2L_M_50_1J_amcatnloFXFX",
+            "DYto2L_M_50_2J_amcatnloFXFX",
+        ]
+
+    cfg.x.bugged_DYto2Tau_samples = bugged_DYto2Tau_samples
+    
+    # cfg.x.fake_factor_method = DotDict.wrap({
+    # "axes": {"delta_r" : {
+    #             "var_route": [f"hcand_{channel}","delta_r"],
+    #             "ax_str"  : "Variable([0.3,3,3.5,4,6], name='delta_r', label='Delta R', underflow=False, overflow=False)",
+    #             },
+    #          "N_jets"  : {
+    #             "var_route" : ["n_jets"],
+    #             "ax_str"  : "Integer(0, 3, name='N_jets', label='Number of jets', underflow=False, overflow=False)",
+    #             },
+    #          "N_b_jets": {
+    #             "var_route" : ["N_b_jets"],
+    #             "ax_str"   : "Integer(0, 2, name='N_b_jets', label='Number of b jets',underflow=False, overflow=False)",
+    #             },
+    # },
+    # "columns" : ["ff_weight_qcd"],
+    # "shifts"  : ["up", "nominal", "down"]
+    # })   
     
     if cfg.campaign.x("custom").get("creator") == "desy":  
         def get_dataset_lfns(dataset_inst: od.Dataset, shift_inst: od.Shift, dataset_key: str) -> list[str]:
@@ -1047,7 +1320,7 @@ def add_run3(ana: od.Analysis,
         cfg.x.get_dataset_lfns = get_dataset_lfns
         # define a custom sandbox
         cfg.x.get_dataset_lfns_sandbox = dev_sandbox("bash::$CF_BASE/sandboxes/cf.sh")
-        # define custom remote fs's to look at
+        # define custom remote fs"s to look at
         cfg.x.get_dataset_lfns_remote_fs =  lambda dataset_inst: "wlcg_fs_eos"
         
     # add categories using the "add_category" tool which adds auto-generated ids
@@ -1057,6 +1330,6 @@ def add_run3(ana: od.Analysis,
     from MSSM_H_tt.config.variables import add_variables
     add_variables(cfg)
     
-    from data_driven.hist_hooks import add_hist_hooks # commond method for data_driven estimation, MSSM should only use good_old_abcd
-    add_hist_hooks(cfg)
+    from data_driven.hist_hooks import add_hist_hooks
+    add_hist_hooks(ana)
         

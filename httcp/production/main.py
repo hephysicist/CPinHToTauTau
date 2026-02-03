@@ -191,4 +191,3 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     events = self[phi_cp](events, **kwargs)
     return events
 
-

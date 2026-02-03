@@ -346,4 +346,3 @@ for cat_id,(low_cut, up_cut) in enumerate([(0.33,0.5),(0.5,0.7),(0.7,1)]):
     globals()[f'hig_cat_{cat_id}'] = categorizer(copy_function(tmp_func,f'hig_cat_{cat_id}'),
                                                uses={'event', 'bdt_raw_score_higgs'}, )
 
-

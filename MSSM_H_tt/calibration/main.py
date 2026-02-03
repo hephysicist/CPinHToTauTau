@@ -34,7 +34,6 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
 def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     
     events = self[deterministic_seeds](events, **kwargs)
-    
     non_finite_mask = ~np.isfinite(events.PuppiMET.pt)
     
     #Jets variables before applying energy corrections
@@ -47,7 +46,7 @@ def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     #PuppiMET variables before applying energy corrections
     events = set_ak_column_f32(events, "PuppiMET.pt_no_jec", events.PuppiMET.pt)
     events = set_ak_column_f32(events, "PuppiMET.phi_no_jec", events.PuppiMET.phi)
-
+    
     print("Performing Jet Energy Correction...")
     events = self[jec](events, **kwargs)
     events = set_ak_column_f32(events, "Electron.pt_no_scaling_smearing", events.Electron.pt)

@@ -5,20 +5,16 @@ Selection modules for jets.InsertableDict
 """
 
 from __future__ import annotations
-
-import law
 import math
-
+import law
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.util import maybe_import, DotDict
 from law.util import InsertableDict
 from columnflow.columnar_util import set_ak_column, flat_np_view, optional_column as optional
 from columnflow.types import Any
-import law
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
-
 
 logger = law.logger.get_logger(__name__)
 
@@ -133,9 +129,8 @@ def jet_veto_map(
 def jet_veto_map_requires(
     self: Selector,
     task: law.Task,
-    reqs: dict[str, DotDict[str, Any]],
-    **kwargs,
-    ) -> None:
+    reqs: dict,
+    **kwargs,) -> None:
     if "external_files" in reqs:
         return
 
@@ -151,7 +146,7 @@ def jet_veto_map_setup(
     inputs: dict[str, Any],
     reader_targets: law.util.InsertableDict,
     **kwargs,
-) -> None:
+    ) -> None:
     bundle = reqs["external_files"]
 
     # create the corrector
