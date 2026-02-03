@@ -1,9 +1,9 @@
 #!/bin/bash
-source ./common_run3.sh #to access set_common_vars() function
+source ./common_run3_MSSM.sh #to access set_common_vars() function
 #The following function defines config, processes, version and datasets variables
 set_common_vars "$1"
-ff_version='debug_include_tes'
-main_category='cat_mutau_sr' #Specify the category for which the fake factors should be calculated
+ff_version='desy_dev'
+main_category='cat_emu_sr' #Specify the category for which the fake factors should be calculated
 args=(
         --config $config 
         --datasets $datasets
@@ -22,7 +22,8 @@ args=(
 
         --cf.ProvideReducedEvents-version $version
 
-        --cf.ProduceColumns-producer 'ff_method'
+        --cf.ProduceColumns-producer 'main'
+        --cf.ProduceColumns-workflow $workflow
         --cf.ProduceColumns-version  $ff_version
 
         --cf.PrepareFakeFactorHistograms-version $ff_version
@@ -30,7 +31,7 @@ args=(
 
         --cf.MergeFakeFactorHistograms-version $ff_version
 
-        --cf.ComputeFakeFactors-version  "met_recoil" 
+        --cf.ComputeFakeFactors-version  "desy_dev" 
         --cf.ComputeFakeFactors-categories $main_category
         
         "${@:2}"
