@@ -79,98 +79,365 @@ def rel_err(h_arr=[], err_arr=[]):
     return np.sqrt(sum_var)
 
 def find_idxs(h: hist.Hist, cat: str, shift: str):
-    return h.axes[:-1].index(cat,shift)
+    return h.axes[:-1].index(cat, shift)
 
-def add_hist_hooks(analysis: od.Analysis) -> None:
+
+def add_hist_hooks(analysis: "od.Analysis") -> None:
     """
     Add histogram hooks to a configuration.
     """
-   
     flat_tf = True
-    def qcd_estimation(task, inputs): #cf0p3
-        output = {}
-        for config, hists in inputs.items():
-            if task.get_task_family() == 'cf.CreateDatacards':
-                sr_cats = [task.branch_data.config_data[config.name].category]
-                incl_h = sum(list(hists.values()))
-                ax = incl_h.axes['shift']
-                shifts = [ax.value(i) for i in range(ax.size)]
-            else: 
-                sr_cats = []
-                decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
-                for the_cat in task.categories:
-                    
-                    for the_ch in decay_ch:
-                        if '_tau2' not in the_cat:
-                            sr_cats.append( '__'.join((the_cat,the_ch)))
-                        else:
-                            sr_cats.append(the_cat)
-                print(sr_cats)
-                shifts = [task.shift]
-            for shift in shifts:
-                for the_cat in sr_cats:
-                    print(f'producing qcd for {the_cat}, shift: {shift}')
-                    sr = config.get_category(the_cat)
-                    d = {}
-                    mc = {}
-                    cr_cat = ''
-                    for reg_name, full_name in sr.aux['abcd_regs'].items():   
-                        loc_dict = {'category': hist.loc(full_name),'shift': hist.loc(shift)}
-                        full_d = get_data_hist(hists)
-                        full_mc = get_mc_hist(hists)   
-                        if full_name in list(full_d.axes[0]): d[reg_name] = get_data_hist(hists)[loc_dict]
-                        if full_name in list(full_mc.axes[0]): mc[reg_name] = get_mc_hist(hists)[loc_dict]
-                        if reg_name == 'dr_num': cr_cat = full_name
-                            
-                    from cmsdb.processes.qcd import qcd
-                    h_donor_name  = list(hists.keys())[0]
-                    if qcd not in hists.keys():
-                        hists[qcd] = hists[h_donor_name].copy().reset()
-                        tmp_arr = hists[qcd].view()
-                    if 'ar' in d.keys() and not d['ar'].empty():
-                        if flat_tf:
-                            tf = 1
-                            #num = ak.sum(d['dr_num'].values() - mc['dr_num'].values())
-                            #den = ak.sum(d['dr_den'].values() - mc['dr_den'].values())
-                            #if (num > 0) and (den > 0):
-                            #    tf = num/den
-                            #else:
-                            #    tf = 1. 
-                        
-                        else:
-                            num = d['dr_num'].values() - mc['dr_num'].values()
-                            den = d['dr_den'].values() - mc['dr_den'].values()
 
-                            # mask = ((num > 0) & (den > 0))
-                        
-                            # tf = num/den
-                            # tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
-                    
-                            # tf_err2 = ((np.sum(d['dr_num'].variances()) + np.sum(mc['dr_num'].variances()))/den**2 + 
-                            #     tf**2/den**2 *(np.sum(d['dr_den'].variances()) + np.sum(mc['dr_den'].variances())))
-                        val = np.maximum(d['ar'].values() - mc['ar'].values(), 0.) * tf
-                        var = (d['ar'].view().variance + mc['ar'].view().variance) * tf**2
-                    
-                        tmp_arr[find_idxs(hists[qcd], the_cat, shift)].value = val
-                        tmp_arr[find_idxs(hists[qcd], the_cat, shift)].variance = var
-                        if len(cr_cat):
-                            if ('dr_den' in d.keys()) and ('dr_den' in mc.keys()):  
-                                cr_val = np.maximum(d['dr_den'].values() - mc['dr_den'].values(), 0)
-                                cr_var = d['dr_den'].variances() - mc['dr_den'].variances()
-                            elif ('dr_den' in d.keys()):
-                                cr_val = d['dr_den'].values() 
-                                cr_var = d['dr_den'].variances()
-                            else:
-                                cr_val = 0
-                                cr_var = 0
-                            tmp_arr[find_idxs(hists[qcd], cr_cat, shift)].value = cr_val
-                            tmp_arr[find_idxs(hists[qcd], cr_cat, shift)].variance = cr_var
+    def qcd_estimation(task, inputs):  # cf0p3
+        output = {}
+
+        def up_down_once(sources):
+            bases = []
+            for s in sources:
+                if s.endswith("_down"):
+                    s = s[:-5]
+                elif s.endswith("_up"):
+                    s = s[:-3]
+                bases.append(s)
+
+            out = []
+            seen = set()
+            for b in bases:  # preserve order
+                if b in seen:
+                    continue
+                seen.add(b)
+                out.extend((f"{b}_down", f"{b}_up"))
+            if "nominal" not in out:
+                out.append("nominal")
+            return tuple(out)
+
+        def storage_from(donor: hist.Hist):
+            # try to preserve the donor storage (weight storage needed for variance)
+            for attr in ("_storage_type", "storage_type"):
+                if hasattr(donor, attr):
+                    st = getattr(donor, attr)
+                    try:
+                        st = st() if callable(st) else st
+                    except TypeError:
+                        st = st
+                    # Hist expects a storage *instance*
+                    try:
+                        return st() if isinstance(st, type) else st
+                    except Exception:
+                        return st
+            # fallback
+            return hist.storage.Weight()
+
+        def book_qcd_hist_like(donor: hist.Hist, shift_sources):
+            axes = []
+            for ax in donor.axes:
+                if getattr(ax, "name", None) == "shift":
+                    axes.append(
+                        hist.axis.StrCategory(list(shift_sources), name="shift", growth=True)
+                    )
+                else:
+                    axes.append(ax)
+            return hist.Hist(*axes, storage=storage_from(donor)).reset()
+
+        def fmt_vals(a):
+            a = np.asarray(a)
+            return np.array2string(a, precision=6, separator=", ", threshold=a.size)
+
+        for config, hists in inputs.items():
+            sr_cats = task.categories
+
+            # shifts we want to produce (includes "nominal")
+            shift_sources = up_down_once(task.shift_sources)
+
+            full_d = get_data_hist(hists)
+            full_mc = get_mc_hist(hists)
+
+            # if a given shift does not exist in MC hist, fall back to nominal
+            def mc_shift(shift: str) -> str:
+                try:
+                    return shift if shift in list(full_mc.axes["shift"]) else "nominal"
+                except Exception:
+                    return "nominal"
+
+            # book QCD hist once per config, ensuring shift axis can hold all shifts
+            from cmsdb.processes.qcd import qcd
+
+            h_donor_name = list(hists.keys())[0]
+            if qcd not in hists:
+                hists[qcd] = book_qcd_hist_like(hists[h_donor_name], shift_sources)
+
+            tmp_arr = hists[qcd].view()
+
+            for the_cat in sr_cats:
+                print(f"producing qcd for {the_cat}, {config.name}")
+                sr = config.get_category(the_cat)
+
+                # DATA is always nominal
+                d = {}
+                cr_cat = ""
+                for reg_name, full_name in sr.aux["abcd_regs"].items():
+                    loc_dict_data = {
+                        "category": hist.loc(full_name),
+                        "shift": hist.loc("nominal"),
+                    }
+                    if full_name in list(full_d.axes["category"]):
+                        d[reg_name] = full_d[loc_dict_data]
+                    if reg_name == "dr_num":
+                        cr_cat = full_name
+
+                if ("ar" not in d) or d["ar"].empty():
+                    print("*** WARNING: AR data histogram doesn't exist or empty! ***")
+                    continue
+
+                # ---------- 1) compute NOMINAL QCD once ----------
+                shift_mc_nom = mc_shift("nominal")
+
+                mc_nom = {}
+                for reg_name, full_name in sr.aux["abcd_regs"].items():
+                    loc_dict_mc_nom = {
+                        "category": hist.loc(full_name),
+                        "shift": hist.loc(shift_mc_nom),
+                    }
+                    if full_name in list(full_mc.axes["category"]):
+                        mc_nom[reg_name] = full_mc[loc_dict_mc_nom]
+
+                if flat_tf:
+                    tf_nom = 1.0
+                else:
+                    num_nom = d["dr_num"].values() - mc_nom["dr_num"].values()
+                    den_nom = d["dr_den"].values() - mc_nom["dr_den"].values()
+                    tf_nom = np.divide(
+                        num_nom,
+                        den_nom,
+                        out=np.zeros_like(num_nom, dtype=float),
+                        where=(den_nom != 0),
+                    )
+
+                d_ar = d["ar"]
+                if "ar" in mc_nom:
+                    mc_ar_val_nom = mc_nom["ar"].values()
+                    mc_ar_var_nom = mc_nom["ar"].view().variance
+                else:
+                    mc_ar_val_nom = np.zeros_like(d_ar.values())
+                    mc_ar_var_nom = np.zeros_like(d_ar.view().variance)
+
+                val_nom = np.maximum(d_ar.values() - mc_ar_val_nom, 0.0) * tf_nom
+                var_nom = (d_ar.view().variance + mc_ar_var_nom) * (tf_nom**2)
+
+                # optional: CR nominal once
+                cr_val_nom = None
+                cr_var_nom = None
+                if cr_cat:
+                    if "dr_den" in d and "dr_den" in mc_nom:
+                        cr_val_nom = np.maximum(
+                            d["dr_den"].values() - mc_nom["dr_den"].values(), 0.0
+                        )
+                        cr_var_nom = (
+                            d["dr_den"].view().variance + mc_nom["dr_den"].view().variance
+                        )
+                    elif "dr_den" in d:
+                        cr_val_nom = d["dr_den"].values()
+                        cr_var_nom = d["dr_den"].view().variance
                     else:
-                        print("*** WARNING: AR data histogam doesn't exist or empty! ***")
-                    
+                        cr_val_nom = 0.0
+                        cr_var_nom = 0.0
+
+                # write nominal
+                idx_nom = find_idxs(hists[qcd], the_cat, "nominal")
+                tmp_arr[idx_nom].value = val_nom
+                tmp_arr[idx_nom].variance = var_nom
+
+                if cr_cat and cr_val_nom is not None:
+                    idx_cr_nom = find_idxs(hists[qcd], cr_cat, "nominal")
+                    tmp_arr[idx_cr_nom].value = cr_val_nom
+                    tmp_arr[idx_cr_nom].variance = cr_var_nom
+
+                # ---------- 2) fill other shifts ----------
+                for shift in shift_sources:
+                    if shift == "nominal":
+                        continue
+
+                    shift_mc = mc_shift(shift)
+
+                    mc = {}
+                    for reg_name, full_name in sr.aux["abcd_regs"].items():
+                        loc_dict_mc = {
+                            "category": hist.loc(full_name),
+                            "shift": hist.loc(shift_mc),
+                        }
+                        if full_name in list(full_mc.axes["category"]):
+                            mc[reg_name] = full_mc[loc_dict_mc]
+
+                    # transfer factor (data nominal, mc shifted)
+                    if flat_tf:
+                        tf = 1.0
+                    else:
+                        num = d["dr_num"].values() - mc["dr_num"].values()
+                        den = d["dr_den"].values() - mc["dr_den"].values()
+                        tf = np.divide(
+                            num,
+                            den,
+                            out=np.zeros_like(num, dtype=float),
+                            where=(den != 0),
+                        )
+
+                    # AR: if MC is missing for this shift, treat MC as 0
+                    if "ar" in mc:
+                        mc_ar_val = mc["ar"].values()
+                        mc_ar_var = mc["ar"].view().variance
+                    else:
+                        mc_ar_val = np.zeros_like(d_ar.values())
+                        mc_ar_var = np.zeros_like(d_ar.view().variance)
+
+                    val_before = np.maximum(d_ar.values() - mc_ar_val, 0.0) * tf
+                    var_before = (d_ar.view().variance + mc_ar_var) * (tf**2)
+
+                    # ADD nominal QCD to every up/down shift
+                    val_after = val_before + val_nom
+                    var_after = var_before + var_nom
+
+                    if shift.endswith("_up") or shift.endswith("_down"):
+                        print(f"[QCD] {config.name} {the_cat} {shift} BEFORE: {fmt_vals(val_before)}")
+                        print(f"[QCD] {config.name} {the_cat} {shift} AFTER : {fmt_vals(val_after)}")
+
+                    idx = find_idxs(hists[qcd], the_cat, shift)
+                    tmp_arr[idx].value = val_after
+                    tmp_arr[idx].variance = var_after
+
+                    # optional: fill CR category for each shift (also add nominal)
+                    if cr_cat:
+                        if "dr_den" in d and "dr_den" in mc:
+                            cr_val_before = np.maximum(
+                                d["dr_den"].values() - mc["dr_den"].values(), 0.0
+                            )
+                            cr_var_before = d["dr_den"].view().variance + mc["dr_den"].view().variance
+                        elif "dr_den" in d:
+                            cr_val_before = d["dr_den"].values()
+                            cr_var_before = d["dr_den"].view().variance
+                        else:
+                            cr_val_before = 0.0
+                            cr_var_before = 0.0
+
+                        if cr_val_nom is not None:
+                            cr_val_after = cr_val_before + cr_val_nom
+                            cr_var_after = cr_var_before + cr_var_nom
+                        else:
+                            cr_val_after = cr_val_before
+                            cr_var_after = cr_var_before
+
+                        if shift.endswith("_up") or shift.endswith("_down"):
+                            print(f"[QCD-CR] {config.name} {cr_cat} {shift} BEFORE: {fmt_vals(cr_val_before)}")
+                            print(f"[QCD-CR] {config.name} {cr_cat} {shift} AFTER : {fmt_vals(cr_val_after)}")
+
+                        idx_cr = find_idxs(hists[qcd], cr_cat, shift)
+                        tmp_arr[idx_cr].value = cr_val_after
+                        tmp_arr[idx_cr].variance = cr_var_after
+
             hists[qcd][...] = tmp_arr
             output[config] = hists
         return output
+        # qcd_proc = next(p for p in hists.keys() if getattr(p, "name", None) == "qcd")
+        # h_qcd = hists[qcd_proc]
+        # h_qcd_nom = h_qcd[{"category": "cat_emu_sr", "shift": "nominal"}]
+        # h_qcd_up = h_qcd[{"category": "cat_emu_sr", "shift": "pu_weight_up"}]
+        # h_qcd_down = h_qcd[{"category": "cat_emu_sr", "shift": "pu_weight_down"}]
+        # qcd_proc = next(p for p in hists.keys() if getattr(p, "name", None) == "qcd")
+        # h_qcd = hists[qcd_proc]
+        # h_qcd_nom = h_qcd[{"category": "cat_emu_sr", "shift": "nominal"}]
+        
+#######################################################################
+### Old approach without proper up/down variations : QCD ESTIMATION ###        
+#######################################################################
+# def add_hist_hooks(analysis: od.Analysis) -> None:
+#     """
+#     Add histogram hooks to a configuration.
+#     """
+   
+#     flat_tf = True
+#     def qcd_estimation(task, inputs): #cf0p3
+#         output = {}
+#         for config, hists in inputs.items():
+#             if task.get_task_family() == 'cf.CreateDatacards':
+#                 sr_cats = [task.branch_data.config_data[config.name].category]
+#                 incl_h = sum(list(hists.values()))
+#                 ax = incl_h.axes['shift']
+#                 shifts = [ax.value(i) for i in range(ax.size)]
+#             else: 
+#                 sr_cats = []
+#                 decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
+#                 for the_cat in task.categories:
+                    
+#                     for the_ch in decay_ch:
+#                         if '_tau2' not in the_cat:
+#                             sr_cats.append( '__'.join((the_cat,the_ch)))
+#                         else:
+#                             sr_cats.append(the_cat)
+#                 print(sr_cats)
+#                 shifts = [task.shift]
+#             for shift in shifts:
+#                 for the_cat in sr_cats:
+#                     print(f'producing qcd for {the_cat}, shift: {shift}')
+#                     sr = config.get_category(the_cat)
+#                     d = {}
+#                     mc = {}
+#                     cr_cat = ''
+#                     for reg_name, full_name in sr.aux['abcd_regs'].items():   
+#                         loc_dict = {'category': hist.loc(full_name),'shift': hist.loc(shift)}
+#                         full_d = get_data_hist(hists)
+#                         full_mc = get_mc_hist(hists)   
+#                         if full_name in list(full_d.axes[0]): d[reg_name] = get_data_hist(hists)[loc_dict]
+#                         if full_name in list(full_mc.axes[0]): mc[reg_name] = get_mc_hist(hists)[loc_dict]
+#                         if reg_name == 'dr_num': cr_cat = full_name
+                            
+#                     from cmsdb.processes.qcd import qcd
+#                     h_donor_name  = list(hists.keys())[0]
+#                     if qcd not in hists.keys():
+#                         hists[qcd] = hists[h_donor_name].copy().reset()
+#                         tmp_arr = hists[qcd].view()
+#                     if 'ar' in d.keys() and not d['ar'].empty():
+#                         if flat_tf:
+#                             tf = 1
+#                             #num = ak.sum(d['dr_num'].values() - mc['dr_num'].values())
+#                             #den = ak.sum(d['dr_den'].values() - mc['dr_den'].values())
+#                             #if (num > 0) and (den > 0):
+#                             #    tf = num/den
+#                             #else:
+#                             #    tf = 1. 
+                        
+#                         else:
+#                             num = d['dr_num'].values() - mc['dr_num'].values()
+#                             den = d['dr_den'].values() - mc['dr_den'].values()
+
+#                             # mask = ((num > 0) & (den > 0))
+                        
+#                             # tf = num/den
+#                             # tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
+                    
+#                             # tf_err2 = ((np.sum(d['dr_num'].variances()) + np.sum(mc['dr_num'].variances()))/den**2 + 
+#                             #     tf**2/den**2 *(np.sum(d['dr_den'].variances()) + np.sum(mc['dr_den'].variances())))
+#                         val = np.maximum(d['ar'].values() - mc['ar'].values(), 0.) * tf
+#                         var = (d['ar'].view().variance + mc['ar'].view().variance) * tf**2
+                    
+#                         tmp_arr[find_idxs(hists[qcd], the_cat, shift)].value = val
+#                         tmp_arr[find_idxs(hists[qcd], the_cat, shift)].variance = var
+#                         if len(cr_cat):
+#                             if ('dr_den' in d.keys()) and ('dr_den' in mc.keys()):  
+#                                 cr_val = np.maximum(d['dr_den'].values() - mc['dr_den'].values(), 0)
+#                                 cr_var = d['dr_den'].variances() - mc['dr_den'].variances()
+#                             elif ('dr_den' in d.keys()):
+#                                 cr_val = d['dr_den'].values() 
+#                                 cr_var = d['dr_den'].variances()
+#                             else:
+#                                 cr_val = 0
+#                                 cr_var = 0
+#                             tmp_arr[find_idxs(hists[qcd], cr_cat, shift)].value = cr_val
+#                             tmp_arr[find_idxs(hists[qcd], cr_cat, shift)].variance = cr_var
+#                     else:
+#                         print("*** WARNING: AR data histogam doesn't exist or empty! ***")
+                    
+#             hists[qcd][...] = tmp_arr
+#             output[config] = hists
+#         return output
     
     def ff_method(task, inputs): #cf0p3
         from cmsdb.processes.qcd import jet_fakes,qcd
@@ -239,7 +506,7 @@ def add_hist_hooks(analysis: od.Analysis) -> None:
         for config, hists in inputs.items():
             dr_num_cats = task.categories
             for the_cat in dr_num_cats:
-                print(f'Performin closure test for {the_cat}')
+                print(f'Performing closure test for {the_cat}')
                 sr_name = the_cat.replace('dr_num_wj','sr').replace('dr_num_qcd','sr')
                 sr = config.get_category(sr_name)
                 data = get_data_hist(hists)

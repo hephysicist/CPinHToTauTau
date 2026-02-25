@@ -5,7 +5,7 @@ import functools
 
 from columnflow.calibration import Calibrator, calibrator
 #from columnflow.calibration.cms.jets import jec
-from MSSM_H_tt.calibration.jets import jec
+from MSSM_H_tt.calibration.jets import jec, jer
 from MSSM_H_tt.calibration.met import met_phi
 from MSSM_H_tt.calibration.tau import tau_energy_scale
 # from columnflow.calibration.cms.egamma import electrons
@@ -24,10 +24,10 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
 
 @calibrator(
     uses={
-       jec,"Jet.pt","Jet.eta","Jet.phi","Jet.mass","PuppiMET.pt","PuppiMET.phi",tau_energy_scale, electron_smearing_scaling, deterministic_seeds, "Electron.phi", "Tau.phi", "Tau.pt", "run", "luminosityBlock", "event",
+       jec, jer,"Jet.pt","Jet.eta","Jet.phi","Jet.mass","PuppiMET.pt","PuppiMET.phi",tau_energy_scale, electron_smearing_scaling, deterministic_seeds, "Electron.phi", "Tau.phi", "Tau.pt", "run", "luminosityBlock", "event",
     },
     produces={
-        jec,tau_energy_scale, electron_smearing_scaling, deterministic_seeds, 
+        jec, jer, tau_energy_scale, electron_smearing_scaling, deterministic_seeds, 
         "Jet.pt_no_jec", "Jet.eta_no_jec","Jet.phi_no_jec", "Jet.mass_no_jec",
         "PuppiMET.pt_no_jec", "PuppiMET.phi_no_jec", "nJet", "Jet.jec_per",
         "Jet.pt_jec", "Jet.eta_jec","Jet.phi_jec", "Jet.mass_jec",
@@ -53,7 +53,10 @@ def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     
     print("Performing Jet Energy Correction...")
     events = self[jec](events, **kwargs)
-    
+    if self.dataset_inst.is_mc:
+        print("Performing Jet Energy Resolution on MC...")
+        events = self[jer](events, **kwargs)
+
     #Jets variables before applying energy corrections
     events = set_ak_column_f32(events, "Jet.pt_jec", events.Jet.pt)
     events = set_ak_column_f32(events, "Jet.phi_jec", events.Jet.phi)
@@ -68,14 +71,11 @@ def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     #events = set_ak_column_f32(events, "PuppiMET.jec_per"    ,((events.PuppiMET.pt_jec - events.PuppiMET.pt_no_jec)/events.PuppiMET.pt_no_jec))
     events = set_ak_column_f32(events, "Electron.pt_no_scaling_smearing", events.Electron.pt)
     
-    # if self.config_inst.x.year==2022: # scaling and smearing is not available for 2023
     print("Performing electron scaling and smearing correction...")
     # events = self[electrons](events, **kwargs)
     events = self[electron_smearing_scaling](events, **kwargs)
     print("Electron scaling and smearing correction...SUCCEDED")
     #events = self[met_phi](events, **kwargs)
-    #events = self[jer](events, **kwargs)
-    #events = self[jets](events, **kwargs)
     if self.dataset_inst.is_mc & (self.config_inst.channels.names()[0]!= 'emu'): 
     #Apply tau energy scale correction
         print("Performing tau energy scale correction...")
