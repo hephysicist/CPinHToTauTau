@@ -37,6 +37,7 @@ def add_run3(ana: od.Analysis,
                         id    = config_id)
 
     # gather campaign data
+    run = campaign.x.run
     cfg.x.year = campaign.x.year
     cfg.x.tag = campaign.x.tag
     year = cfg.x.year
@@ -579,9 +580,6 @@ def add_run3(ana: od.Analysis,
     # (used during plotting)
     cfg.x.variable_groups = {}
 
-    # shift groups for conveniently looping over certain shifts
-    # (used during plotting)
-    cfg.x.shift_groups = {}
 
     # selector step groups for conveniently looping over certain steps
     # (used in cutflow tasks)
@@ -595,113 +593,228 @@ def add_run3(ana: od.Analysis,
     # (currently set to false because the number of files per dataset is truncated to 2)
     cfg.x.validate_dataset_lfns = False
     
-    # jec configuration
-    # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC?rev=201
-    jerc_postfix = ""
-    if year == 2016 and campaign.x.vfp == "post":
-        jerc_postfix = "APV"
-    elif year == 2022 and campaign.x.tag == "postEE":
-        jerc_postfix = "EE"
+    # # jec configuration
+    # # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC?rev=201
+    # jerc_postfix = ""
+    # if year == 2016 and campaign.x.vfp == "post":
+    #     jerc_postfix = "APV"
+    # elif year == 2022 and campaign.x.tag == "postEE":
+    #     jerc_postfix = "EE"
     
-    elif year == 2023 and campaign.x.tag == "postBPix":
-        jerc_postfix = "BPix"
-    jet_type = "AK4PFPuppi"
-    if year < 2022:
-        jerc_campaign = f"Summer19UL{year2}{jerc_postfix}"
-        jet_type = "AK4PFchs"
-    elif year==2022:
-        jerc_campaign = f"Summer{year2}{jerc_postfix}_22Sep2023"
-        jet_type = "AK4PFPuppi"
-    elif year==2023:
-        jerc_campaign = f"Summer{year2}{jerc_postfix}Prompt23"
+    # elif year == 2023 and campaign.x.tag == "postBPix":
+    #     jerc_postfix = "BPix"
+    # jet_type = "AK4PFPuppi"
+    # if year < 2022:
+    #     jerc_campaign = f"Summer19UL{year2}{jerc_postfix}"
+    #     jet_type = "AK4PFchs"
+    # elif year==2022:
+    #     jerc_campaign = f"Summer{year2}{jerc_postfix}_22Sep2023"
+    #     jet_type = "AK4PFPuppi"
+    # elif year==2023:
+    #     jerc_campaign = f"Summer{year2}{jerc_postfix}Prompt23"
         
-    cfg.x.jec = DotDict.wrap({
-        "campaign": jerc_campaign,
-         "version": {2016: "V7", 2017: "V5", 2018: "V5", 2022: "V2", 2023:"V1"}[year],
-        "jet_type": jet_type,
-        "levels_DATA": ["L1L2L3Res"], #"L2Relative", "L2L3Residual", "L3Absolute", "L1L2L3Res" 
-        "levels_MC": ["L1L2L3Res"], 
-        "levels_for_type1_met": ["L1L2L3Res"], 
-        "uncertainty_sources": [
-            # "AbsoluteStat",
-            # "AbsoluteScale",
-            # "AbsoluteSample",
-            # "AbsoluteFlavMap",
-            # "AbsoluteMPFBias",
-            # "Fragmentation",
-            # "SinglePionECAL",
-            # "SinglePionHCAL",
-            # "FlavorQCD",
-            # "TimePtEta",
-            # "RelativeJEREC1",
-            # "RelativeJEREC2",
-            # "RelativeJERHF",
-            # "RelativePtBB",
-            # "RelativePtEC1",
-            # "RelativePtEC2",
-            # "RelativePtHF",
-            # "RelativeBal",
-            # "RelativeSample",
-            # "RelativeFSR",
-            # "RelativeStatFSR",
-            # "RelativeStatEC",
-            # "RelativeStatHF",
-            # "PileUpDataMC",
-            # "PileUpPtRef",
-            # "PileUpPtBB",
-            # "PileUpPtEC1",
-            # "PileUpPtEC2",
-            # "PileUpPtHF",
-            # "PileUpMuZero",
-            # "PileUpEnvelope",
-            # "SubTotalPileUp",
-            # "SubTotalRelative",
-            # "SubTotalPt",
-            # "SubTotalScale",
-            # "SubTotalAbsolute",
-            # "SubTotalMC",
-            "Total",
-            # "TotalNoFlavor",
-            # "TotalNoTime",
-            # "TotalNoFlavorNoTime",
-            # "FlavorZJet",
-            # "FlavorPhotonJet",
-            # "FlavorPureGluon",
-            # "FlavorPureQuark",
-            # "FlavorPureCharm",
-            # "FlavorPureBottom",
-            # # "TimeRunA",
-            # # "TimeRunB",
-            # # "TimeRunC",
-            # # "TimeRunD",
-            # "CorrelationGroupMPFInSitu",
-            # "CorrelationGroupIntercalibration",
-            # "CorrelationGroupbJES",
-            # "CorrelationGroupFlavor",
-            # "CorrelationGroupUncorrelated",
-        ],
-    })
-    
-    ###############################################################################################
-    # met settings
-    ################################################################################################
-
-    # name of the MET phi correction set
-    # (used in the met_phi calibrator)
-    #cfg.x.met_phi_correction_set = r"{variable}_metphicorr_pfmet_{data_source}"
-    
-    ###############################################################################################
-    # JER settings
-    ################################################################################################
-    
-    # # JER
-    # # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution?rev=107
-    # # TODO: get jerc working for Run3
-    # cfg.x.jer = DotDict.wrap({
+    # cfg.x.jec = DotDict.wrap({
     #     "campaign": jerc_campaign,
-    #     "version": {2016: "JRV3", 2017: "JRV2", 2018: "JRV2", 2022: "JRV1"}[year],
+    #      "version": {2016: "V7", 2017: "V5", 2018: "V5", 2022: "V2", 2023:"V1"}[year],
     #     "jet_type": jet_type,
+    #     "levels_DATA": ["L1L2L3Res"], #"L2Relative", "L2L3Residual", "L3Absolute", "L1L2L3Res" 
+    #     "levels_MC": ["L1L2L3Res"], 
+    #     "levels_for_type1_met": ["L1L2L3Res"], 
+    #     "uncertainty_sources": [
+    #         # "AbsoluteStat",
+    #         # "AbsoluteScale",
+    #         # "AbsoluteSample",
+    #         # "AbsoluteFlavMap",
+    #         # "AbsoluteMPFBias",
+    #         # "Fragmentation",
+    #         # "SinglePionECAL",
+    #         # "SinglePionHCAL",
+    #         # "FlavorQCD",
+    #         # "TimePtEta",
+    #         # "RelativeJEREC1",
+    #         # "RelativeJEREC2",
+    #         # "RelativeJERHF",
+    #         # "RelativePtBB",
+    #         # "RelativePtEC1",
+    #         # "RelativePtEC2",
+    #         # "RelativePtHF",
+    #         # "RelativeBal",
+    #         # "RelativeSample",
+    #         # "RelativeFSR",
+    #         # "RelativeStatFSR",
+    #         # "RelativeStatEC",
+    #         # "RelativeStatHF",
+    #         # "PileUpDataMC",
+    #         # "PileUpPtRef",
+    #         # "PileUpPtBB",
+    #         # "PileUpPtEC1",
+    #         # "PileUpPtEC2",
+    #         # "PileUpPtHF",
+    #         # "PileUpMuZero",
+    #         # "PileUpEnvelope",
+    #         # "SubTotalPileUp",
+    #         # "SubTotalRelative",
+    #         # "SubTotalPt",
+    #         # "SubTotalScale",
+    #         # "SubTotalAbsolute",
+    #         # "SubTotalMC",
+    #         "Total",
+    #         # "TotalNoFlavor",
+    #         # "TotalNoTime",
+    #         # "TotalNoFlavorNoTime",
+    #         # "FlavorZJet",
+    #         # "FlavorPhotonJet",
+    #         # "FlavorPureGluon",
+    #         # "FlavorPureQuark",
+    #         # "FlavorPureCharm",
+    #         # "FlavorPureBottom",
+    #         # # "TimeRunA",
+    #         # # "TimeRunB",
+    #         # # "TimeRunC",
+    #         # # "TimeRunD",
+    #         # "CorrelationGroupMPFInSitu",
+    #         # "CorrelationGroupIntercalibration",
+    #         # "CorrelationGroupbJES",
+    #         # "CorrelationGroupFlavor",
+    #         # "CorrelationGroupUncorrelated",
+    #     ],
     # })
+
+    ################################################################################################
+    # jet settings
+    # TODO: keep a single table somewhere that configures all settings: btag correlation, year
+    #       dependence, usage in calibrator, etc
+    ################################################################################################
+    # common jec/jer settings configuration
+    if run == 3:
+        # https://cms-jerc.web.cern.ch/Recommendations/#2022
+        jerc_postfix = {
+            (2022, ""): "_22Sep2023",
+            (2022, "EE"): "_22Sep2023",
+            (2023, ""): "Prompt23",
+            (2023, "BPix"): "Prompt23",
+            (2024, ""): "Prompt24",
+        }[(year, campaign.x.postfix)]
+        jec_campaign = f"Summer{year2}{campaign.x.postfix}{jerc_postfix}"
+        jec_version = {
+            (2022, ""): "V3",
+            (2022, "EE"): "V3",
+            (2023, ""): "V2",
+            (2023, "BPix"): "V3",
+            (2024, ""): "V2",
+        }[(year, campaign.x.postfix)]
+        jer_campaign = f"Summer{year2}{campaign.x.postfix}{jerc_postfix}"
+        if year == 2024:
+            jer_campaign = "Summer23BPixPrompt23"  # https://cms-jerc.web.cern.ch/Recommendations/#2024_1
+        # special "Run" fragment in 2023 jer campaign
+        if year == 2023:
+            jer_campaign += f"_Run{'Cv1234' if campaign.x.tag =='preBPix' else 'D'}"
+        if year == 2024:
+            jer_campaign += "_RunD"
+        jer_version = "JR" + {2022: "V1", 2023: "V1", 2024: "V1"}[year]
+        jet_type = "AK4PFPuppi"
+    else:
+        assert False
+
+    # full list of jec sources in a fixed order that is used to assign consistent ids across configs
+    # (please add new sources at the bottom to preserve the order of existing ones)
+    # the boolean flag decides whether to use them in the JEC config and if shifts should be created for them
+    # https://cms-jerc.web.cern.ch/Recommendations/#uncertainites-and-correlations
+    jec_source_era = f"{year}{campaign.x.postfix}"
+    all_jec_sources = {
+        "AbsoluteFlavMap": False,
+        "AbsoluteMPFBias": False,
+        "AbsoluteSample": False,
+        "AbsoluteScale": False,
+        "AbsoluteStat": False,
+        "FlavorPhotonJet": False,
+        "FlavorPureBottom": False,
+        "FlavorPureCharm": False,
+        "FlavorPureGluon": False,
+        "FlavorPureQuark": False,
+        "FlavorQCD": False,
+        "FlavorZJet": False,
+        "Fragmentation": False,
+        "PileUpDataMC": False,
+        "PileUpEnvelope": False,
+        "PileUpMuZero": False,
+        "PileUpPtBB": False,
+        "PileUpPtEC1": False,
+        "PileUpPtEC2": False,
+        "PileUpPtHF": False,
+        "PileUpPtRef": False,
+        "RelativeBal": False,
+        "RelativeFSR": False,
+        "RelativeJEREC1": False,
+        "RelativeJEREC2": False,
+        "RelativeJERHF": False,
+        "RelativePtBB": False,
+        "RelativePtEC1": False,
+        "RelativePtEC2": False,
+        "RelativePtHF": False,
+        "RelativeSample": False,
+        "RelativeStatEC": False,
+        "RelativeStatFSR": False,
+        "RelativeStatHF": False,
+        "SinglePionECAL": False,
+        "SinglePionHCAL": False,
+        "SubTotalAbsolute": False,
+        "SubTotalMC": False,
+        "SubTotalPileUp": False,
+        "SubTotalPt": False,
+        "SubTotalRelative": False,
+        "SubTotalScale": False,
+        "TimePtEta": False,
+        "Total": True,
+        "TotalNoFlavor": False,
+        "TotalNoFlavorNoTime": False,
+        "TotalNoTime": False,
+        "CorrelationGroupFlavor": False,
+        "CorrelationGroupIntercalibration": False,
+        "CorrelationGroupMPFInSitu": False,
+        "CorrelationGroupUncorrelated": False,
+        "CorrelationGroupbJES": False,
+        "Regrouped_Absolute": False,
+        f"Regrouped_Absolute_{jec_source_era}": False,
+        "Regrouped_BBEC1": False,
+        f"Regrouped_BBEC1_{jec_source_era}": False,
+        "Regrouped_EC2": False,
+        f"Regrouped_EC2_{jec_source_era}": False,
+        "Regrouped_FlavorQCD": False,
+        "Regrouped_HF": False,
+        f"Regrouped_HF_{jec_source_era}": False,
+        "Regrouped_RelativeBal": False,
+        f"Regrouped_RelativeSample_{jec_source_era}": False,
+        "Regrouped_Total": False,
+    }
+
+    cfg.x.jec = DotDict.wrap({
+        "Jet": {
+            "campaign": jec_campaign,
+            "version": jec_version,
+            "data_per_era": year == 2022,  # 2022 JEC has the era in the correction set name
+            "jet_type": jet_type,
+            "levels": ["L1L2L3Res"], #["L1FastJet", "L2Relative", "L2L3Residual", "L3Absolute"],
+            "levels_for_type1_met": ["L1L2L3Res"], # ["L1FastJet"],
+            "uncertainty_sources": [src for src, flag in all_jec_sources.items() if flag],
+        },
+    })
+
+    # JER
+    cfg.x.jer = DotDict.wrap({
+        "Jet": {
+            "campaign": jer_campaign,
+            "version": jer_version,
+            "jet_type": jet_type,
+        },
+    })
+
+    # updated jet id
+    from columnflow.production.cms.jet import JetIdConfig
+    cfg.x.jet_id = JetIdConfig(corrections={"AK4PUPPI_Tight": 2, "AK4PUPPI_TightLeptonVeto": 3})
+    # trigger sf corrector
+    cfg.x.jet_trigger_corrector = "jetlegSFs"
+    
 
     # JEC uncertainty sources propagated to btag scale factors
     # (names derived from contents in BTV correctionlib file)
@@ -744,7 +857,15 @@ def add_run3(ana: od.Analysis,
         "SinglePionHCAL",
         "TimePtEta",
     ]
-    
+    ################################################################################################
+    # met settings
+    ################################################################################################
+
+
+    if run == 3:
+        cfg.x.met_name = "PuppiMET"
+        cfg.x.raw_met_name = "RawPuppiMET"
+        
     # ##################################
     # # Parameters fot top pT reweight #
     # ##################################
@@ -782,41 +903,55 @@ def add_run3(ana: od.Analysis,
     # )
 
 
-    ################################
-    # luminosity and normalization #
-    ################################
+   ################################################################################################
+    # luminosity and normalization
+    ################################################################################################
 
-    # lumi values in inverse pb
-    # https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun2?rev=2#Combination_and_correlations
+    # lumi values in 1/pb (= 1000/fb)
+    # https://twiki.cern.ch/twiki/bin/view/CMS/LumiRecommendationsRun3?rev=36
     # https://twiki.cern.ch/twiki/bin/view/CMS/PdmVRun3Analysis
     # difference pre-post VFP: https://cds.cern.ch/record/2854610/files/DP2023_006.pdf
-    
-    if year == 2022 and campaign.x.tag =="preEE":
-        cfg.x.luminosity = Number(7_980.4, {
-            "lumi_13p6TeV_correlated": 0.014j,
+    # Lumis for Run3 within the Twiki are outdated as stated here:
+    # https://cms-talk.web.cern.ch/t/luminosity-in-run2023c/116859/2
+    # Run3 Lumis can be calculated with brilcalc tool https://twiki.cern.ch/twiki/bin/view/CMS/BrilcalcQuickStart?rev=15
+    # CClub computed this already: https://gitlab.cern.ch/cclubbtautau/AnalysisCore/-/issues/49
+
+    if year == 2022 and campaign.x.tag == "preEE":
+        cfg.x.luminosity = Number(7_980.4541, {
+            "lumi_13p6TeV_2022": 0.014j,
+            "lumi_13p6TeV_1": 0.0138j,
         })
-    elif year == 2022 and campaign.x.tag =="postEE":
-        cfg.x.luminosity = Number(26_671.7, {
-            "lumi_13p6TeV_correlated": 0.014j,
+    elif year == 2022 and campaign.x.tag == "postEE":
+        cfg.x.luminosity = Number(26_671.6097, {
+            "lumi_13p6TeV_2022": 0.014j,
+            "lumi_13p6TeV_1": 0.0138j,
         })
-    elif year == 2023 and campaign.x.tag =="preBPix":
-        cfg.x.luminosity = Number(17_794, {
-            "lumi_13p6TeV_correlated": 0.013j,
+    elif year == 2023 and campaign.x.tag == "preBPix":
+        cfg.x.luminosity = Number(18_062.6591, {
+            "lumi_13p6TeV_2023": 0.013j,
+            "lumi_13p6TeV_1": 0.0017j,
+            "lumi_13p6TeV_2": 0.0127j,
         })
-    elif year == 2023 and campaign.x.tag =="postBPix":
-        cfg.x.luminosity = Number(9_451, {
-            "lumi_13p6TeV_correlated": 0.013j,
+    elif year == 2023 and campaign.x.tag == "postBPix":
+        cfg.x.luminosity = Number(9_693.1301, {
+            "lumi_13p6TeV_2023": 0.013j,
+            "lumi_13p6TeV_1": 0.0017j,
+            "lumi_13p6TeV_2": 0.0127j,
         })
     elif year == 2024:
-        cfg.x.luminosity = Number(0, {
-            "lumi_13p6TeV_correlated": 0.0j,
+        cfg.x.luminosity = Number(104_675.143180, {
+            "lumi_13p6TeV_2024": 0.016j,
+            "lumi_13p6TeV_1": 0.0020j,
+            "lumi_13p6TeV_2": 0.0068j,
+            "lumi_13p6TeV_3": 0.0144j,
         })
     else:
         assert False
-    
+
     # minimum bias cross section in mb (milli) for creating PU weights, values from
     # https://twiki.cern.ch/twiki/bin/view/CMS/PileupJSONFileforData?rev=52#Recommended_cross_section
     cfg.x.minbias_xs = Number(69.2, 0.046j)
+
    
     # names of muon correction sets and working points
     # (used in the muon producer)   
@@ -1032,16 +1167,12 @@ def add_run3(ana: od.Analysis,
         "electron_scaling_smearing": f"{json_acd_path}EGM/{json_acd_tag}/latest/electronSS_EtDependent.json.gz",
         "electron_idiso"           : f"{json_acd_path}EGM/{json_acd_tag}/latest/electron.json.gz",
         "electron_trigger"         : f"{json_acd_path}EGM/{json_acd_tag}/latest/electronHlt.json.gz",
-        #"electron_scaling_smearing": f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronSS.json.gz",
-        #"electron_idiso"           : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electron.json.gz",
-        #"electron_trigger"         : f"{jsonpog_dir}EGM/{cfg.x.year}_{tag}/electronHlt.json.gz",
         "tau_correction"           : f"{json_acd_path}TAU/{json_acd_tag}/latest/tau.json.gz", #tau_DeepTau2018v2p5_{cfg.x.year}_{tau_tag}
         "zpt_weight"              : (f"{corr_dir}dy_ptll/DY_pTll_weights_{cfg.x.year}{campaign.x.tag}.json.gz","v2"),
         #"jet_jerc"                 : (f"{jsonpog_dir}JME/{cfg.x.year}_{tag}/jet_jerc.json.gz", "v2"),
         "jet_jerc"                 : (f"{json_acd_path}JME/{json_acd_tag}/latest/jet_jerc.json.gz", "v2"),
         "jet_veto_map"             : (f"{json_acd_path}JME/{json_acd_tag}/latest/jetvetomaps.json.gz", "v2"),
         "btag_sf_corr"             : (f"{json_acd_path}BTV/{json_acd_tag}/latest/btagging.json.gz", "v2"),
-        #"met_recoil"               : (f"{corr_dir}/hleprare/RecoilCorrlib/Recoil_corrections_{cfg.x.year}{campaign.x.tag}_v2.json.gz", "v2"),
         "met_recoil"               : (f"{corr_dir}dy_ptll/Recoil_corrections_{cfg.x.year}{campaign.x.tag}.json.gz", "v2"),
     })
     #/eos/user/a/anigamov/htt_corrections_mirror/dy_ptll'
@@ -1142,7 +1273,58 @@ def add_run3(ana: od.Analysis,
     cfg.add_shift(name="pu_weight_down", id=16, type="shape")
     cfg.add_shift(name="pu_weight_up", id=17, type="shape")
     add_shift_aliases(cfg,"pu_weight",{"pu_weight": "pu_weight_{direction}"})
-    
+    # add column aliases for shift jec
+    for i, (jec_source, flag) in enumerate(all_jec_sources.items()):
+        if not flag:
+            continue
+        cfg.add_shift(
+            name=f"jec_{jec_source}_up",
+            id=5000 + 2 * i,
+            type="shape",
+            tags={"jec"},
+            aux={"jec_source": jec_source},
+        )
+        cfg.add_shift(
+            name=f"jec_{jec_source}_down",
+            id=5001 + 2 * i,
+            type="shape",
+            tags={"jec"},
+            aux={"jec_source": jec_source},
+        )
+        add_shift_aliases(
+            cfg,
+            f"jec_{jec_source}",
+            {
+                "Jet.pt": "Jet.pt_{name}",
+                "Jet.mass": "Jet.mass_{name}",
+                f"{cfg.x.met_name}.pt": f"{cfg.x.met_name}.pt_{{name}}",
+                f"{cfg.x.met_name}.phi": f"{cfg.x.met_name}.phi_{{name}}",
+            },
+        )
+        # # TODO: check the JEC de/correlation across years and the interplay with btag weights
+        # if ("" if jec_source == "Total" else jec_source) in cfg.x.btag_sf_jec_sources:
+        #     add_shift_aliases(
+        #         cfg,
+        #         f"jec_{jec_source}",
+        #         {
+        #             "normalized_btag_weight_pnet": "normalized_btag_weight_pnet_{name}",
+        #             "normalized_njet_btag_weight_pnet": "normalized_njet_btag_weight_pnet_{name}",
+        #         },
+        #     )
+
+    cfg.add_shift(name="jer_up", id=6000, type="shape", tags={"jer"})
+    cfg.add_shift(name="jer_down", id=6001, type="shape", tags={"jer"})
+    add_shift_aliases(
+        cfg,
+        "jer",
+        {
+            "Jet.pt": "Jet.pt_{name}",
+            "Jet.mass": "Jet.mass_{name}",
+            f"{cfg.x.met_name}.pt": f"{cfg.x.met_name}.pt_{{name}}",
+            f"{cfg.x.met_name}.phi": f"{cfg.x.met_name}.phi_{{name}}",
+        },
+    )
+
     # cfg.add_shift(name="btag_weight_SF_up", id=15, type="shape")
     # cfg.add_shift(name="btag_weight_SF_down", id=16, type="shape")
     # add_shift_aliases(cfg, "btag_weight_SF", {"btag_weight_SF_nom": "btag_weight_SF_nom_{direction}"})
@@ -1310,6 +1492,15 @@ def add_run3(ana: od.Analysis,
     # "columns" : ["ff_weight_qcd"],
     # "shifts"  : ["up", "nominal", "down"]
     # })   
+    
+    # shift groups for conveniently looping over certain shifts
+    # (used during plotting)
+    cfg.x.shift_groups = {
+        "jec": [
+            shift_inst.name for shift_inst in cfg.shifts
+            if shift_inst.has_tag(("jec", "jer"))
+        ],
+    }
     
     if cfg.campaign.x("custom").get("creator") == "desy":  
         def get_dataset_lfns(dataset_inst: od.Dataset, shift_inst: od.Shift, dataset_key: str) -> list[str]:

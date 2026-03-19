@@ -10,9 +10,16 @@ import law
 from columnflow.selection import Selector, SelectionResult, selector
 from columnflow.util import maybe_import, DotDict
 from law.util import InsertableDict
-from columnflow.columnar_util import set_ak_column, flat_np_view, optional_column as optional
+from columnflow.columnar_util import EMPTY_FLOAT, set_ak_column, flat_np_view, optional_column as optional
 from columnflow.types import Any
+from MSSM_H_tt.util import get_lep_p4, get_vec_p3, to_pt_eta_phi_m
 
+np = maybe_import("numpy")
+ak = maybe_import("awkward")
+
+import functools
+set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
+set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
 
@@ -124,6 +131,14 @@ def jet_veto_map(
 
     return events, results
 
+@jet_veto_map.init
+def jet_veto_map_init(self: Selector, **kwargs) -> None:
+    # register shifts
+    self.shifts |= {
+        shift_inst.name
+        for shift_inst in self.config_inst.shifts
+        if shift_inst.has_tag(("jec", "jer"))
+    }
 
 @jet_veto_map.requires
 def jet_veto_map_requires(
@@ -160,3 +175,4 @@ def jet_veto_map_setup(
         raise ValueError(f"Expected exactly one correction in the file, got {len(keys)}")
 
     self.veto_map = correction_set[keys[0]]
+
