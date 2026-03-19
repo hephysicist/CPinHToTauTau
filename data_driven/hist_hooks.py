@@ -1,17 +1,15 @@
+# coding: utf-8
+
 """
 Histogram hooks.
 """
 
-from collections import defaultdict
-
 import law
 import order as od
-
 import scinum as sn
 
 from columnflow.util import maybe_import
 from law.util import InsertableDict
-import warnings
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -19,64 +17,72 @@ hist = maybe_import("hist")
 
 logger = law.logger.get_logger(__name__)
 
-def calc_yields(hists: dict, locator: dict, fake_locator: dict)-> hist.Hist :
-    #Get data hists
+
+def calc_yields(hists: dict, locator: dict, fake_locator: dict) -> dict:
     data_hists = [h for p, h in hists.items() if p.is_data]
     data_hist = sum(data_hists[1:], data_hists[0].copy())
     data = data_hist[locator].values()
-    
-    #Get all monte-carlo hists
+
     mc_hists = [h for p, h in hists.items() if (p.is_mc and not p.has_tag("signal"))]
     mc_hist = sum(mc_hists[1:], mc_hists[0].copy())
     mc = mc_hist[locator].values()
     mc_fakes = mc_hist[fake_locator].values()
 
-    wj_ratio =  (mc_fakes) / np.maximum(data - mc , 1)
-    wj_err   = np.ones_like(wj_ratio)
-    
-    qcd_ratio =  np.maximum((data - (mc_fakes + mc)), 0)/ np.maximum(data - mc, 1)
-    qcd_err   = np.ones_like(wj_ratio) 
-    # np.where(data > 0,
-    #                         rel_err(h_arr=[wj_hist[fake_locator],data_hist[locator]]) * wj_ratio,
-    #                         np.ones_like(wj_ratio)) 
-    
-   
-    # np.where((data - mc) > 0,
-    #                     rel_err(h_arr=[wj_hist[fake_locator],data_hist[locator]]) * qcd_ratio,
-    #                     np.ones_like(wj_ratio)) 
-    
-    return {'wj': wj_ratio,
-            'wj_err': wj_err,
-            'qcd': qcd_ratio,
-            'qcd_err': qcd_err,}
+    wj_ratio = mc_fakes / np.maximum(data - mc, 1)
+    wj_err = np.ones_like(wj_ratio)
 
-def get_data_hist(hists: dict)-> hist.Hist :
+    qcd_ratio = np.maximum((data - (mc_fakes + mc)), 0) / np.maximum(data - mc, 1)
+    qcd_err = np.ones_like(wj_ratio)
+
+    return {
+        "wj": wj_ratio,
+        "wj_err": wj_err,
+        "qcd": qcd_ratio,
+        "qcd_err": qcd_err,
+    }
+
+
+def get_data_hist(hists: dict):
     data_hists = [h for p, h in hists.items() if p.is_data]
-    if len(data_hists): return sum(data_hists[1:], data_hists[0].copy())
-    else: return None
+    if len(data_hists):
+        return sum(data_hists[1:], data_hists[0].copy())
+    return None
 
-def get_mc_hist(hists: dict, remove_wj=False)-> hist.Hist :
-    data_hists = [h for 
-                  p, h in hists.items() 
-                  if p.is_mc 
-                  and not p.has_tag("signal")
-                  and ((remove_wj * ('wj' not in p.name)) or not remove_wj) ]
-    if len(data_hists): return sum(data_hists[1:], data_hists[0].copy())
-    else: return None
-    
 
-def get_signal_hists(hists: dict)-> hist.Hist :
-    hists = [h 
-             for p, h in hists.items() 
-             if p.is_mc and p.has_tag("signal") and (p.name != 'qcd')]
-    return hists
+def get_mc_hist(hists: dict, remove_wj: bool = False):
+    mc_hists = [
+        h
+        for p, h in hists.items()
+        if p.is_mc
+        and not p.has_tag("signal")
+        and ((remove_wj and ("wj" not in p.name)) or not remove_wj)
+    ]
+    if len(mc_hists):
+        return sum(mc_hists[1:], mc_hists[0].copy())
+    return None
 
-def rel_err(h_arr=[], err_arr=[]):
-    if len(h_arr):  sum_var = np.zeros_like(h_arr[0].values())
-    else: sum_var = np.zeros_like(err_arr[0])
-    for x in h_arr: sum_var += x.variances()/np.maximum(x.values()**2, 1)
-    for the_arr in err_arr: sum_var += err_arr
+
+def get_signal_hists(hists: dict):
+    return [
+        h
+        for p, h in hists.items()
+        if p.is_mc and p.has_tag("signal") and (p.name != "qcd")
+    ]
+
+
+def rel_err(h_arr=None, err_arr=None):
+    h_arr = h_arr or []
+    err_arr = err_arr or []
+    if len(h_arr):
+        sum_var = np.zeros_like(h_arr[0].values())
+    else:
+        sum_var = np.zeros_like(err_arr[0])
+    for x in h_arr:
+        sum_var += x.variances() / np.maximum(x.values() ** 2, 1)
+    for the_arr in err_arr:
+        sum_var += the_arr
     return np.sqrt(sum_var)
+
 
 def find_idxs(h: hist.Hist, cat: str, shift: str):
     return h.axes[:-1].index(cat, shift)
@@ -86,9 +92,50 @@ def add_hist_hooks(analysis: "od.Analysis") -> None:
     """
     Add histogram hooks to a configuration.
     """
+
     flat_tf = True
 
-    def qcd_estimation(task, inputs):  # cf0p3
+    def _get_config_process(config, process_name: str, required: bool = False):
+        try:
+            return config.get_process(process_name)
+        except Exception:
+            if required:
+                raise
+            return None
+
+    def _get_or_create_hist_like(hists: dict, proc_obj, donor_hist: hist.Hist, shift_sources):
+        if proc_obj in hists:
+            return hists[proc_obj]
+
+        def storage_from(donor: hist.Hist):
+            for attr in ("_storage_type", "storage_type"):
+                if hasattr(donor, attr):
+                    st = getattr(donor, attr)
+                    try:
+                        st = st() if callable(st) else st
+                    except TypeError:
+                        pass
+                    try:
+                        return st() if isinstance(st, type) else st
+                    except Exception:
+                        return st
+            return hist.storage.Weight()
+
+        axes = []
+        for ax in donor_hist.axes:
+            if getattr(ax, "name", None) == "shift":
+                axes.append(hist.axis.StrCategory(list(shift_sources), name="shift", growth=True))
+            else:
+                axes.append(ax)
+
+        hists[proc_obj] = hist.Hist(*axes, storage=storage_from(donor_hist)).reset()
+        return hists[proc_obj]
+
+    def qcd_estimation(task, inputs, variable_name=None, category_name=None, **kwargs):
+        """
+        QCD estimation hook compatible with both normal histogram tasks and CreateDatacards.
+        """
+
         output = {}
 
         def up_down_once(sources):
@@ -102,7 +149,7 @@ def add_hist_hooks(analysis: "od.Analysis") -> None:
 
             out = []
             seen = set()
-            for b in bases:  # preserve order
+            for b in bases:
                 if b in seen:
                     continue
                 seen.add(b)
@@ -111,68 +158,80 @@ def add_hist_hooks(analysis: "od.Analysis") -> None:
                 out.append("nominal")
             return tuple(out)
 
-        def storage_from(donor: hist.Hist):
-            # try to preserve the donor storage (weight storage needed for variance)
-            for attr in ("_storage_type", "storage_type"):
-                if hasattr(donor, attr):
-                    st = getattr(donor, attr)
-                    try:
-                        st = st() if callable(st) else st
-                    except TypeError:
-                        st = st
-                    # Hist expects a storage *instance*
-                    try:
-                        return st() if isinstance(st, type) else st
-                    except Exception:
-                        return st
-            # fallback
-            return hist.storage.Weight()
-
-        def book_qcd_hist_like(donor: hist.Hist, shift_sources):
-            axes = []
-            for ax in donor.axes:
-                if getattr(ax, "name", None) == "shift":
-                    axes.append(
-                        hist.axis.StrCategory(list(shift_sources), name="shift", growth=True)
-                    )
-                else:
-                    axes.append(ax)
-            return hist.Hist(*axes, storage=storage_from(donor)).reset()
-
         def fmt_vals(a):
             a = np.asarray(a)
             return np.array2string(a, precision=6, separator=", ", threshold=a.size)
 
         for config, hists in inputs.items():
-            sr_cats = task.categories
+            if not hists:
+                output[config] = hists
+                continue
 
-            # shifts we want to produce (includes "nominal")
-            shift_sources = up_down_once(task.shift_sources)
+            qcd_proc = _get_config_process(config, "qcd")
+            if qcd_proc is None:
+                logger.warning(
+                    f"config {config.name} has no process 'qcd'; skipping qcd hist hook"
+                )
+                output[config] = hists
+                continue
+
+            if task.get_task_family() == "cf.CreateDatacards":
+                if category_name is None:
+                    raise ValueError(
+                        "qcd_estimation requires 'category_name' when run from CreateDatacards"
+                    )
+                sr_cats = [category_name]
+
+                incl_h = sum(list(hists.values())[1:], list(hists.values())[0].copy())
+                ax = incl_h.axes["shift"]
+                shift_sources = tuple(ax.value(i) for i in range(ax.size))
+            else:
+                sr_cats = task.categories
+                shift_sources = up_down_once(task.shift_sources)
 
             full_d = get_data_hist(hists)
             full_mc = get_mc_hist(hists)
 
-            # if a given shift does not exist in MC hist, fall back to nominal
+            if full_d is None:
+                logger.warning(
+                    f"no data histogram found for config {config.name}, skipping qcd estimation"
+                )
+                output[config] = hists
+                continue
+
+            if full_mc is None:
+                logger.warning(
+                    f"no MC histogram found for config {config.name}, skipping qcd estimation"
+                )
+                output[config] = hists
+                continue
+
             def mc_shift(shift: str) -> str:
                 try:
                     return shift if shift in list(full_mc.axes["shift"]) else "nominal"
                 except Exception:
                     return "nominal"
 
-            # book QCD hist once per config, ensuring shift axis can hold all shifts
-            from cmsdb.processes.qcd import qcd
-
-            h_donor_name = list(hists.keys())[0]
-            if qcd not in hists:
-                hists[qcd] = book_qcd_hist_like(hists[h_donor_name], shift_sources)
-
-            tmp_arr = hists[qcd].view()
+            h_donor_proc = list(hists.keys())[0]
+            h_qcd = _get_or_create_hist_like(
+                hists=hists,
+                proc_obj=qcd_proc,
+                donor_hist=hists[h_donor_proc],
+                shift_sources=shift_sources,
+            )
+            tmp_arr = h_qcd.view()
 
             for the_cat in sr_cats:
                 print(f"producing qcd for {the_cat}, {config.name}")
                 sr = config.get_category(the_cat)
 
-                # DATA is always nominal
+                if "abcd_regs" not in sr.aux:
+                    logger.warning(
+                        f"category '{the_cat}' in config '{config.name}' has no aux['abcd_regs']; "
+                        "skipping qcd estimation"
+                    )
+                    continue
+
                 d = {}
                 cr_cat = ""
                 for reg_name, full_name in sr.aux["abcd_regs"].items():
@@ -184,12 +243,11 @@ def add_hist_hooks(analysis: "od.Analysis") -> None:
                         d[reg_name] = full_d[loc_dict_data]
                     if reg_name == "dr_num":
                         cr_cat = full_name
-
+    
                 if ("ar" not in d) or d["ar"].empty():
-                    print("*** WARNING: AR data histogram doesn't exist or empty! ***")
+                    print("*** WARNING: AR data histogram doesn't exist or is empty! ***")
                     continue
 
-                # ---------- 1) compute NOMINAL QCD once ----------
                 shift_mc_nom = mc_shift("nominal")
 
                 mc_nom = {}
@@ -222,15 +280,15 @@ def add_hist_hooks(analysis: "od.Analysis") -> None:
                     mc_ar_var_nom = np.zeros_like(d_ar.view().variance)
 
                 val_nom = np.maximum(d_ar.values() - mc_ar_val_nom, 0.0) * tf_nom
-                var_nom = (d_ar.view().variance + mc_ar_var_nom) * (tf_nom**2)
+                var_nom = (d_ar.view().variance + mc_ar_var_nom) * (tf_nom ** 2)
 
-                # optional: CR nominal once
                 cr_val_nom = None
                 cr_var_nom = None
                 if cr_cat:
-                    if "dr_den" in d and "dr_den" in mc_nom:
+                    if ("dr_den" in d) and ("dr_den" in mc_nom):
                         cr_val_nom = np.maximum(
-                            d["dr_den"].values() - mc_nom["dr_den"].values(), 0.0
+                            d["dr_den"].values() - mc_nom["dr_den"].values(),
+                            0.0,
                         )
                         cr_var_nom = (
                             d["dr_den"].view().variance + mc_nom["dr_den"].view().variance
@@ -242,17 +300,15 @@ def add_hist_hooks(analysis: "od.Analysis") -> None:
                         cr_val_nom = 0.0
                         cr_var_nom = 0.0
 
-                # write nominal
-                idx_nom = find_idxs(hists[qcd], the_cat, "nominal")
+                idx_nom = find_idxs(h_qcd, the_cat, "nominal")
                 tmp_arr[idx_nom].value = val_nom
                 tmp_arr[idx_nom].variance = var_nom
 
                 if cr_cat and cr_val_nom is not None:
-                    idx_cr_nom = find_idxs(hists[qcd], cr_cat, "nominal")
+                    idx_cr_nom = find_idxs(h_qcd, cr_cat, "nominal")
                     tmp_arr[idx_cr_nom].value = cr_val_nom
                     tmp_arr[idx_cr_nom].variance = cr_var_nom
 
-                # ---------- 2) fill other shifts ----------
                 for shift in shift_sources:
                     if shift == "nominal":
                         continue
@@ -268,7 +324,6 @@ def add_hist_hooks(analysis: "od.Analysis") -> None:
                         if full_name in list(full_mc.axes["category"]):
                             mc[reg_name] = full_mc[loc_dict_mc]
 
-                    # transfer factor (data nominal, mc shifted)
                     if flat_tf:
                         tf = 1.0
                     else:
@@ -281,7 +336,6 @@ def add_hist_hooks(analysis: "od.Analysis") -> None:
                             where=(den != 0),
                         )
 
-                    # AR: if MC is missing for this shift, treat MC as 0
                     if "ar" in mc:
                         mc_ar_val = mc["ar"].values()
                         mc_ar_var = mc["ar"].view().variance
@@ -290,27 +344,24 @@ def add_hist_hooks(analysis: "od.Analysis") -> None:
                         mc_ar_var = np.zeros_like(d_ar.view().variance)
 
                     val_before = np.maximum(d_ar.values() - mc_ar_val, 0.0) * tf
-                    var_before = (d_ar.view().variance + mc_ar_var) * (tf**2)
-
-                    # ADD nominal QCD to every up/down shift
-                    val_after = val_before + val_nom
-                    var_after = var_before + var_nom
+                    var_before = (d_ar.view().variance + mc_ar_var) * (tf ** 2)
 
                     if shift.endswith("_up") or shift.endswith("_down"):
-                        print(f"[QCD] {config.name} {the_cat} {shift} BEFORE: {fmt_vals(val_before)}")
-                        print(f"[QCD] {config.name} {the_cat} {shift} AFTER : {fmt_vals(val_after)}")
+                        print(f"[QCD] {config.name} {the_cat} {shift}: {fmt_vals(val_before)}")
 
-                    idx = find_idxs(hists[qcd], the_cat, shift)
-                    tmp_arr[idx].value = val_after
-                    tmp_arr[idx].variance = var_after
+                    idx = find_idxs(h_qcd, the_cat, shift)
+                    tmp_arr[idx].value = val_before
+                    tmp_arr[idx].variance = var_before
 
-                    # optional: fill CR category for each shift (also add nominal)
                     if cr_cat:
-                        if "dr_den" in d and "dr_den" in mc:
+                        if ("dr_den" in d) and ("dr_den" in mc):
                             cr_val_before = np.maximum(
-                                d["dr_den"].values() - mc["dr_den"].values(), 0.0
+                                d["dr_den"].values() - mc["dr_den"].values(),
+                                0.0,
                             )
-                            cr_var_before = d["dr_den"].view().variance + mc["dr_den"].view().variance
+                            cr_var_before = (
+                                d["dr_den"].view().variance + mc["dr_den"].view().variance
+                            )
                         elif "dr_den" in d:
                             cr_val_before = d["dr_den"].values()
                             cr_var_before = d["dr_den"].view().variance
@@ -318,453 +369,360 @@ def add_hist_hooks(analysis: "od.Analysis") -> None:
                             cr_val_before = 0.0
                             cr_var_before = 0.0
 
-                        if cr_val_nom is not None:
-                            cr_val_after = cr_val_before + cr_val_nom
-                            cr_var_after = cr_var_before + cr_var_nom
-                        else:
-                            cr_val_after = cr_val_before
-                            cr_var_after = cr_var_before
-
                         if shift.endswith("_up") or shift.endswith("_down"):
-                            print(f"[QCD-CR] {config.name} {cr_cat} {shift} BEFORE: {fmt_vals(cr_val_before)}")
-                            print(f"[QCD-CR] {config.name} {cr_cat} {shift} AFTER : {fmt_vals(cr_val_after)}")
+                            print(f"[QCD-CR] {config.name} {cr_cat} {shift}: {fmt_vals(cr_val_before)}")
 
-                        idx_cr = find_idxs(hists[qcd], cr_cat, shift)
-                        tmp_arr[idx_cr].value = cr_val_after
-                        tmp_arr[idx_cr].variance = cr_var_after
+                        idx_cr = find_idxs(h_qcd, cr_cat, shift)
+                        tmp_arr[idx_cr].value = cr_val_before
+                        tmp_arr[idx_cr].variance = cr_var_before
 
-            hists[qcd][...] = tmp_arr
+            h_qcd[...] = tmp_arr
             output[config] = hists
-        return output
-        # qcd_proc = next(p for p in hists.keys() if getattr(p, "name", None) == "qcd")
-        # h_qcd = hists[qcd_proc]
-        # h_qcd_nom = h_qcd[{"category": "cat_emu_sr", "shift": "nominal"}]
-        # h_qcd_up = h_qcd[{"category": "cat_emu_sr", "shift": "pu_weight_up"}]
-        # h_qcd_down = h_qcd[{"category": "cat_emu_sr", "shift": "pu_weight_down"}]
-        # qcd_proc = next(p for p in hists.keys() if getattr(p, "name", None) == "qcd")
-        # h_qcd = hists[qcd_proc]
-        # h_qcd_nom = h_qcd[{"category": "cat_emu_sr", "shift": "nominal"}]
-        
-#######################################################################
-### Old approach without proper up/down variations : QCD ESTIMATION ###        
-#######################################################################
-# def add_hist_hooks(analysis: od.Analysis) -> None:
-#     """
-#     Add histogram hooks to a configuration.
-#     """
-   
-#     flat_tf = True
-#     def qcd_estimation(task, inputs): #cf0p3
-#         output = {}
-#         for config, hists in inputs.items():
-#             if task.get_task_family() == 'cf.CreateDatacards':
-#                 sr_cats = [task.branch_data.config_data[config.name].category]
-#                 incl_h = sum(list(hists.values()))
-#                 ax = incl_h.axes['shift']
-#                 shifts = [ax.value(i) for i in range(ax.size)]
-#             else: 
-#                 sr_cats = []
-#                 decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
-#                 for the_cat in task.categories:
-                    
-#                     for the_ch in decay_ch:
-#                         if '_tau2' not in the_cat:
-#                             sr_cats.append( '__'.join((the_cat,the_ch)))
-#                         else:
-#                             sr_cats.append(the_cat)
-#                 print(sr_cats)
-#                 shifts = [task.shift]
-#             for shift in shifts:
-#                 for the_cat in sr_cats:
-#                     print(f'producing qcd for {the_cat}, shift: {shift}')
-#                     sr = config.get_category(the_cat)
-#                     d = {}
-#                     mc = {}
-#                     cr_cat = ''
-#                     for reg_name, full_name in sr.aux['abcd_regs'].items():   
-#                         loc_dict = {'category': hist.loc(full_name),'shift': hist.loc(shift)}
-#                         full_d = get_data_hist(hists)
-#                         full_mc = get_mc_hist(hists)   
-#                         if full_name in list(full_d.axes[0]): d[reg_name] = get_data_hist(hists)[loc_dict]
-#                         if full_name in list(full_mc.axes[0]): mc[reg_name] = get_mc_hist(hists)[loc_dict]
-#                         if reg_name == 'dr_num': cr_cat = full_name
-                            
-#                     from cmsdb.processes.qcd import qcd
-#                     h_donor_name  = list(hists.keys())[0]
-#                     if qcd not in hists.keys():
-#                         hists[qcd] = hists[h_donor_name].copy().reset()
-#                         tmp_arr = hists[qcd].view()
-#                     if 'ar' in d.keys() and not d['ar'].empty():
-#                         if flat_tf:
-#                             tf = 1
-#                             #num = ak.sum(d['dr_num'].values() - mc['dr_num'].values())
-#                             #den = ak.sum(d['dr_den'].values() - mc['dr_den'].values())
-#                             #if (num > 0) and (den > 0):
-#                             #    tf = num/den
-#                             #else:
-#                             #    tf = 1. 
-                        
-#                         else:
-#                             num = d['dr_num'].values() - mc['dr_num'].values()
-#                             den = d['dr_den'].values() - mc['dr_den'].values()
 
-#                             # mask = ((num > 0) & (den > 0))
-                        
-#                             # tf = num/den
-#                             # tf = ak.where((num>0) & (den>0), tf, np.ones_like(num))
-                    
-#                             # tf_err2 = ((np.sum(d['dr_num'].variances()) + np.sum(mc['dr_num'].variances()))/den**2 + 
-#                             #     tf**2/den**2 *(np.sum(d['dr_den'].variances()) + np.sum(mc['dr_den'].variances())))
-#                         val = np.maximum(d['ar'].values() - mc['ar'].values(), 0.) * tf
-#                         var = (d['ar'].view().variance + mc['ar'].view().variance) * tf**2
-                    
-#                         tmp_arr[find_idxs(hists[qcd], the_cat, shift)].value = val
-#                         tmp_arr[find_idxs(hists[qcd], the_cat, shift)].variance = var
-#                         if len(cr_cat):
-#                             if ('dr_den' in d.keys()) and ('dr_den' in mc.keys()):  
-#                                 cr_val = np.maximum(d['dr_den'].values() - mc['dr_den'].values(), 0)
-#                                 cr_var = d['dr_den'].variances() - mc['dr_den'].variances()
-#                             elif ('dr_den' in d.keys()):
-#                                 cr_val = d['dr_den'].values() 
-#                                 cr_var = d['dr_den'].variances()
-#                             else:
-#                                 cr_val = 0
-#                                 cr_var = 0
-#                             tmp_arr[find_idxs(hists[qcd], cr_cat, shift)].value = cr_val
-#                             tmp_arr[find_idxs(hists[qcd], cr_cat, shift)].variance = cr_var
-#                     else:
-#                         print("*** WARNING: AR data histogam doesn't exist or empty! ***")
-                    
-#             hists[qcd][...] = tmp_arr
-#             output[config] = hists
-#         return output
-    
-    def ff_method(task, inputs): #cf0p3
-        from cmsdb.processes.qcd import jet_fakes,qcd
+        return output
+
+    def ff_method(task, inputs, variable_name=None, category_name=None, **kwargs):
+        from cmsdb.processes.qcd import jet_fakes as jet_fakes_fallback
+
         output = {}
         for config, hists in inputs.items():
-            if task.get_task_family() == 'cf.CreateDatacards':
-                sr_cats = [task.branch_data.config_data[config.name].category]
-                incl_h = sum(list(hists.values()))
-                ax = incl_h.axes['shift']
+            qcd_proc = _get_config_process(config, "qcd")
+            if qcd_proc is None:
+                logger.warning(f"config {config.name} has no process 'qcd'; skipping ff_method")
+                output[config] = hists
+                continue
+
+            jet_fakes_proc = _get_config_process(config, "jet_fakes") or jet_fakes_fallback
+
+            if task.get_task_family() == "cf.CreateDatacards":
+                if category_name is None:
+                    raise ValueError("ff_method requires 'category_name' when run from CreateDatacards")
+                sr_cats = [category_name]
+                incl_h = sum(list(hists.values())[1:], list(hists.values())[0].copy())
+                ax = incl_h.axes["shift"]
                 shifts = [ax.value(i) for i in range(ax.size)]
-            else: 
+            else:
                 sr_cats = []
-                decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
+                decay_ch = ["tau2pi", "tau2rho", "tau2a1", "tau2a1_3pr"]
                 for the_cat in task.categories:
-                    
                     for the_ch in decay_ch:
-                        if '_tau2' not in the_cat:
-                            sr_cats.append( '__'.join((the_cat,the_ch)))
+                        if "_tau2" not in the_cat:
+                            sr_cats.append("__".join((the_cat, the_ch)))
                         else:
                             sr_cats.append(the_cat)
-                print(sr_cats)
                 shifts = [task.shift]
+
             for the_cat in sr_cats:
-                print(f'Applying fake factor method on {config.name} {the_cat}')
-                sr = config.get_category(the_cat) 
-                sr.label = sr.label.replace('prompt lep.', '') + f'\njet fakes from FF'
+                print(f"Applying fake factor method on {config.name} {the_cat}")
+                sr = config.get_category(the_cat)
+                sr.label = sr.label.replace("prompt lep.", "") + "\njet fakes from FF"
+
                 data = get_data_hist(hists)
                 mc = get_mc_hist(hists)
-                locator = lambda reg:  {'category': hist.loc(sr.aux['ff_regs'][reg]),'shift': hist.loc(task.shift)}
+                locator = lambda reg: {"category": hist.loc(sr.aux["ff_regs"][reg]), "shift": hist.loc(shifts[0])}
+
                 def fake_locator(reg):
-                    ar_string = sr.aux['ff_regs'][reg]
-                    af_fakes_string = ar_string.replace('prompt','jet_fakes')
-                    return {'category': hist.loc(af_fakes_string),'shift': hist.loc(task.shift)}
-                data_qcd = data[locator('ar_qcd')]
-                mc_qcd = mc[locator('ar_qcd')]
-                data_wj = data[locator('ar_wj')]
-                mc_wj = mc[locator('ar_wj')]
-                yields = calc_yields(hists, locator('ar_yields'), fake_locator('ar_yields'))
-                h_donor_name  = list(hists.keys())[0]
-                if qcd not in hists.keys():
-                    hists[qcd] = hists[h_donor_name].copy().reset()
-                    tmp_qcd = hists[qcd].view()
-                
-                if jet_fakes not in hists.keys():
-                    hists[jet_fakes] = hists[h_donor_name].copy().reset()
-                    tmp_fakes = hists[jet_fakes].view()
-                    
-                tmp_qcd[find_idxs(hists[qcd], the_cat, task.shift)].value = np.maximum(data_qcd.values() - mc_qcd.values(), 0) * yields['qcd']
-                tmp_qcd[find_idxs(hists[qcd], the_cat, task.shift)].variance = data_qcd.variances() + mc_qcd.variances()
-                
-                tmp_fakes[find_idxs(hists[jet_fakes], the_cat, task.shift)].value = np.maximum(data_wj.values() - mc_wj.values(), 0) * yields['wj']
-                tmp_fakes[find_idxs(hists[jet_fakes], the_cat, task.shift)].variance = data_wj.variances() + mc_wj.variances()
-                
-            hists[qcd][...] = tmp_qcd
-            hists[jet_fakes][...] = tmp_fakes
-            
-            wj_proc = [p for p in hists.keys() if p.name == 'w']
+                    ar_string = sr.aux["ff_regs"][reg]
+                    af_fakes_string = ar_string.replace("prompt", "jet_fakes")
+                    return {"category": hist.loc(af_fakes_string), "shift": hist.loc(shifts[0])}
+
+                data_qcd = data[locator("ar_qcd")]
+                mc_qcd = mc[locator("ar_qcd")]
+                data_wj = data[locator("ar_wj")]
+                mc_wj = mc[locator("ar_wj")]
+                yields = calc_yields(hists, locator("ar_yields"), fake_locator("ar_yields"))
+
+                h_donor_name = list(hists.keys())[0]
+
+                if qcd_proc not in hists:
+                    hists[qcd_proc] = hists[h_donor_name].copy().reset()
+                tmp_qcd = hists[qcd_proc].view()
+
+                if jet_fakes_proc not in hists:
+                    hists[jet_fakes_proc] = hists[h_donor_name].copy().reset()
+                tmp_fakes = hists[jet_fakes_proc].view()
+
+                tmp_qcd[find_idxs(hists[qcd_proc], the_cat, shifts[0])].value = (
+                    np.maximum(data_qcd.values() - mc_qcd.values(), 0) * yields["qcd"]
+                )
+                tmp_qcd[find_idxs(hists[qcd_proc], the_cat, shifts[0])].variance = (
+                    data_qcd.variances() + mc_qcd.variances()
+                )
+
+                tmp_fakes[find_idxs(hists[jet_fakes_proc], the_cat, shifts[0])].value = (
+                    np.maximum(data_wj.values() - mc_wj.values(), 0) * yields["wj"]
+                )
+                tmp_fakes[find_idxs(hists[jet_fakes_proc], the_cat, shifts[0])].variance = (
+                    data_wj.variances() + mc_wj.variances()
+                )
+
+            hists[qcd_proc][...] = tmp_qcd
+            hists[jet_fakes_proc][...] = tmp_fakes
+
+            wj_proc = [p for p in hists.keys() if p.name == "w"]
             if len(wj_proc):
-                del hists[wj_proc[0]]   
+                del hists[wj_proc[0]]
+
             output[config] = hists
         return output
-    
-    def ff_closure_test(task, inputs): #cf0p3
-        from cmsdb.processes.qcd import jet_fakes,qcd
+
+    def ff_closure_test(task, inputs, variable_name=None, category_name=None, **kwargs):
+        from cmsdb.processes.qcd import jet_fakes as jet_fakes_fallback
+
         output = {}
         for config, hists in inputs.items():
+            qcd_proc = _get_config_process(config, "qcd")
+            if qcd_proc is None:
+                logger.warning(f"config {config.name} has no process 'qcd'; skipping ff_closure_test")
+                output[config] = hists
+                continue
+
+            jet_fakes_proc = _get_config_process(config, "jet_fakes") or jet_fakes_fallback
+
             dr_num_cats = task.categories
             for the_cat in dr_num_cats:
-                print(f'Performing closure test for {the_cat}')
-                sr_name = the_cat.replace('dr_num_wj','sr').replace('dr_num_qcd','sr')
+                print(f"Performing closure test for {the_cat}")
+                sr_name = the_cat.replace("dr_num_wj", "sr").replace("dr_num_qcd", "sr")
                 sr = config.get_category(sr_name)
                 data = get_data_hist(hists)
                 mc = get_mc_hist(hists)
-                locator = lambda reg:  {'category': hist.loc(sr.aux['ff_regs'][reg]),'shift': hist.loc(task.shift)}
-                iter_dict = {'wj': jet_fakes, 'qcd':qcd}
-                h_donor_name  = list(hists.keys())[0]
+                locator = lambda reg: {"category": hist.loc(sr.aux["ff_regs"][reg]), "shift": hist.loc(task.shift)}
+                iter_dict = {"wj": jet_fakes_proc, "qcd": qcd_proc}
+                h_donor_name = list(hists.keys())[0]
+
                 for name, proc in iter_dict.items():
-                    if proc not in hists.keys():
+                    if proc not in hists:
                         hists[proc] = hists[h_donor_name].copy().reset()
-                        tmp_fakes = hists[proc].view()
-                        h_d = data[locator(f'dr_den_{name}_w_ff')]
-                        h_mc = mc[locator(f'dr_den_{name}_w_ff')]
-                        num = sr.aux['ff_regs'][f'dr_num_{name}']
-                        tmp_fakes[find_idxs(hists[jet_fakes], num, task.shift)].value = np.maximum(h_d.values() - h_mc.values(), 0)
-                        tmp_fakes[find_idxs(hists[jet_fakes], num, task.shift)].variance = h_d.variances() + h_mc.variances()
-                        hists[proc][...] = tmp_fakes
-                    # if name == 'wj':
-                    #     p_list = [p for p in hists.keys() if 'wj' in p.name]
-                    #     if len(p_list):
-                    #         del hists[p_list[0]]          
+
+                    tmp_fakes = hists[proc].view()
+                    h_d = data[locator(f"dr_den_{name}_w_ff")]
+                    h_mc = mc[locator(f"dr_den_{name}_w_ff")]
+                    num = sr.aux["ff_regs"][f"dr_num_{name}"]
+
+                    tmp_fakes[find_idxs(hists[proc], num, task.shift)].value = np.maximum(
+                        h_d.values() - h_mc.values(),
+                        0,
+                    )
+                    tmp_fakes[find_idxs(hists[proc], num, task.shift)].variance = (
+                        h_d.variances() + h_mc.variances()
+                    )
+                    hists[proc][...] = tmp_fakes
+
             output[config] = hists
-            return output
-    
-    # def ff_method_dr_closure_test(task, hists):
-    #     if not hists:
-    #         return hists
-    #     cat_tag = category_inst.name.split('__')
-    #     if len(cat_tag) > 1:
-    #         cat_tag = '__' + cat_tag[1] 
-    #     else:
-    #         cat_tag = ''
-    #     sr = task.config_inst.get_category('cat_mutau_sr' + cat_tag)
-        
-    #     hist_qcd = get_data_hist(hists[sr.aux['ff_regs']['dr_den_qcd_w_ff']])
-    #     hist_wj  = get_data_hist(hists[sr.aux['ff_regs']['dr_den_wj_w_ff']])
-        
-    #     hist_qcd_mc = get_mc_hist(hists[sr.aux['ff_regs']['dr_den_qcd_w_ff']])
-    #     hist_wj_mc  = get_mc_hist(hists[sr.aux['ff_regs']['dr_den_wj_w_ff']])
+        return output
 
-    #     fakes_wj  = (hist_wj.values()  - hist_wj_mc.values()) 
-    #     fakes_qcd = (hist_qcd.values() - hist_qcd_mc.values()) 
-        
-    #     hists_sr = hists[category_inst.name].copy()
-    #     tmp_h = list(hists_sr.values())
-    #     tmp_h = sum(tmp_h[1:],tmp_h[0].copy())
-    #     #Remove wj histogram from the signal region set
-    #     from cmsdb.processes.qcd import jet_fakes,qcd
-    #     wj_proc = [p for p in hists_sr.keys() if 'wj' in p.name]
-    #     if 'wj' in category_inst.name:
-    #         hists_sr[jet_fakes] = tmp_h.copy().reset()
-    #         hists_sr[jet_fakes].view().value = fakes_wj
-    #         del hists_sr[wj_proc[0]]
-    #     else:
-    #         hists_sr[qcd] = tmp_h.copy().reset()
-    #         hists_sr[qcd].view().value = fakes_qcd
-            
-    #     return hists_sr
-    
-    def flatten_dy(task, hists, category_inst):
+    def flatten_dy(task, hists, category_inst=None, **kwargs):
         if not hists:
             return hists
         for the_reg, h_single_reg in hists.items():
-            if ('fake' in the_reg) or ('gtau' in the_reg):
-                pass
-            else:
-                dy_procs = [p for p in h_single_reg.keys() if p.is_mc and 'dy' in p.name]
-                for p in dy_procs:
-                    dy_hist = h_single_reg[p].copy()
-                    if not dy_hist.empty():
-                        mean_val = np.average(dy_hist.view().value, axis=1)
-                        variance =np.average(dy_hist.view().variance, axis=1)/dy_hist.shape[-1]
-                        #print(f"Perform dy flattening for {the_reg}")
-                        #print(f"Before: {hists[the_reg][p].view().value}")
-                        hists[the_reg][p].view().value = mean_val
-                        hists[the_reg][p].view().variance = variance
-                        #print(f"After: {hists[the_reg][p].view().value}")
-                    else:
-                        print(f"DY histogram is empty for {the_reg}")
+            if ("fake" in the_reg) or ("gtau" in the_reg):
+                continue
+            dy_procs = [p for p in h_single_reg.keys() if p.is_mc and "dy" in p.name]
+            for p in dy_procs:
+                dy_hist = h_single_reg[p].copy()
+                if not dy_hist.empty():
+                    mean_val = np.average(dy_hist.view().value, axis=1)
+                    variance = np.average(dy_hist.view().variance, axis=1) / dy_hist.shape[-1]
+                    hists[the_reg][p].view().value = mean_val
+                    hists[the_reg][p].view().variance = variance
+                else:
+                    print(f"DY histogram is empty for {the_reg}")
         return hists
 
-    def symmetrize_signal(task, hists, category_inst):
+    def symmetrize_signal(task, hists, category_inst=None, **kwargs):
         if not hists:
             return hists
         for the_reg, h_single_reg in hists.items():
-            if ('fake' in the_reg) or ('gtau' in the_reg):
-                pass
-            else:
-                signal_procs = [p for p in h_single_reg.keys() if p.is_mc and p.has_tag("signal")]
-                for p in signal_procs:
-                    the_hist = h_single_reg[p].copy()
-                    if not the_hist.empty():
-                        n_bins = the_hist.shape[-1]
-                        def get_val(idx, err=None):
-                            the_field = 'variance' if err else 'value'
-                            return getattr(hists[the_reg][p].view(), the_field)[:,idx]
-                        def set_val(hists, idx, val, var):
-                            hists[the_reg][p].view().value[:,idx]= val
-                            hists[the_reg][p].view().variance[:,idx]= var
-                            return hists 
-                        if ('htt_cpo' in p.name) or ('htt_sm' in p.name):
-                            for idx in range(n_bins//2):
-                                idxs = [idx,n_bins-idx-1]
-                                val = np.average([get_val(idy) for idy in idxs])
-                                var = np.average([get_val(idy,err=True) for idy in idxs])/2.
-                                hists = set_val(hists, idxs[0], val, var)
-                                hists = set_val(hists, idxs[1], val, var)
-                        elif ('htt_mm' in p.name):
-                            for idx in range(n_bins//4):
-                                #left part of the distribution 
-                                idxs = [idx,(n_bins//2)-idx-1]
-                                val = np.average([get_val(idy) for idy in idxs])
-                                var = np.average([get_val(idy,err=True) for idy in idxs])/2.
-                                hists = set_val(hists, idxs[0], val, var)
-                                hists = set_val(hists, idxs[1], val, var)
-                                #right part of the distribution
-                                idxs = [idy+(n_bins//2) for idy in idxs]
-                                val = np.average([get_val(idy) for idy in idxs])
-                                var = np.average([get_val(idy,err=True) for idy in idxs])/2.
-                                hists = set_val(hists, idxs[0], val, var)
-                                hists = set_val(hists, idxs[1], val, var)
-                        else:
-                            raise NotImplementedError(f"Signal does not have any of this tags [sm, mm, cpo]. I don't know how to symmetrize it.")
-                        norm_after = np.sum(hists[the_reg][p].view().value,axis=1)
-                    else:
-                        print(f"signal histogram is empty for {the_reg}")
+            if ("fake" in the_reg) or ("gtau" in the_reg):
+                continue
+            signal_procs = [p for p in h_single_reg.keys() if p.is_mc and p.has_tag("signal")]
+            for p in signal_procs:
+                the_hist = h_single_reg[p].copy()
+                if the_hist.empty():
+                    print(f"signal histogram is empty for {the_reg}")
+                    continue
+
+                n_bins = the_hist.shape[-1]
+
+                def get_val(idx, err=None):
+                    the_field = "variance" if err else "value"
+                    return getattr(hists[the_reg][p].view(), the_field)[:, idx]
+
+                def set_val(hists, idx, val, var):
+                    hists[the_reg][p].view().value[:, idx] = val
+                    hists[the_reg][p].view().variance[:, idx] = var
+                    return hists
+
+                if ("htt_cpo" in p.name) or ("htt_sm" in p.name):
+                    for idx in range(n_bins // 2):
+                        idxs = [idx, n_bins - idx - 1]
+                        val = np.average([get_val(idy) for idy in idxs], axis=0)
+                        var = np.average([get_val(idy, err=True) for idy in idxs], axis=0) / 2.0
+                        hists = set_val(hists, idxs[0], val, var)
+                        hists = set_val(hists, idxs[1], val, var)
+                elif "htt_mm" in p.name:
+                    for idx in range(n_bins // 4):
+                        idxs = [idx, (n_bins // 2) - idx - 1]
+                        val = np.average([get_val(idy) for idy in idxs], axis=0)
+                        var = np.average([get_val(idy, err=True) for idy in idxs], axis=0) / 2.0
+                        hists = set_val(hists, idxs[0], val, var)
+                        hists = set_val(hists, idxs[1], val, var)
+
+                        idxs = [idy + (n_bins // 2) for idy in idxs]
+                        val = np.average([get_val(idy) for idy in idxs], axis=0)
+                        var = np.average([get_val(idy, err=True) for idy in idxs], axis=0) / 2.0
+                        hists = set_val(hists, idxs[0], val, var)
+                        hists = set_val(hists, idxs[1], val, var)
+                else:
+                    raise NotImplementedError(
+                        "Signal does not have any of these tags [sm, mm, cpo]. "
+                        "I don't know how to symmetrize it."
+                    )
         return hists
 
-
-    def blind_sr(task, inputs):
-        ouputs = {}
-       
+    def blind_sr(task, inputs, variable_name=None, category_name=None, **kwargs):
+        outputs = {}
         for config, hists in inputs.items():
-            sr_cats = [c for c in config.categories.names() if '_sr' in c]
+            sr_cats = [c for c in config.categories.names() if "_sr" in c]
             out_h = hists.copy()
+            shift_name = getattr(task, "shift", "nominal")
+
             for p, h in hists.items():
-                if 'data' in p.name:
-                    tmp_arr = h.view()
-                    for the_cat in sr_cats:
-                        loc_dict = {'category': hist.loc(the_cat),'shift': hist.loc(task.shift)}
-                        tmp_arr[find_idxs(h, the_cat, task.shift)].value[-5:] = 0
-                        tmp_arr[find_idxs(h, the_cat, task.shift)].variance[-5:] = 1
+                if "data" not in p.name:
+                    continue
+                tmp_arr = h.view()
+                for the_cat in sr_cats:
+                    tmp_arr[find_idxs(h, the_cat, shift_name)].value[-5:] = 0
+                    tmp_arr[find_idxs(h, the_cat, shift_name)].variance[-5:] = 1
+                out_h[p][...] = tmp_arr
+            outputs[config] = out_h
+        return outputs
 
-                    out_h[p][...] = tmp_arr
-            ouputs[config] = out_h
-        return ouputs
+    def add_qcd_and_wj(task, hists, category_inst=None, **kwargs):
+        qcd_proc = _get_config_process(task.config_inst, "qcd")
+        if qcd_proc is None:
+            logger.warning("task config has no process 'qcd'; skipping add_qcd_and_wj")
+            return hists
 
-    def add_qcd_and_wj(task, hists, category_inst):
         fake_hists = []
-        for (proc, h) in hists.items():
-            is_fake_proc = ('qcd' in proc.name) or ('wj' in proc.name )
-            if is_fake_proc: fake_hists.append(h)
+        for proc, h in hists.items():
+            is_fake_proc = ("qcd" in proc.name) or ("wj" in proc.name)
+            if is_fake_proc:
+                fake_hists.append(h)
+
+        if not fake_hists:
+            return hists
+
         fake_hist = sum(fake_hists[1:], fake_hists[0].copy())
-        from cmsdb.processes.qcd import qcd
-        hists[qcd] = fake_hist
+        hists[qcd_proc] = fake_hist
         return hists
 
-    def ensure_zl_hist(task, hists, category_inst):
-        has_dy_z2ll = [the_proc 
-                       for the_proc in hists.keys() 
-                       if ('dy_z2mumu' in the_proc.name) or ('dy_z2ee' in the_proc.name)]
-        from cmsdb.processes.ewk import dy_z2ee,dy_z2tautau
+    def ensure_zl_hist(task, hists, category_inst=None, **kwargs):
+        has_dy_z2ll = [
+            the_proc
+            for the_proc in hists.keys()
+            if ("dy_z2mumu" in the_proc.name) or ("dy_z2ee" in the_proc.name)
+        ]
+        from cmsdb.processes.ewk import dy_z2ee, dy_z2tautau, dy_z2mumu
+
         if len(has_dy_z2ll) == 0:
-            tmp_h = [the_h for proc , the_h in hists if ('dy_z2tautau' in the_proc.name)][0] 
-            hists[dy_z2mumu] = tmp_h.copy().reset()
-            hists[dy_z2ee] = tmp_h.copy().reset()
+            tmp_hists = [the_h for the_proc, the_h in hists.items() if "dy_z2tautau" in the_proc.name]
+            if len(tmp_hists):
+                tmp_h = tmp_hists[0]
+                hists[dy_z2mumu] = tmp_h.copy().reset()
+                hists[dy_z2ee] = tmp_h.copy().reset()
         return hists
-    
-    
-    def make_inclusive_hists(task, inputs): #cf0p3
-        ouputs = {}
+
+    def make_inclusive_hists(task, inputs, variable_name=None, category_name=None, **kwargs):
+        outputs = {}
         for config, hists in inputs.items():
-            incl = task.categories
-            #'cat_mutau_sr_no_mt' #'cat_mutau_sr'
-            if 'ff_method' in task.hist_hooks:
-                bkg_type = '' #take prompt contribution form all hists and estimate jet fake contribution via transfer factor method
-            elif 'qcd' in task.hist_hooks:
-                bkg_type = ''
-            else: 
-                bkg_type = ''
+            bkg_type = ""
+
             print(f"Using {bkg_type} subcategories to make inclusive hists.")
-            
-            decay_ch = ['tau2pi','tau2rho','tau2a1','tau2a1_3pr']
+
+            decay_ch = ["tau2pi", "tau2rho", "tau2a1", "tau2a1_3pr"]
             out_h = hists.copy()
+            shift_name = getattr(task, "shift", "nominal")
+
             for incl in task.categories:
-                print(f'Preparing hists for {incl} from {config.name}')
+                print(f"Preparing hists for {incl} from {config.name}")
                 for p, h in hists.items():
                     tmp_arr = h.view()
                     subhists = []
                     for the_decay in decay_ch:
-                        if bkg_type== '':
-                            cat_name = '__'.join((incl,the_decay))
-                        print(f'Adding :{cat_name} for {p.name} from {config.name}')
-                        loc_dict = {'category': hist.loc(cat_name),
-                                    'shift': hist.loc(task.shift)}
+                        cat_name = "__".join((incl, the_decay))
+                        print(f"Adding :{cat_name} for {p.name} from {config.name}")
+                        loc_dict = {"category": hist.loc(cat_name), "shift": hist.loc(shift_name)}
                         if cat_name in h.axes[0]:
                             subhists.append(h[loc_dict])
                         else:
                             print(f"WARNING: didn't find {cat_name} for {p.name} from {config.name}")
                     if len(subhists):
-                        incl_h = sum(subhists)
-                        tmp_arr[find_idxs(h, incl, task.shift)].value = incl_h.view().value
-                        tmp_arr[find_idxs(h, incl, task.shift)].variance = incl_h.view().variance
-                    else: 
-                        tmp_arr[find_idxs(h, incl, task.shift)].value = 0
-                        tmp_arr[find_idxs(h, incl, task.shift)].variance = 0
+                        incl_h = sum(subhists[1:], subhists[0].copy())
+                        tmp_arr[find_idxs(h, incl, shift_name)].value = incl_h.view().value
+                        tmp_arr[find_idxs(h, incl, shift_name)].variance = incl_h.view().variance
+                    else:
+                        tmp_arr[find_idxs(h, incl, shift_name)].value = 0
+                        tmp_arr[find_idxs(h, incl, shift_name)].variance = 0
                     out_h[p][...] = tmp_arr
-            ouputs[config] = out_h
-        return ouputs
+            outputs[config] = out_h
+        return outputs
 
-    def add_cats(task, inputs): #cf0p3
-        ouputs = {}
+    def add_cats(task, inputs, variable_name=None, category_name=None, **kwargs):
+        outputs = {}
         for config, hists in inputs.items():
-            incl = 'cat_mutau_sr'
-            #subcats = ['cat_mutau_sr','cat_mutau_abcd_dr_num'] #to plot iso inclusive
-            subcats = ['cat_mutau_dr_num_wj__prompt','cat_mutau_dr_num_wj__jet_fakes'] #to plot mt inclusive
+            incl = "cat_mutau_sr"
+            subcats = ["cat_mutau_dr_num_wj__prompt", "cat_mutau_dr_num_wj__jet_fakes"]
             out_h = hists.copy()
+            shift_name = getattr(task, "shift", "nominal")
             for p, h in hists.items():
                 tmp_arr = h.view()
                 subhists = []
                 for subcat in subcats:
-                    loc_dict = {'category': hist.loc(subcat),'shift': hist.loc(task.shift)}
+                    loc_dict = {"category": hist.loc(subcat), "shift": hist.loc(shift_name)}
                     subhists.append(h[loc_dict])
-                incl_h = sum(subhists)
-                tmp_arr[find_idxs(h, incl, task.shift)].value = incl_h.view().value
-                tmp_arr[find_idxs(h, incl, task.shift)].variance = incl_h.view().variance
+                incl_h = sum(subhists[1:], subhists[0].copy())
+                tmp_arr[find_idxs(h, incl, shift_name)].value = incl_h.view().value
+                tmp_arr[find_idxs(h, incl, shift_name)].variance = incl_h.view().variance
                 out_h[p][...] = tmp_arr
-            ouputs[config] = out_h
-        return ouputs
-    
+            outputs[config] = out_h
+        return outputs
 
-    def order_hists(task, inputs): #cf0p3
-        ouputs = {}
+    def order_hists(task, inputs, variable_name=None, category_name=None, **kwargs):
+        outputs = {}
         for config, hists in inputs.items():
             out_hists = {}
-            procs = [p for p in hists.keys() if (p.name != 'qcd') and (p.name != 'dy_tt_m50') and (p.name != 'dy_ll_m50')]
-            qcd = [p for p in hists.keys() if (p.name == 'qcd')]
-            dy_tt = [p for p in hists.keys() if (p.name == 'dy_tt_m50')]
-            dy_ll = [p for p in hists.keys() if (p.name == 'dy_ll_m50')]
-            if len(qcd): out_hists[qcd[0]] = hists[qcd[0]]
-            for p in procs: out_hists[p] = hists[p]
-            if len(dy_ll): out_hists[dy_ll[0]] = hists[dy_ll[0]]
-            if len(dy_tt): out_hists[dy_tt[0]] = hists[dy_tt[0]]
-            ouputs[config] = out_hists
-        return ouputs
-    
-    
+            procs = [
+                p
+                for p in hists.keys()
+                if (p.name != "qcd") and (p.name != "dy_tt_m50") and (p.name != "dy_ll_m50")
+            ]
+            qcd = [p for p in hists.keys() if p.name == "qcd"]
+            dy_tt = [p for p in hists.keys() if p.name == "dy_tt_m50"]
+            dy_ll = [p for p in hists.keys() if p.name == "dy_ll_m50"]
+
+            if len(qcd):
+                out_hists[qcd[0]] = hists[qcd[0]]
+            for p in procs:
+                out_hists[p] = hists[p]
+            if len(dy_ll):
+                out_hists[dy_ll[0]] = hists[dy_ll[0]]
+            if len(dy_tt):
+                out_hists[dy_tt[0]] = hists[dy_tt[0]]
+
+            outputs[config] = out_hists
+        return outputs
 
     analysis.x.hist_hooks = {
-        "qcd"                       : qcd_estimation,
-        "add_qcd_and_wj"            : add_qcd_and_wj,
-        "ff_method"                 : ff_method,
-        "closure_test"              : ff_closure_test,
-        "flatten_dy"                : flatten_dy,
-        "symmetrize_signal"         : symmetrize_signal,
-        "blind_sr"                  : blind_sr,
-        "ensure_zl_hist"            : ensure_zl_hist,
-        "order"                     : order_hists,
-        "incl"                       : make_inclusive_hists,
-        "add_cats"                   : add_cats,
-       }
+        "qcd": qcd_estimation,
+        "add_qcd_and_wj": add_qcd_and_wj,
+        "ff_method": ff_method,
+        "closure_test": ff_closure_test,
+        "flatten_dy": flatten_dy,
+        "symmetrize_signal": symmetrize_signal,
+        "blind_sr": blind_sr,
+        "ensure_zl_hist": ensure_zl_hist,
+        "order": order_hists,
+        "incl": make_inclusive_hists,
+        "add_cats": add_cats,
+    }

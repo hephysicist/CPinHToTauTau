@@ -140,7 +140,6 @@ class ComputeFakeFactors(
                 # load input histograms per dataset
                 the_hist = the_input["collection"][0]['hists'].targets[self.variables[0]].load(formatter='pickle')
 
-                #from IPython import embed; embed()
                 ds = the_cfg.get_dataset(dataset_name)
                 proc = the_cfg.get_process(ds.processes.names()[0])
                 print(f'Adding {ds.processes.names()[0]}')
@@ -177,7 +176,7 @@ class ComputeFakeFactors(
 
             num = dnum.values() - mnum.values()
             den = dden.values() - mden.values()
-            # from IPython import embed; embed()
+            
             ff_vals = np.where((num > 0) & (den > 0), num / np.maximum(den, 1), -1)
             ff_err = ff_vals * ((np.sqrt(dnum.variances()) + np.sqrt(mnum.variances())) / np.abs(num)
                                 + (np.sqrt(dden.variances()) + np.sqrt(mden.variances())) / np.abs(den))
