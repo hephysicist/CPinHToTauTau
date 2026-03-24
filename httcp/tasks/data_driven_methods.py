@@ -105,7 +105,7 @@ class ComputeFakeFactors(
                                                  tag)) + '.json'),
                 "plots": {'_'.join((ff_type,
                                     syst,
-                                    f'n_jets_{str(nj)}')): self.target(f"fake_factor_{ff_type}_{syst}_njets_{str(nj)}.png")
+                                    f'n_j_{str(nj)}')): self.target(f"fake_factor_{ff_type}_{syst}_njets_{str(nj)}.png")
                           for syst in ['nominal', 'up', 'down']
                           for ff_type in ['qcd','wj']
                           for nj in [0,1,2]},
@@ -193,10 +193,10 @@ class ComputeFakeFactors(
             for nj in [0,1,2]:
                 for dm in [0,1,2,10,11]:
                     print(f'DM {dm} Nj {nj}')
-                    print(f"data_num: {data_num[{'tau_dm_pnet': hist.loc(dm), 'n_jets': hist.loc(nj)}].values()}")
-                    print(f"data_den: {data_den[{'tau_dm_pnet': hist.loc(dm), 'n_jets': hist.loc(nj)}].values()}")
-                    print(f"mc_num: {mc_num[{'tau_dm_pnet': hist.loc(dm), 'n_jets': hist.loc(nj)}].values()}")
-                    print(f"mc_den: {mc_den[{'tau_dm_pnet': hist.loc(dm), 'n_jets': hist.loc(nj)}].values()}")
+                    print(f"data_num: {data_num[{'tau_dm_pnet': hist.loc(dm), 'n_j': hist.loc(nj)}].values()}")
+                    print(f"data_den: {data_den[{'tau_dm_pnet': hist.loc(dm), 'n_j': hist.loc(nj)}].values()}")
+                    print(f"mc_num: {mc_num[{'tau_dm_pnet': hist.loc(dm), 'n_j': hist.loc(nj)}].values()}")
+                    print(f"mc_den: {mc_den[{'tau_dm_pnet': hist.loc(dm), 'n_j': hist.loc(nj)}].values()}")
             num = data_num.values() - mc_num.values()
 
             den = data_den.values() - mc_den.values()
@@ -234,7 +234,7 @@ class ComputeFakeFactors(
                                     p[1]*exp(p[2]*(x-p[3]))*p[2]/(1+exp(p[2]*(x-p[3])))**2,
                                     ])
                         return ders 
-                    bounds = ([0,0,-0.5,20],[0.3,0.3,-0.05,50]) 
+                    bounds = ([0,0,-0.5,20],[0.3,0.3,-0.005,50]) 
                 else:
                     formula_str = 'p0+p1/(1+exp(p2*(x-p3)))'
                     def fitf(x,p0,p1,p2,p3): 
@@ -249,7 +249,7 @@ class ComputeFakeFactors(
                                     p[1]*exp(p[2]*(x-p[3]))*p[2]/(1+exp(p[2]*(x-p[3])))**2,
                                     ])
                         return ders 
-                    bounds = ([0,0,-2,20],[0.3,0.3,-0.05,50])  
+                    bounds = ([0,0,-1.5,20],[0.3,0.3,-0.001,60])  
                 return formula_str, fitf, jac, bounds
             
             # def get_fit_model(name, dm, nj):
@@ -288,14 +288,14 @@ class ComputeFakeFactors(
             fitres = {}
             
             dm_axis = ff_raw.axes['tau_dm_pnet']
-            n_jets_axis = ff_raw.axes['n_jets']
+            n_j_axis = ff_raw.axes['n_j']
             
-            for nj in n_jets_axis:
+            for nj in n_j_axis:
                 if nj not in fitres.keys(): fitres[nj] = {}
                 for dm in dm_axis:
                     if dm not in fitres[nj].keys(): fitres[nj][dm] = {}
                     h1d = ff_raw[{'tau_dm_pnet': hist.loc(dm),
-                                   'n_jets': hist.loc(nj),
+                                   'n_j': hist.loc(nj),
                                     'syst': hist.loc('nominal')}]
                     mask = h1d.values() > 0
                     x = h1d.axes[0].centers
@@ -347,7 +347,7 @@ class ComputeFakeFactors(
                     fitres[nj][dm]['y'] = {}
                     for c, shift_name in enumerate(['down', 'nom', 'up']): # if down then c=-1, if up c=+1, nominal => c=0
                         
-                        fitres[nj][dm]['y'][shift_name] = np.clip(y + np.multiply(err_y,(c-1)), 0.,1.)
+                        fitres[nj][dm]['y'][shift_name] = np.clip(y + np.multiply(err_y,(c-1)), 0.,2*y)
             return ff_raw, fitres
         
         wj_raw, wj_fitres = get_ff_corr(self,
@@ -406,13 +406,13 @@ class ComputeFakeFactors(
                 inputs=[
                     cs.Variable(name="tau_pt", type="real",description="pt of tau"),
                     cs.Variable(name="tau_dm_pnet", type="int", description="PNet decay mode of tau"),
-                    cs.Variable(name="n_jets", type="int", description="Number of jets with pt > 20 GeV and eta < 4.7"),
+                    cs.Variable(name="n_j", type="int", description="Number of jets with pt > 20 GeV and eta < 4.7"),
                     cs.Variable(name="syst", type="string", description="Systematic variation 'nom', 'up', 'down'"),
                 ],
                 output=cs.Variable(name="weight", type="real", description="Multiplicative event weight"),
                 data=cs.Category(
                     nodetype="category",
-                    input="n_jets",
+                    input="n_j",
                     content=binned_by_nj,
                 )
             ))
@@ -440,13 +440,13 @@ class ComputeFakeFactors(
             h_raw       = eval(f'{h_name}_raw')
             fitres_dict = eval(f'{h_name}_fitres')
             dm_axis     = h_raw.axes['tau_dm_pnet']
-            nj_axis     = h_raw.axes['n_jets']
+            nj_axis     = h_raw.axes['n_j']
             pt_axis     = h_raw.axes['tau_pt']
             for nj in nj_axis:
                 print(f"Plotting 2d map for n jets = {nj}")
                 fig, ax = plt.subplots(figsize=(12, 8))
                 
-                single2d_h = h_raw[{'n_jets': hist.loc(nj),
+                single2d_h = h_raw[{'n_j': hist.loc(nj),
                        'syst': hist.loc('nominal')}]
                 pcm = ax.pcolormesh(*np.meshgrid(*single2d_h.axes.edges), single2d_h.view().value.T, cmap="viridis", vmin=0, vmax=0.1)
                 ax.set_yticks(dm_axis.centers, labels=list(map(dm_axis.bin, range(dm_axis.size))))
@@ -455,11 +455,11 @@ class ComputeFakeFactors(
                 plt.ylabel(single2d_h.axes.label[1])
                 plt.title(single2d_h.label)
 
-                self.output()['plots']['_'.join((h_name,'nominal',f'n_jets_{str(nj)}'))].dump(fig, formatter="mpl")
+                self.output()['plots']['_'.join((h_name,'nominal',f'n_j_{str(nj)}'))].dump(fig, formatter="mpl")
                 for dm in dm_axis:
                     print(f"Plotting 1d plot for n jets = {nj}, dm = {dm}")
                     h1d = h_raw[{'tau_dm_pnet': hist.loc(dm),
-                                 'n_jets': hist.loc(nj),
+                                 'n_j': hist.loc(nj),
                                     'syst': hist.loc('nominal')}]
                     fig, ax = plt.subplots(figsize=(8, 6))
                     mask = h1d.counts() > 0
