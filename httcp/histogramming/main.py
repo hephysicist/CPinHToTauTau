@@ -182,11 +182,10 @@ def ff_fill_hist(self: HistProducer, h: dict, data: dict[str, Any], task: law.Ta
         fill_data['shift']          = ak.full_like(fill_data['weight'], data['shift'], dtype=np.int32)
         fill_data['process']        = data['process'][mask]
         var_names = [v for v in data.keys() if v not in ['category','process','weight', 'shift']]
-        for the_var_name in var_names:
-            if the_var_name == 'n_jets':
-                fill_data[the_var_name] = np.clip(data[the_var_name][mask],0,2)
-            else:
-                fill_data[the_var_name] = ak.values_astype(data[the_var_name][mask], np.int32)
+        
+        fill_data['tau_pt'] = ak.values_astype(data['tau_pt'][mask],np.float32)
+        fill_data['tau_dm_pnet'] = ak.values_astype(data['tau_dm_pnet'][mask],np.int32)
+        fill_data['n_j'] = ak.values_astype(np.clip(data['n_j'][mask],0,2),np.int32)
         fill_hist(h[cat.name], fill_data, last_edge_inclusive=task.last_edge_inclusive) 
      
 @ff_hist_producer.post_process_hist

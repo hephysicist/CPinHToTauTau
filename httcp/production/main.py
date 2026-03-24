@@ -52,7 +52,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         gen_boson,
         #met_recoil,
         get_mc_weight,
-        #fake_factors,
+        fake_factors,
         hcand_fields,
         tauspinner_weight,
         category_ids,
@@ -72,6 +72,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         phi_cp,
         filter_weight,
         stitching_weight,
+        "luminosityBlock"
         },
     produces={
         attach_coffea_behavior,
