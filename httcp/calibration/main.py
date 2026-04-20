@@ -22,10 +22,10 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
 
 @calibrator(
     uses={
-        jec, tau_energy_scale, electron_smearing_scaling, deterministic_seeds, "PuppiMET.pt","Electron.phi", "Tau.phi", "Tau.pt"
+        jec, tau_energy_scale, deterministic_seeds, "PuppiMET.pt","Electron.phi", "Tau.phi", "Tau.pt"
     },
     produces={
-        jec, tau_energy_scale, electron_smearing_scaling, deterministic_seeds,"nJet", 
+        jec, tau_energy_scale, deterministic_seeds,"nJet", 
     },
 )
 def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
@@ -38,11 +38,6 @@ def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
 
     print("Performing Jet Energy Correction...")
     events = self[jec](events, **kwargs)
-    
-    if self.config_inst.x.year==2022: # scaling and smearing is not available for 2023
-        print("Performing electron scaling and smearing correction...")
-        events = self[electron_smearing_scaling](events, **kwargs)
-        print("Electron scaling and smearing correction...SUCCEDED")
     
     #events = self[met_phi](events, **kwargs)
     #events = self[jer](events, **kwargs)

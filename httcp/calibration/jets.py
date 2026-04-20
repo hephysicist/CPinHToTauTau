@@ -159,6 +159,7 @@ def get_jec_config_default(self) -> DotDict:
 
 @calibrator(
     uses={
+        optional("run"),
         "Jet.pt", "Jet.eta", "Jet.phi", "Jet.mass", "Jet.area", "Jet.rawFactor",
         "Jet.jetId",
         optional("fixedGridRhoFastjetAll"),
@@ -176,6 +177,8 @@ def get_jec_config_default(self) -> DotDict:
     get_jec_file=get_jec_file_default,
     # # function to determine the jec configuration dict
     get_jec_config=get_jec_config_default,
+    # function to update variables before jec corrector call
+    update_corrector_variables=(lambda self, corrector, variables: variables),
 )
 
 def jec(
@@ -244,7 +247,7 @@ def jec(
     events = set_ak_column_f32(events, "Jet.pt_raw", events.Jet.pt * (1 - events.Jet.rawFactor))
     events = set_ak_column_f32(events, "Jet.mass_raw", events.Jet.mass * (1 - events.Jet.rawFactor))
     
-    def correct_jets(pt, phi, area, eta, rho, evaluator_key="jec"):
+    def correct_jets(pt, phi, area, eta, rho,run, evaluator_key="jec"):
         # variable naming convention
         variable_map = {
             "JetA": area,
@@ -252,6 +255,7 @@ def jec(
             "JetPt": pt,
             "JetPhi": phi,
             "Rho": ak.values_astype(rho, np.float32),
+            "run": run,
         }
 
         # apply all correctors sequentially, updating the pt each time
@@ -289,6 +293,7 @@ def jec(
             eta=events.Jet.eta,
             area=events.Jet.area,
             rho=rho,
+            run=events.run,
             evaluator_key="jec_subset_type1_met",
         )
         
@@ -311,6 +316,7 @@ def jec(
         eta=events.Jet.eta,
         area=events.Jet.area,
         rho=rho,
+        run=events.run,
         evaluator_key="jec",
     )
     # map jet phi into [-pi, pi] 
@@ -413,7 +419,7 @@ def jec_init(self: Calibrator) -> None:
         for junc_name in sources
         for junc_dir in ("up", "down")
     }
-
+    self.uses.add("run")
     # add PuppiMET variables
     if self.propagate_met:
         self.uses |= {"RawPuppiMET.pt", "RawPuppiMET.phi","PuppiMET.pt", "PuppiMET.phi"}
