@@ -442,20 +442,40 @@ def fake_factors(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     """
     channel = self.config_inst.channels.names()[0]
     tau = events[f'hcand_{channel}'].lep1 # fake factor method works for nutau/etau channel
-    pt = np.clip(flat_np_view(tau.pt, axis=1), 20,200)#fake factors are estimated for this pt region
+    pt = np.clip(flat_np_view(tau.pt, axis=1), 20,300)#fake factors are estimated for this pt region
     dm = flat_np_view(tau.decayModePNet, axis=1)
     n_jets = np.clip(flat_np_view(events.n_jets).copy(),0,2).astype(int) 
-    mask = (dm ==0) | (dm==1) | (dm==2) | (dm==10) | (dm==11) 
+    mask = (dm ==0) | (dm==1) | (dm==2) | (dm==10) | (dm==11)
+     
+    shift_dict = self.config_inst.x.fake_factor_method.shifts
+    shifts = ak.cartesian([shift_dict['tau_dm_pnet'],
+                           shift_dict['n_j'],
+                           shift_dict['shift_name']], axis=0)
+   
+    args = lambda mask,shift : (pt[mask],
+                                dm[mask],
+                                n_jets[mask],
+                                shift)
+    ff_dict = {}
     for the_name in self.config_inst.x.fake_factor_method.columns:
-        for the_shift in self.config_inst.x.fake_factor_method.shifts:
-            ff_evaluator = self.fake_factor_qcd if 'qcd' in the_name else self.fake_factor_wjets
-            args = lambda mask : (pt[mask],
-                                  dm[mask],
-                                  n_jets[mask],
-                                  the_shift)
-            ff_vals = np.zeros_like(pt, dtype=np.float32)
-            ff_vals[mask] = ff_evaluator(*args(mask))
-            events = set_ak_column_f32(events,'_'.join((the_name,the_shift)), ff_vals)
+        ff_evaluator = self.fake_factor_qcd if 'qcd' in the_name else self.fake_factor_wjets
+        ff_nom = np.zeros_like(pt, dtype=np.float32)
+        ff_nom[mask] = ff_evaluator(*args(mask,'nom')) #use these values as nominal
+        
+        ff_dict[the_name] = ff_nom
+        #Evaluate systematics:
+        for (the_dm,the_nj,the_syst) in shifts.tolist():
+            
+            syst_name = '_'.join((the_name,
+                            'dm',str(the_dm),
+                            'nj',str(the_nj),
+                            the_syst))
+            
+            the_mask = mask & (dm == the_dm) & (n_jets == the_nj)
+            ff_syst = ff_nom.copy()
+            ff_syst[the_mask] = ff_evaluator(*args(the_mask,the_syst))
+            ff_dict[syst_name] = ff_syst
+    events = set_ak_column_f32(events, 'ff_weight', ak.zip(ff_dict)) 
     return events
 
 @fake_factors.requires

@@ -25,7 +25,7 @@ def keep_columns(cfg: od.Config) -> None:
             "run", "luminosityBlock", "event",
             "PV.npvs","PV.x","PV.y","PV.z","PVBS.x","PVBS.y","PVBS.z",
             "Pileup.nTrueInt","Pileup.nPU","genWeight", "LHEWeight.originalXWGTUP", "HTXS_njets*","weight","zpt_weight","muon_weight_nom","mc_weight","tau_weight_nom",
-            "LHE.Njets", "LHE.NpNLO",
+            "LHE.Njets", "LHE.NpNLO","LHEScaleWeight*","PSWeight*"
         } | {
             f"PuppiMET.{var}" for var in [
                 "pt", "phi", "significance",
@@ -492,6 +492,22 @@ def add_highlevel_features(cfg: od.Config) -> None:
         unit="",
         x_title=r"$\frac{|E(\pi^{\pm}) - E(\pi^{0})|}{E(\pi^{\pm}) + E(\pi^{0})}$",
     ) 
+    cfg.add_variable(
+        name="Emu2tau",
+        expression="Emu2tau",
+        null_value=EMPTY_FLOAT,
+        binning=(50, 0,1/2),
+        unit=r"1/$m_{\tau}$",
+        x_title=r"$E_{\mu}$ in $\tau$ ZMF",
+    ) 
+    cfg.add_variable(
+        name="Epi",
+        expression="Epi",
+        null_value=EMPTY_FLOAT,
+        binning=(50, 0, 150),
+        unit="GeV",
+        x_title=r"$E_{\pi}$ in Higgs ZMF",
+    ) 
     
     
     
@@ -512,7 +528,7 @@ def add_weight_features(cfg: od.Config) -> None:
         expression="pu_weight",
         null_value=EMPTY_FLOAT,
         binning=(30, 0,3),
-        unit="",
+        unit=r"$m_\tau$",
         x_title=r"Pileup weight",
     )
     
@@ -571,7 +587,7 @@ def phi_cp_variables(cfg: od.Config) -> None:
         binning=(n_bins_phi_cp, 0, 2*np.pi),
         x_title=rf"$\varphi_{{CP}} (rad)",
     )
-    for the_ch in ['mu_pi','mu_pi_gen','mu_rho','mu_rho_gen',
+    for the_ch in ['mu_pi','mu_pi_Emu_cut','mu_pi_gen','mu_rho','mu_rho_gen',
                    'mu_a1_1pr','mu_a1_1pr_gen','mu_a1_3pr_dp','mu_a1_3pr_dp_gen',
                    'mu_a1_3pr_pv','mu_a1_3pr_pv_mtt','mu_a1_3pr_pv_gef','mu_a1_3pr_pv_gen']:
 

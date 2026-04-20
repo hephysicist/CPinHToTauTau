@@ -344,10 +344,13 @@ def jets_taggable(
 
 @producer(
     uses={f"Jet.{var}" for var in
-          [
-        "pt", "eta", "phi", "mass", "btagDeepFlavB", "pass_tightID_lep_veto"
-    ]} | {"hcand_*"},
-    produces={"N_b_jets"},
+          ["pt", "eta", "phi", "mass", "btagDeepFlavB", "pass_tightID_lep_veto"]} | {"hcand_*"},
+    produces={
+        "N_b_jets",
+        "lead_b_jet.*",
+        "sublead_b_jet.*",
+        "di_b_jet.*",
+    },
     exposed=False,
 )
 def number_b_jet(
@@ -356,64 +359,102 @@ def number_b_jet(
         **kwargs
 ) -> ak.Array:
     """
-    This function that produces 'N_b_jets' column to be used in categorisation
+    Produces:
+      - N_b_jets
+      - lead_b_jet.{pt,eta,phi,mass}
+      - sublead_b_jet.{pt,eta,phi,mass} (and alias sublad_b_jet.*)
+      - di_b_jet.{pt,eta,phi,mass,deltaeta,deltaphi,delta_r}
     """
     year = self.config_inst.x.year
     tag = self.config_inst.x.tag
     btag_wp = self.config_inst.x.btag_working_points[year][tag].deepjet.medium
-    # nominal jet selection
+
+    # sort jets by pt
     jet_pt_sorted_idx = ak.argsort(events.Jet.pt, axis=1, ascending=False)
     sorted_jets = events.Jet[jet_pt_sorted_idx]
+
+    # base (b-jet) selection
     jet_selections = {
         "jet_pt_20": sorted_jets.pt > 20.0,
         "jet_eta_2.5": abs(sorted_jets.eta) < 2.5,
         "jet_id": sorted_jets.pass_tightID_lep_veto,
-        "btag_wp_medium": sorted_jets.btagDeepFlavB >= btag_wp
+        "btag_wp_medium": sorted_jets.btagDeepFlavB >= btag_wp,
     }
     jet_obj_mask = ak.ones_like(jet_pt_sorted_idx, dtype=np.bool_)
     for the_sel in jet_selections.values():
         jet_obj_mask = jet_obj_mask & the_sel
 
-    for the_ch in self.config_inst.channels.names():
-        hcand = events[f'hcand_{the_ch}']
+    # use first configured channel (same pattern as jet_pt_def)
+    ch_str = self.config_inst.channels.names()[0]
+    hcand = events[f"hcand_{ch_str}"]
 
-        for lep_str in [field for field in hcand.fields if 'lep' in field]:
-            lep = ak.firsts(hcand[lep_str])
-            seed_idx = ak.fill_none(lep.jetIdx, -1)
-            jet_obj_mask_seed_idx = jet_obj_mask & (
-                jet_pt_sorted_idx != seed_idx)
-            presel_jet = ak.drop_none(
-                ak.mask(sorted_jets, jet_obj_mask_seed_idx))
-            jet_tau_pairs = ak.cartesian([presel_jet, lep], axis=1)
-            jet_br, lep_br = ak.unzip(jet_tau_pairs)
-            delta_phi = jet_br.phi - lep_br.phi
-            delta_phi = ak.where(
-                delta_phi > np.pi, delta_phi - 2*np.pi, delta_phi)
-            delta_phi = ak.where(delta_phi < -np.pi,
-                                 delta_phi + 2*np.pi, delta_phi)
-            delta_eta = jet_br.eta - lep_br.eta
-            delta_r = np.sqrt(delta_phi**2 + delta_eta**2)
-            jet_br_to_plot = jet_br[delta_r > 0.4]
-            if lep_str == 'lep0':
-                jet_vs_lep0 = jet_br[delta_r > 0.4]
-            elif lep_str == 'lep1':
-                jet_vs_lep1 = jet_br[delta_r > 0.4]
+    # Δφ wrapping helper (vectorized)
+    def _wrap_delta_phi(dphi):
+        dphi = ak.where(dphi > np.pi, dphi - 2.0 * np.pi, dphi)
+        dphi = ak.where(dphi < -np.pi, dphi + 2.0 * np.pi, dphi)
+        return dphi
 
-    lep0_max_obj = ak.max(ak.num(jet_vs_lep0.pt))
-    lep1_max_obj = ak.max(ak.num(jet_vs_lep1.pt))
-    max_len = ak.max([lep0_max_obj, lep1_max_obj])
+    # remove jets matched to leptons (seed jetIdx) and require ΔR(jet,lep) > 0.4 for both leptons
+    mask = jet_obj_mask
+    for lep_str in ["lep0", "lep1"]:
+        lep = ak.firsts(hcand[lep_str])
+        seed_idx = ak.fill_none(lep.jetIdx, -1)
 
-    jet_vs_lep0_pt = ak.pad_none(jet_vs_lep0.pt, max_len)
-    jet_vs_lep0_pt_tag = ak.fill_none(jet_vs_lep0_pt, -999)
-    jet_vs_lep1_pt = ak.pad_none(jet_vs_lep1.pt, max_len)
-    jet_vs_lep1_pt_tag = ak.fill_none(jet_vs_lep1_pt, -999)
+        # veto the seed jet (same indexing space as sorted jets)
+        mask = mask & (jet_pt_sorted_idx != seed_idx)
 
-    n_jets_vs_lep0_tag = ak.sum((jet_vs_lep0_pt_tag > 20), axis=1)
-    n_jets_vs_lep1_tag = ak.sum((jet_vs_lep1_pt_tag > 20), axis=1)
-    n_jets_mask_tag = (n_jets_vs_lep0_tag == n_jets_vs_lep1_tag)
-    n_jets_taggable = ak.where(n_jets_mask_tag, n_jets_vs_lep0_tag, 0)
+        # ΔR cleaning
+        dphi = _wrap_delta_phi(sorted_jets.phi - lep.phi)
+        deta = sorted_jets.eta - lep.eta
+        dr = np.sqrt(dphi**2 + deta**2)
+        mask = mask & ak.fill_none((dr > 0.4), False)
 
-    events = set_ak_column(events, "N_b_jets", n_jets_taggable)
+    # selected b-jets after cleaning
+    sel_bjets = ak.drop_none(ak.mask(sorted_jets, mask))
+    nbjets = ak.num(sel_bjets, axis=1)
+
+    # build leading/subleading and dijet (using same utilities as jet_pt_def)
+    empty_p4 = ak.zeros_like(get_lep_p4(hcand.lep0))
+    sel_bjets_p4 = get_lep_p4(sel_bjets)
+
+    lead_bjet_p4 = ak.where(nbjets > 0, sel_bjets_p4[:, :1], empty_p4)
+    sublead_bjet_p4 = ak.where(nbjets > 1, sel_bjets_p4[:, 1:2], empty_p4)
+
+    di_bjet_p4 = to_pt_eta_phi_m(lead_bjet_p4 + sublead_bjet_p4)
+
+    # fill output records with EMPTY_FLOAT when not present
+    empty_float = lambda arr: ak.full_like(arr, EMPTY_FLOAT)
+
+    lead_b_jet = {}
+    lead_mask = (lead_bjet_p4.pt > 20)
+    sublead_b_jet = {}
+    sublead_mask = (sublead_bjet_p4.pt > 20)
+    di_b_jet = {}
+    di_mask = (di_bjet_p4.pt > 20)
+
+    for var in ["pt", "eta", "phi", "mass"]:
+        lead_b_jet[var] = ak.where(
+            lead_mask, getattr(lead_bjet_p4, var), empty_float(getattr(lead_bjet_p4, var))
+        )
+        sublead_b_jet[var] = ak.where(
+            sublead_mask, getattr(sublead_bjet_p4, var), empty_float(getattr(sublead_bjet_p4, var))
+        )
+        di_b_jet[var] = ak.where(
+            di_mask, getattr(di_bjet_p4, var), empty_float(getattr(di_bjet_p4, var))
+        )
+
+    # dijet angular separations (only meaningful if >=2 b-jets)
+    for func_name in ["deltaeta", "deltaphi", "delta_r"]:
+        func = getattr(lead_bjet_p4, func_name)
+        di_b_jet[func_name] = ak.where(
+            nbjets >= 2, func(sublead_bjet_p4), empty_float(di_bjet_p4.pt)
+        )
+
+    # write columns
+    events = set_ak_column(events, "lead_b_jet", ak.zip(lead_b_jet))
+    events = set_ak_column(events, "sublead_b_jet", ak.zip(sublead_b_jet))
+    events = set_ak_column(events, "di_b_jet", ak.zip(di_b_jet))
+    events = set_ak_column(events, "N_b_jets", nbjets)
     return events
 
 
@@ -583,6 +624,33 @@ def pion_energy_split(
     events = set_ak_column_f32(events, "pion_E_split", pion_E_split)
     return events
 
+
+
+@producer(
+    uses={
+        "hcand_mutau*",
+    },
+    produces={
+        "Emu2tau","Epi",
+    },
+    exposed=False,
+)
+def mtt_features(
+        self: Producer,
+        events: ak.Array,
+        **kwargs
+) -> ak.Array:
+    mu = get_lep_p4(events.hcand_mutau.lep0)
+    pi = get_lep_p4(events.hcand_mutau.lep1)
+    tau0 = get_lep_p4(events.hcand_mutau.fastMTT_BW.lep0)
+    tau1 = get_lep_p4(events.hcand_mutau.fastMTT_BW.lep1)
+    beta_tau = tau0.boostvec
+    beta_H = (tau0+tau1).boostvec
+    mu_boosted = mu.boost(-beta_tau)
+    pi_boosted = pi.boost(-beta_H)
+    events = set_ak_column_f32(events, "Emu2tau", mu_boosted.E/1.7769)
+    events = set_ak_column_f32(events, "Epi", pi_boosted.E)
+    return events
 
 
 

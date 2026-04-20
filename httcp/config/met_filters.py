@@ -25,7 +25,7 @@ def add_met_filters(config: od.Config) -> None:
         "Flag.BadPFMuonDzFilter", # +
         "Flag.hfNoisyHitsFilter", # + 
         "Flag.eeBadScFilter", # +
-        "Flag.ecalBadCalibFilter", # + (not in the code of IC)
+        #"Flag.ecalBadCalibFilter", # + (not in the code of IC)
     ]
     # same filter for mc and data, but still separate
     filters = {

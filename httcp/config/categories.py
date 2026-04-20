@@ -112,7 +112,7 @@ def add_categories(config: od.Config,
     
     category_map  = DotDict.wrap({
         "sr"            : { 'selection' : ['mt_cut', "deep_tau_wp", "lep_iso", "os_charge"],
-                            'label'     : r"inclusive",
+                            'label'     : r"incl. SR",
                             'aux'       : {
                                            #qcd estimation categories
                                            'abcd_regs' : {
@@ -170,9 +170,9 @@ def add_categories(config: od.Config,
     #Add child categories to base categories
     
     jet_fake_map  = DotDict.wrap({
-        "jet_fakes" : {'selection'  : ["tau_jet_fakes"],    'label': f"jet fakes",},
-        "prompt"    : {'selection'   : ["tau_no_jet_fakes"], 'label': f"prompt lep."},
-        "fake_incl" : {'selection'   : [], 'label': f"fakes + prompt lep."},
+        "jet_fakes" : {'selection'  : ["tau_jet_fakes"],    'label': f"\njet fakes",},
+        "prompt"    : {'selection'   : ["tau_no_jet_fakes"], 'label': f"\nprompt lep."},
+        "fake_incl" : {'selection'   : [], 'label': f"\nfake incl."},
         })
     
     bdt_map  = DotDict.wrap({

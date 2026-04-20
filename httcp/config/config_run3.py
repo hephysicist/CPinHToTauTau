@@ -101,6 +101,7 @@ def add_run3(ana: od.Analysis,
             "e_smearing_corrector"  : "2022Re-recoBCD_SmearingJSON",
             "jerc_postfix"          : "",
             "cat_tag"               : "Run3-22CDSep23-Summer22-NanoAODv12",
+            "date"                  : "2025-09-23"
             },
         "postEE"    : {
             "short_tag"             : "EE",
@@ -111,6 +112,7 @@ def add_run3(ana: od.Analysis,
             "e_smearing_corrector"  : "2022Re-recoE+PromptFG_SmearingJSON",
             "jerc_postfix"          : "EE",
             "cat_tag"               : "Run3-22EFGSep23-Summer22EE-NanoAODv12",
+            "date"                  : "2025-09-23"
             },
         "preBPix"   : {
             "short_tag"             : "",
@@ -121,6 +123,7 @@ def add_run3(ana: od.Analysis,
             "e_smearing_corrector"  : "2022Re-recoE+PromptFG_SmearingJSON",
             "jerc_postfix"          : "",
             "cat_tag"               : "Run3-23CSep23-Summer23-NanoAODv12",
+            "date"                  : "2025-10-07"
             },
         "postBPix"  : {
             "short_tag"             : "BPix",
@@ -131,6 +134,7 @@ def add_run3(ana: od.Analysis,
             "e_smearing_corrector"  : "2022Re-recoE+PromptFG_SmearingJSON",
             "jerc_postfix"          : "BPix",
             "cat_tag"               : "Run3-23DSep23-Summer23BPix-NanoAODv12",
+            "date"                  : "2025-10-07" #TODO check
             },
         ""  : { #Default values in case tag is empty
             "short_tag"             : "",
@@ -140,6 +144,7 @@ def add_run3(ana: od.Analysis,
             "e_scale_corrector"     : "",
             "e_smearing_corrector"  : "",
             "jerc_postfix"          : "",
+            "date"                  : ""
             },
     }
     
@@ -292,10 +297,6 @@ def add_run3(ana: od.Analysis,
     # (used during plotting)
     cfg.x.variable_groups = {}
 
-    # shift groups for conveniently looping over certain shifts
-    # (used during plotting)
-    cfg.x.shift_groups = {}
-
     # selector step groups for conveniently looping over certain steps
     # (used in cutflow tasks)
     cfg.x.selector_step_groups = {
@@ -317,7 +318,7 @@ def add_run3(ana: od.Analysis,
         
     cfg.x.jec = DotDict.wrap({
         "campaign": jerc_campaign,
-        "version": {2016: "V7", 2017: "V5", 2018: "V5", 2022: "V2", 2023:"V1"}[year],
+        "version": {2016: "V7", 2017: "V5", 2018: "V5", 2022: "V3", 2023:"V1"}[year],
         "jet_type": jet_type,
         "levels": ["L1L2L3Res"], #"L2Relative", "L2L3Residual", "L3Absolute", "L1L2L3Res" 
         "levels_DATA": ["L1FastJet", "L2Relative","L3Absolute", "L2L3Residual"],
@@ -562,18 +563,18 @@ def add_run3(ana: od.Analysis,
             corrector_kwargs={"wp": getattr(cfg.x.deep_tau.vs_jet, channel), "wp_VSe": getattr(cfg.x.deep_tau.vs_e, channel)},
             )
     
-    cfg.x.eec = EGammaCorrectionConfig(
-                correction_set=f"EGMSmearAndSyst_ElePTsplit_{str(year)}{campaign.x.tag}",
-                value_type="scale",
-                uncertainty_type="escale",
-                compound=True,
-            )
+    # cfg.x.eec = EGammaCorrectionConfig(
+    #             correction_set=f"EGMSmearAndSyst_ElePTsplit_{str(year)}{campaign.x.tag}",
+    #             value_type="scale",
+    #             uncertainty_type="escale",
+    #             compound=True,
+    #         )
     
-    cfg.x.eer = EGammaCorrectionConfig(
-                correction_set=f"EGMSmearAndSyst_ElePTsplit_{str(year)}{campaign.x.tag}",
-                value_type="smear",
-                uncertainty_type="esmear",
-    )
+    # cfg.x.eer = EGammaCorrectionConfig(
+    #             correction_set=f"EGMSmearAndSyst_ElePTsplit_{str(year)}{campaign.x.tag}",
+    #             value_type="smear",
+    #             uncertainty_type="esmear",
+    # )
     ##########################
     ###### mT cut value ######
     ##########################
@@ -649,7 +650,7 @@ def add_run3(ana: od.Analysis,
         "met_recoil"                    : f"{tmp_corr_dir}ZpT_RecCorr_V5/DY_pTll_recoil_corrections_{year}{tag}.json.gz",
         "jet_jerc"                      : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jet_jerc.json.gz", "v2"),
         "jet_veto_map"                  : (f"{jsonpog_dir}JME/{year}_{pog_tag}/jetvetomaps.json.gz", "v2"),
-        "fake_factors"                  : (f"{tmp_corr_dir}fake_factors_v2_2026_no_recoil_sigmoid_9bins.json", "v2"),
+        "fake_factors"                  : (f"{tmp_corr_dir}fake_factors_v3_2026_no_recoil_sigmoid_9bins.json", "v2"),
         "ip_sig_corr"                   : (f"{tmp_corr_dir}measured_by_Alexei/IPsignificance/JSON/IP_Significance_Correction_Run3_2022-2023_muon.json", "v2"),
         "ip_corr"                       : f"{corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
         "ml_model_even"                 : f"{corr_dir}signal_classifier/model_EVEN.json",
@@ -659,8 +660,36 @@ def add_run3(ana: od.Analysis,
     })
     
     
+    jsons_2025_v3 = DotDict.wrap({
+        "lumi": {
+            "golden": (golden_ls[year], "v1"),
+            "normtag": ("/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json", "v1"), #/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags
+        },
+        "pu_sf"                         : (f"{cat_path}/LUM/{cat_tag}/2024-01-31/puWeights.json.gz", "v1"),
+        "muon_correction"               : f"{cat_path}/MUO/{cat_tag}/2025-08-14/muon_Z.json.gz",
+        "cross_mutau_mu_leg"            : f"{tmp_corr_dir}hleprare/TriggerScaleFactors/{year}{tag}/CrossMuTauHlt_MuLeg_v1.json",
+        #"electron_scaling_smearing"     : f"{cat_path}/EGM/{cat_tag}/2024-03-04/electronSS.json.gz",
+        #"electron_idiso"                : f"{cat_path}/EGM/{cat_tag}/2024-03-04/electron.json.gz",
+        #"electron_trigger"              : f"{cat_path}/EGM/{cat_tag}/2024-03-04/electronHlt.json.gz",
+        "tau_correction"                : f"{cat_path}/TAU/{cat_tag}/2025-10-01/tau_DeepTau2018v2p5_{year}_{tag}.json.gz",
+        "tes"                           : (f"{tmp_corr_dir}measured_by_ic/tes/tau_es_dm_DeepTau2018v2p5_{year}_{tag}.json.gz", "v1"),
+        "tau_sf"                        : f"{tmp_corr_dir}measured_by_ic/tau_sf/tau_sf_pt-dm_DeepTau2018v2p5VSjet_{year}_{tag}.json.gz",
+        "tau_trigger_sf"                : f"{tmp_corr_dir}measured_by_ic/tau_trigger_sf/tau_trigger_DeepTau2018v2p5_{year}_{tag}.json.gz",
+        "zpt_weight"                    : f"{tmp_corr_dir}dy_ptll/DY_pTll_weights_{year}{tag}.json.gz",
+        "met_recoil"                    : f"{tmp_corr_dir}ZpT_RecCorr_V5/DY_pTll_recoil_corrections_{year}{tag}.json.gz",
+        "jet_jerc"                      : (f"{cat_path}/JME/{cat_tag}/{tags['date']}/jet_jerc.json.gz", "v2"),
+        "jet_veto_map"                  : (f"{cat_path}/JME/{cat_tag}/{tags['date']}/jetvetomaps.json.gz", "v2"),
+        "fake_factors"                  : (f"{tmp_corr_dir}fake_factors_v3_2026_no_recoil_sigmoid_9bins.json", "v2"),
+        "ip_sig_corr"                   : (f"{tmp_corr_dir}measured_by_Alexei/IPsignificance/JSON/IP_Significance_Correction_Run3_2022-2023_muon.json", "v2"),
+        "ip_corr"                       : f"{tmp_corr_dir}ip_correction/ip_correction_Run3_{year}{short_tag}.json",
+        "ml_model_even"                 : f"{tmp_corr_dir}signal_classifier/model_EVEN.json",
+        "ml_model_odd"                  : f"{tmp_corr_dir}signal_classifier/model_ODD.json",
+        "filter_eff"                    : f"{tmp_corr_dir}filter_eff/2025_v1/Run3_{year}{short_tag}.yaml",
+    })
     
-    cfg.x.external_files = jsons_2025_v2
+    
+    
+    cfg.x.external_files = jsons_2025_v3
     #--------------------------------------------------------------------------------------------- #
     # electron settings
     # names of electron correction sets and working points
@@ -712,40 +741,27 @@ def add_run3(ana: od.Analysis,
  
     cfg.add_shift(name="nominal", id=0)
 
-   
-    for i, (match, dm) in enumerate(itertools.product(["jet", "e"], [0, 1, 2, 10, 11])):
-        cfg.add_shift(name=f"tec_{match}_dm{dm}_up", id=40 + 2 * i, type="shape", tags={"tec"})
-        cfg.add_shift(name=f"tec_{match}_dm{dm}_down", id=41 + 2 * i, type="shape", tags={"tec"})
-        add_shift_aliases(
-            cfg,
-            f"tec_{match}_dm{dm}",
-            {
-                "Tau.pt": "Tau.pt_{name}",
-                "Tau.mass": "Tau.mass_{name}",
-                f"{cfg.x.met_name}.pt": f"{cfg.x.met_name}.pt_{{name}}",
-                f"{cfg.x.met_name}.phi": f"{cfg.x.met_name}.phi_{{name}}",
-            },
-        )
-        
-    cfg.add_shift(name="tau_up", id=1, type="shape")
-    cfg.add_shift(name="tau_down", id=2, type="shape")
-    add_shift_aliases(cfg, "tau", {"tau_weight": "tau_weight_{direction}"})
+    # for i, (match, dm) in enumerate(itertools.product(["jet", "e"], [0, 1, 2, 10, 11])):
+    #     cfg.add_shift(name=f"tec_{match}_dm{dm}_up", id=40 + 2 * i, type="shape", tags={"tec"})
+    #     cfg.add_shift(name=f"tec_{match}_dm{dm}_down", id=41 + 2 * i, type="shape", tags={"tec"})
+    #     add_shift_aliases(
+    #         cfg,
+    #         f"tec_{match}_dm{dm}",
+    #         {
+    #             "Tau.pt": "Tau.pt_{name}",
+    #             "Tau.mass": "Tau.mass_{name}",
+    #             f"{cfg.x.met_name}.pt": f"{cfg.x.met_name}.pt_{{name}}",
+    #             f"{cfg.x.met_name}.phi": f"{cfg.x.met_name}.phi_{{name}}",
+    #         },
+    #     )
     
     cfg.add_shift(name="mu_up", id=3, type="shape")
     cfg.add_shift(name="mu_down", id=4, type="shape")
     add_shift_aliases(cfg, "mu", {"muon_weight": "muon_weight_{direction}"})
-
-    # cfg.add_shift(name="ts_up", id=5, type="shape") #cp-even
-    # cfg.add_shift(name="ts_down", id=7, type="shape") #cp-odd
-    # add_shift_aliases(cfg, "ts", {"tauspinner_weight": "tauspinner_weight_{direction}"})
-    
-    # cfg.add_shift(name="electron_up", id=8, type="shape")
-    # cfg.add_shift(name="electron_down", id=9, type="shape")
-    # add_shift_aliases(cfg, "electron", {"electron_weight": "electron_weight_{direction}"})
-    
-    cfg.add_shift(name="top_pt_up", id=10, type="shape")
-    cfg.add_shift(name="top_pt_down", id=11, type="shape")
-    add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"}) 
+  
+    # cfg.add_shift(name="top_pt_up", id=10, type="shape")
+    # cfg.add_shift(name="top_pt_down", id=11, type="shape")
+    # add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"}) 
     
     cfg.x.ip_sig_syst = ['prompt_etaLt1p0_stat',
                    'prompt_eta1p0to1p6_stat',
@@ -758,22 +774,56 @@ def add_run3(ana: od.Analysis,
         cfg.add_shift(name=f"ip_sig_{name}_up", id=2 * idx, type="shape") 
         cfg.add_shift(name=f"ip_sig_{name}_down", id=2 * idx + 1, type="shape") 
     
+    #Theory uncertainties
+    
+    cfg.x.lhe_variations = {
+        "Scale_muR_up"      : 7, # muR 2.0, muF 1.0
+        "Scale_muR_down"    : 1, # muR 0.5, muF 1.0
+        "Scale_muF_up"      : 5, # muR 1.0, muF 2.0
+        "Scale_muF_down"    : 3, # muR 1.0, muF 0.5 
+    }
+    for i, the_name in enumerate(cfg.x.lhe_variations.keys()):
+        cfg.add_shift(name='_'.join(('CMS',the_name)) , id=900+i, type="shape", tags={"theo"})
+    
+    add_shift_aliases(cfg, "CMS_Scale_muR", {"lhe_weight": "lhe_weight_Scale_muR_{direction}"})
+    add_shift_aliases(cfg, "CMS_Scale_muF", {"lhe_weight": "lhe_weight_Scale_muF_{direction}"})
+        
+    cfg.x.ps_variations = {    
+        "PS_ISR_up"         : 0, # ISR = 2, FSR = 1
+        "PS_ISR_down"       : 2, # ISR = 0.5, FSR = 1
+        "PS_FSR_up"         : 1, # ISR = 1, FSR = 2
+        "PS_FSR_down"       : 3, # ISR = 1, FSR = 2
+    }
+    for i, the_name in enumerate(cfg.x.ps_variations.keys()):
+        cfg.add_shift(name='_'.join(('CMS',the_name)) , id=950+i, type="shape", tags={"theo"})
+    
+    add_shift_aliases(cfg, "CMS_PS_ISR", {"ps_weight": "ps_weight_PS_ISR_{direction}"})
+    add_shift_aliases(cfg, "CMS_PS_FSR", {"ps_weight": "ps_weight_PS_FSR_{direction}"})
+        
+    
+    #Fake factor config and uncertainties 
+    from httcp.config.ff_config import add_ff_config
+    add_ff_config(cfg,channel=channel)
+   
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
-    
     cfg.x.event_weights = DotDict({
         "normalization_weight": [],
         "filter_weight": [],
         #"mc_weight":[],
-        "tau_weight_nom": get_shifts("tau"),
+        "tau_weight_nom": [],
         "pu_weight": [],
         "tauspinner_weight": [],
         "zpt_weight":[],
         "muon_weight_nom": get_shifts("mu"),
+        "ff_weight_qcd" : get_shifts(*(f"{unc}" for unc in cfg.x.ff_syst_names if "qcd" in unc)), #not used as a general weight
+        "ff_weight_wj"  : get_shifts(*(f"{unc}" for unc in cfg.x.ff_syst_names if "wj" in unc)),   #not used as a general weight
         #"electron_weight_nom": get_shifts("electron"), 
         "top_pt_weight" : [],       
         "trigger_weight_mutau_nom": [],
         "stitching_weight": [],
+        "lhe_weight" : get_shifts("CMS_Scale_muR","CMS_Scale_muF"),
+        "ps_weight"  : get_shifts("CMS_PS_ISR","CMS_PS_FSR"),
     })
     #for dataset in cfg.datasets:
         #if dataset.has_tag("ttbar"):
@@ -820,8 +870,14 @@ def add_run3(ana: od.Analysis,
     # cfg.add_shift(name="jer_up", id=6000, type="shape", tags={"jer"})
     # cfg.add_shift(name="jer_down", id=6001, type="shape", tags={"jer"})
     # add_shift_aliases(cfg, "jer", {"Jet.pt": "Jet.pt_{name}", "Jet.mass": "Jet.mass_{name}"})
-  
     
+   
+    cfg.x.shift_groups = {
+        "ff": [
+            shift_inst.name for shift_inst in cfg.shifts
+            if shift_inst.has_tag(("ff"))
+        ],
+    }
 
     
     # versions per task family, either referring to strings or to callables receving the invoking
@@ -855,24 +911,6 @@ def add_run3(ana: od.Analysis,
                     'lep1' : 'Tau'},
         'tautau' : {'lep0' : 'Tau',
                     'lep1' : 'Tau'},
-    })
-    cfg.x.fake_factor_method = DotDict.wrap({
-    "axes": {'tau_pt': {
-                'var_route' : [f'hcand_{channel}', 'lep1', 'pt'],
-                'ax_str'    : 'Variable([20,25,30,35,40,50,60,80,300], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
-                # 'ax_str'    : 'Variable([20,30,40,60,200], name="tau_pt", label="Tau pt", underflow=False, overflow=False)',
-                },
-             'tau_dm_pnet': {
-                'var_route' : [f'hcand_{channel}', 'lep1', 'decayModePNet'],
-                'ax_str'    : 'IntCategory([0,1,2,10,11], name="tau_dm_pnet", label="Tau PNet decayMode")',
-             },
-             "n_jets": {
-                'var_route' : ['n_jets'],
-                'ax_str'    : 'Integer(0, 3, name="n_j", label="Number of jets",underflow=False, overflow=False)',
-            },
-    },
-    "columns" : ['ff_weight_wj','ff_weight_qcd'],
-    "shifts"  : ["up", "nom", "down"]
     })
     
     cfg.x.dy_ptll_corrs = DotDict.wrap({
@@ -926,7 +964,7 @@ def add_run3(ana: od.Analysis,
             "main"                    : True,
         },        
     })
-
+   
     # add categories using the "add_category" tool which adds auto-generated ids
     from httcp.config.categories import add_categories
     add_categories(cfg,channel=channel)

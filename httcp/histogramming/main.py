@@ -25,13 +25,21 @@ hist = maybe_import('hist')
 def httcp_hist_producer(self: HistProducer, events: ak.Array, **kwargs) -> ak.Array:
     print('Invoking httcp hist producer')
     weight = ak.Array(np.ones(len(events), dtype=np.float32))
-    
+  
     for column in self.weight_columns:
+        if "ff_weight" not in column: 
             weight = weight * Route(column).apply(events)
     weight_dict = {}
+   
     weight_dict['no_tf'] = weight
-    weight_dict['tf_wj'] = weight * events.ff_weight_wj_nom
-    weight_dict['tf_qcd'] = weight * events.ff_weight_qcd_nom
+    procs = self.dataset_inst.get_leaf_processes()
+    is_signal = any([p.has_tag('signal') for p in procs])
+    if is_signal:
+        weight_dict['tf_wj'] = weight
+        weight_dict['tf_qcd'] = weight
+    else:
+        weight_dict['tf_wj'] = weight * events.ff_weight.ff_wj
+        weight_dict['tf_qcd'] = weight * events.ff_weight.ff_qcd
     return events, weight_dict
 
 @httcp_hist_producer.init
@@ -41,19 +49,22 @@ def httcp_hist_init(self: HistProducer) -> None:
     do_drop = pattern_matcher(self.drop_weights) if self.drop_weights else lambda _, /: False
     all_weights = self.config_inst.x.event_weights.copy()
     all_weights.update(self.dataset_inst.x('event_weights', {}))
-    
-    for the_weight in self.config_inst.x.fake_factor_method.columns:
-        self.uses.add(the_weight + '*')
-        
-    if self.dataset_inst.is_data: pass
+    if self.dataset_inst.is_data: 
+        self.uses.add('ff_weight.ff_qcd')
+        self.uses.add('ff_weight.ff_wj')
+        self.shifts |= {shift_inst.name for shift_inst in all_weights['ff_weight_qcd']}
+        self.shifts |= {shift_inst.name for shift_inst in all_weights['ff_weight_wj']}
     else: 
         for weight_name, shift_insts in all_weights.items():
             if not do_keep(weight_name) or do_drop(weight_name):
                 continue
-            self.weight_columns.add(weight_name)
-            self.uses.add(weight_name)
+            if 'ff_weight' in weight_name:
+                self.uses.add('ff_weight.ff_qcd')
+                self.uses.add('ff_weight.ff_wj')
+            else:
+                self.weight_columns.add(weight_name)
+                self.uses.add(weight_name)
             self.shifts |= {shift_inst.name for shift_inst in shift_insts}
-
 @httcp_hist_producer.create_hist
 def httcp_create_hist(self: HistProducer, variables: list[od.Variable], task: law.Task, **kwargs) -> dict:
     """
@@ -119,7 +130,7 @@ def default_post_process_hist(self: HistProducer, h_dict: dict, task: law.Task) 
 
 @cf_default.hist_producer(keep_weights=None,
                           skip_compatibility_check=True, 
-                          drop_weights={"normalization_weight_inclusive"})
+                          drop_weights={"normalization_weight_inclusive"}) #TODO: remove ff weights from evaluation
 def ff_hist_producer(self: HistProducer, events: ak.Array, **kwargs) -> ak.Array:
     print('Invoking data-driven method hist producer')
     weight = ak.Array(np.ones(len(events), dtype=np.float32))

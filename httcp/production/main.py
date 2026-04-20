@@ -22,12 +22,13 @@ from httcp.production.met_recoil import gen_boson, met_recoil
 from httcp.production.dilepton_features import hcand_fields
 
 from httcp.production.phi_cp import phi_cp
-from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split,gen_lep_fields
+from httcp.production.aux_columns import jet_pt_def,jets_taggable, number_b_jet, pion_energy_split,gen_lep_fields,mtt_features
 from httcp.production.top_pt_weight import top_pt_weight, gen_parton_top
 from httcp.production.ip_corrector import ip_correction,ip_sig_correction
 from httcp.production.bdt_score import hcp_bdt_score
 from httcp.production.fastMTT import fastMTT
 from httcp.production.stitching_weights import stitching_weight
+from httcp.production.theor_weight import theor_unc
 
 np = maybe_import("numpy")
 ak = maybe_import("awkward")
@@ -46,7 +47,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         trigger_weight_mutau,
         muon_weight,
         tau_weight,
-        electron_weight,
+        #electron_weight,
         genZ,
         zpt_weight,
         gen_boson,
@@ -72,6 +73,8 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         phi_cp,
         filter_weight,
         stitching_weight,
+        theor_unc,
+        #mtt_features,
         "luminosityBlock"
         },
     produces={
@@ -82,7 +85,7 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         muon_weight,
         get_mc_weight,
         tau_weight,
-        electron_weight,
+        #electron_weight,
         genZ,
         zpt_weight,
         gen_boson,
@@ -105,6 +108,8 @@ set_ak_column_i32 = functools.partial(set_ak_column, value_type=np.int32)
         phi_cp,
         filter_weight,
         stitching_weight,
+        theor_unc,
+        #mtt_features,
     },
     # whether weight producers should be added and called
     produce_weights=True,
@@ -136,6 +141,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
     print("Producing Hcand features...")
     events = self[hcand_fields](events, **kwargs) 
     events = self[fastMTT](events,**kwargs)
+    #events = self[mtt_features](events,**kwargs)
     if self.dataset_inst.is_mc:
         
         print("Producing Gen weights...")    
@@ -166,8 +172,8 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         print("Producing Muon weights...")
         events = self[muon_weight](events,do_syst = True, **kwargs)
         
-        print("Producing Electron weights...")
-        events = self[electron_weight](events,do_syst = True, **kwargs)
+        #print("Producing Electron weights...")
+        #events = self[electron_weight](events,do_syst = True, **kwargs)
         
         print("Producing Tau weights...")
         events = self[tau_weight](events,do_syst = True, **kwargs)
@@ -178,8 +184,7 @@ def main(self: Producer, events: ak.Array, **kwargs) -> ak.Array:
         print("Producing GenPartonTop...")
         events = self[gen_parton_top](events, **kwargs)
         events = self[top_pt_weight](events, **kwargs)
-    
-    
+        events = self[theor_unc](events, **kwargs)
     #Assume that the corrections are done, now we can evaluate bdt scores and produce parameters of interest
     print("Producing bdt scores...")
     events = self[hcp_bdt_score](events, **kwargs)

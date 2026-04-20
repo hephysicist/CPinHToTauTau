@@ -29,11 +29,18 @@ def pion_mask(tauprod): return np.abs(tauprod.pdgId) == 211
 def get_single_part(array: ak.Array, idx: int) -> ak.Array:
     return ak.firsts(array[:,idx:idx+1])
 
+def make_boost(vecs_p4, boostvec_=None):
+    # Create a dictionary to store boosted variables (they are defined with upper case names)
+    zmf_vars = {}
+    if boostvec_ is None:
+        boostvec_ = vecs_p4['p1'].add(vecs_p4['p2'])
+    for var in vecs_p4.keys():
+        zmf_vars[var.upper()] = vecs_p4[var].boostCM_of_p4(boostvec_)
+    return zmf_vars
 
 def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     PVBS        = events.PVBS
     if pair_decay_ch.endswith("_gen"):
-        #from IPython import embed; embed()
         tau = events.gen_lep.lep1
         tauprod = events.gentau_decay_prods_mutau_lep1 
         muon = events.gen_lep.lep0
@@ -213,9 +220,14 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
     ip2 = ak.drop_none(ak.mask(ip2, final_mask))
     ch1 = ak.drop_none(ak.mask(ch1, final_mask))
 
-    if pair_decay_ch.startswith("mu_pi"):
+    # if pair_decay_ch.startswith("mu_pi_Emu_cut"):
+    #     mtt_lep = events.hcand_mutau.fastMTT_BW
+    #     tau0 = ak.drop_none(ak.mask(get_lep_p4(mtt_lep.lep0), final_mask))
+    #     beta_tau = tau0.boostvec 
+    #     mu_boosted = p1.boost(-beta_tau)
+    #     do_phase_shift = ak.fill_none(mu_boosted.E < tau0.m/5,False)
+    if pair_decay_ch.startswith("mu_a1_3pr") or (pair_decay_ch.startswith("mu_pi") and ('Epi_cut' not in pair_decay_ch)):
         do_phase_shift = ak.zeros_like(r1.energy, dtype=np.bool_) 
-
     else:
         do_phase_shift = ((p2.energy - r2.energy)/(p2.energy + r2.energy)) < 0
 
@@ -224,14 +236,7 @@ def prepare_acop_vecs(events: ak.Array, pair_decay_ch):
         vecs_p4[var] = eval(var)
     return vecs_p4, do_phase_shift, ch1, theta_gj, theta_max, theta_rot, dsvpv
 
-def make_boost(vecs_p4, boostvec_=None):
-    # Create a dictionary to store boosted variables (they are defined with upper case names)
-    zmf_vars = {}
-    if boostvec_ is None:
-        boostvec_ = vecs_p4['p1'].add(vecs_p4['p2'])
-        for var in vecs_p4.keys():
-            zmf_vars[var.upper()] = vecs_p4[var].boostCM_of_p4(boostvec_)
-    return zmf_vars
+
 
 
 def get_acop_angle(vecs_p4, do_phase_shift, ch1):
@@ -305,6 +310,7 @@ def phi_cp(
         **kwargs
 ) -> ak.Array:
     channels = ['mu_pi',
+                #'mu_pi_Emu_cut',
                 'mu_rho',
                 'mu_a1_1pr',
                 'mu_a1_3pr_dp',
