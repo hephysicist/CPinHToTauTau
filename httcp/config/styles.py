@@ -46,7 +46,7 @@ def setup_plot_styles(config: od.Config) -> None:
             }
     }
     annotate = {
-        "fontsize": 18, "style": "italic", "xycoords": "axes fraction", "xy": (0.035, 0.955),
+        "fontsize": 18, "style": "italic", "xycoords": "axes fraction",
     }
 
     # wide legend
@@ -57,7 +57,7 @@ def setup_plot_styles(config: od.Config) -> None:
         "ncols": 2, "loc": "upper right", "cf_entries_per_column": legend_entries_per_column, "cf_short_labels": True,
     }
     annotate_wide = annotate | {
-        "xy": (0.035, 0.765),
+        "xy": (0.035, 0.955),
     }
 
     # wide extended legend, same as wide legend except

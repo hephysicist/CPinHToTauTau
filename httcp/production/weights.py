@@ -250,12 +250,11 @@ def electron_weight_setup(
         'event', 'hcand_*',
     },
     produces={
-        f"tau_weight_{shift}"
-        for shift in ["nom", "up", "down"]
+        f"tau_weight*"
     },
     mc_only=True,
 )
-def tau_weight(self: Producer, events: ak.Array, do_syst: bool, **kwargs) -> ak.Array:
+def tau_weight(self: Producer, events: ak.Array, do_syst=True, **kwargs) -> ak.Array:
     """
     Producer for tau scale factors derived by the TAU POG. Requires an external file in the
     config under ``tau_correction``:
@@ -271,85 +270,91 @@ def tau_weight(self: Producer, events: ak.Array, do_syst: bool, **kwargs) -> ak.
     https://twiki.cern.ch/twiki/bin/view/CMS/TauIDRecommendationForRun2?rev=113
     https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/849c6a6efef907f4033715d52290d1a661b7e8f9/POG/TAU
     """
-
-    #Helper function to deal with the case when two taus exist at the events. In that case one should multiply sf values to get the sf per event
-    shape_sf = lambda sf: ak.prod(ak.unflatten(sf, 
-                                            ak.num(events.Tau.pt, axis=1)), 
-                                  axis=1, 
-                                  mask_identity=False)
     
-    #Make masks for each channel
-    shifts = ["nom"]
-    if  do_syst: shifts=[*shifts,"up", "down"]         
-    sf_values = {}
-
-    channels = self.config_inst.channels.names()
-    ch_objects = self.config_inst.x.ch_objects
-    for shift in shifts:
-        sf_values = np.ones_like(events.event, dtype=np.float32)
-        for ch_str in channels:
-            wp_vs_e   = self.config_inst.x.deep_tau.vs_e.tautau
-            wp_vs_jet = self.config_inst.x.deep_tau.vs_jet.tautau
-            wp_vs_mu  = self.config_inst.x.deep_tau.vs_mu.tautau
-            if ch_str=='mutau':
-                wp_vs_e   = self.config_inst.x.deep_tau.vs_e.mutau
-                wp_vs_jet = self.config_inst.x.deep_tau.vs_jet.mutau
-                wp_vs_mu  = self.config_inst.x.deep_tau.vs_mu.mutau
-            elif ch_str=='etau':
-                wp_vs_e   = self.config_inst.x.deep_tau.vs_e.etau
-                wp_vs_jet = self.config_inst.x.deep_tau.vs_jet.etau
-                wp_vs_mu  = self.config_inst.x.deep_tau.vs_mu.etau
-            hcand = events[f'hcand_{ch_str}']
-            for lep in [field for field in hcand.fields if 'lep' in field]:
-                if ch_objects[ch_str][lep]  == 'Tau':
-                    tau = hcand[lep]
-                    #Prepare flat arrays of the inputs to send into the 
-                    pt = flat_np_view(tau.pt, axis=1)
-                    eta = flat_np_view(abs(tau.eta), axis=1)
-                    dm = flat_np_view(tau.decayMode, axis=1)
-                    dm_pnet = flat_np_view(tau.decayModePNet, axis=1)
-                    genmatch = flat_np_view(tau.genPartFlav, axis=1)
-                    per_ch_sf = np.ones_like(pt, dtype=np.float32)
-                    args_vs_e = lambda mask, syst : (eta[mask],
-                                                     dm[mask],
-                                                     genmatch[mask],
-                                                     wp_vs_e,
-                                                     syst)   
-                    args_vs_mu = lambda mask, syst : (eta[mask],
-                                                      genmatch[mask],
-                                                      wp_vs_mu,
-                                                      syst)                      
-                    args_vs_jet = lambda mask, syst : (pt[mask],
-                                                       dm_pnet[mask],
-                                                       genmatch[mask],
-                                                       wp_vs_jet,
-                                                       wp_vs_e,
-                                                       syst,
-                                                       "dm")
-                    
-                    tau_part_flav = {
-                        "prompt_e"  : 1,
-                        "prompt_mu" : 2,
-                        "tau->e"    : 3,
-                        "tau->mu"   : 4,
-                        "tau_had"   : 5
-                    }
-                    #Calculate scale factors for tau vs electron classifier 
-                    masked_dm_pnet = (dm_pnet == 0) | (dm_pnet == 1) | (dm_pnet == 2) | (dm_pnet == 10) | (dm_pnet == 11)
-                    masked_dm = (dm == 0) | (dm == 1) | (dm == 10) | (dm == 11)
-                    e_mask = ((genmatch == tau_part_flav["prompt_e"]) | (genmatch == tau_part_flav["tau->e"])) & masked_dm
-                    per_ch_sf[e_mask] *= self.id_vs_e_corrector.evaluate(*args_vs_e(e_mask,shift))
-                    #Calculate scale factors for tau vs muon classifier 
-                    mu_mask = ((genmatch == tau_part_flav["prompt_mu"]) | (genmatch == tau_part_flav["tau->mu"])) & masked_dm
-                    per_ch_sf[mu_mask] *= self.id_vs_mu_corrector.evaluate(*args_vs_mu(mu_mask,shift)) 
-                    #Calculate tau ID scale factors
-                    tau_mask = (genmatch == tau_part_flav["tau_had"]) & masked_dm_pnet
-                    per_ch_sf[tau_mask] *= self.id_vs_jet_corrector.evaluate(*args_vs_jet(tau_mask,shift))
-                    ch_mask = ak.num(tau, axis=1) > 0
-                    shaped_sf = ak.unflatten(per_ch_sf, ak.num(tau.pt, axis=1))
-                    sf_values = sf_values * ak.fill_none(ak.firsts(shaped_sf,axis=1), 1.)       
-        events = set_ak_column(events,f"tau_weight_{shift}",sf_values,value_type=np.float32)
-                                    
+    sf_values = np.ones_like(events.event, dtype=np.float32)
+    wp_vs_e   = self.config_inst.x.deep_tau.vs_e.mutau
+    wp_vs_jet = self.config_inst.x.deep_tau.vs_jet.mutau
+    wp_vs_mu  = self.config_inst.x.deep_tau.vs_mu.mutau
+    tau  = events.hcand_mutau.lep1
+    
+    #Prepare flat arrays of the inputs to send into the 
+    pt = flat_np_view(tau.pt, axis=1)
+    eta = flat_np_view(abs(tau.eta), axis=1)
+    dm = flat_np_view(tau.decayMode, axis=1)
+    dm_pnet = flat_np_view(tau.decayModePNet, axis=1)
+    genmatch = flat_np_view(tau.genPartFlav, axis=1)
+    
+    sf_per_type = {}
+    for the_type in ['vs_e','vs_mu','id']:
+        sf_per_type[the_type] = np.ones_like(pt, dtype=np.float32)
+    args_vs_e = lambda mask, syst : (eta[mask],
+                                        dm[mask],
+                                        genmatch[mask],
+                                        wp_vs_e,
+                                        syst)   
+    args_vs_mu = lambda mask, syst : (eta[mask],
+                                        genmatch[mask],
+                                        wp_vs_mu,
+                                        syst)                      
+    args_vs_jet = lambda mask, syst : (pt[mask],
+                                        dm_pnet[mask],
+                                        genmatch[mask],
+                                        wp_vs_jet,
+                                        wp_vs_e,
+                                        syst,
+                                        "dm")
+    
+    tau_part_flav = {
+        "prompt_e"  : 1,
+        "prompt_mu" : 2,
+        "tau->e"    : 3,
+        "tau->mu"   : 4,
+        "tau_had"   : 5
+    }
+    print('Calculating nominal tau weights...')
+    #Calculate scale factors for tau vs electron classifier 
+    dm_pnet_mask = (dm_pnet == 0) | (dm_pnet == 1) | (dm_pnet == 2) | (dm_pnet == 10) | (dm_pnet == 11)
+    masked_dm = (dm == 0) | (dm == 1) | (dm == 10) | (dm == 11)
+    e_mask = ((genmatch == tau_part_flav["prompt_e"]) | (genmatch == tau_part_flav["tau->e"])) & masked_dm
+    
+    sf_per_type['vs_e'][e_mask] = self.id_vs_e_corrector.evaluate(*args_vs_e(e_mask,'nom'))
+    
+    #Calculate scale factors for tau vs muon classifier 
+    mu_mask = ((genmatch == tau_part_flav["prompt_mu"]) | (genmatch == tau_part_flav["tau->mu"])) & masked_dm
+    sf_per_type['vs_mu'][mu_mask] = self.id_vs_mu_corrector.evaluate(*args_vs_mu(mu_mask,'nom')) 
+    
+    #Calculate tau ID scale factors
+    tau_incl_mask = (genmatch == tau_part_flav["tau_had"]) & dm_pnet_mask
+    sf_per_type['id'][tau_incl_mask] = self.id_vs_jet_corrector.evaluate(*args_vs_jet(tau_incl_mask,'default'))
+    #Merge scale factors from different sourses
+    sf_per_ch = sf_per_type['vs_e']*sf_per_type['vs_mu']*sf_per_type['id']
+    
+    sf_values = sf_values * sf_per_ch  
+    events = set_ak_column(events,f"tau_weight",sf_values,value_type=np.float32)
+    print('Calculating tau weight shifts...')
+    if do_syst:
+        shifts = [s for s in self.config_inst.shifts if s.has_tag('tauID')]
+        for the_shift in shifts:
+            print(f"shift: {the_shift.name}")
+            #Calculate mask according to the the decay mode of the systematic
+            dm2mask = the_shift.aux['dm']
+            if dm2mask >= 0: #for syst it is set to -1
+                dm_pnet_mask = (dm_pnet == dm2mask)
+            else:
+                dm_pnet_mask = (dm_pnet == 0) | (dm_pnet == 1) | (dm_pnet == 2) | (dm_pnet == 10) | (dm_pnet == 11)
+            
+            # stat uncs are binned in two bins: 1: pt <= 70, 2: pt > 70
+            if 'stat1' in the_shift.name: pt_mask = (pt <= 70) 
+            elif'stat2' in the_shift.name:  pt_mask = (pt > 70)
+            else: pt_mask = (pt > 0) #in case of of syst unc, no pt cut is applied
+                
+            #Calculate tau ID scale factors
+            tau_mask = (genmatch == tau_part_flav["tau_had"]) & dm_pnet_mask & pt_mask
+            shift_name = the_shift.name.replace('tauID_','')
+            tmp_sf = sf_per_type['id'].copy()
+            tmp_sf[tau_mask] = self.id_vs_jet_corrector.evaluate(*args_vs_jet(tau_mask,shift_name))
+            sf_values = sf_per_type['vs_e']*sf_per_type['vs_mu']*tmp_sf
+            events = set_ak_column(events,f"tau_weight_{the_shift.name}",sf_values,value_type=np.float32)                                
     return events
 
 @tau_weight.requires
@@ -384,6 +389,7 @@ def tau_weight_setup(
     self.id_vs_e_corrector      = cs1[f"{tagger_name}VSe"]
     self.id_vs_mu_corrector     = cs1[f"{tagger_name}VSmu"]
     self.id_vs_jet_corrector     = cs2[f"tau_sf_pt-dm_{tagger_name}VSjet_{year}_{tag}"]
+    
 
 @producer(
     uses={

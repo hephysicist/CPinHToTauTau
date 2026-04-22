@@ -741,28 +741,50 @@ def add_run3(ana: od.Analysis,
  
     cfg.add_shift(name="nominal", id=0)
 
-    # for i, (match, dm) in enumerate(itertools.product(["jet", "e"], [0, 1, 2, 10, 11])):
-    #     cfg.add_shift(name=f"tec_{match}_dm{dm}_up", id=40 + 2 * i, type="shape", tags={"tec"})
-    #     cfg.add_shift(name=f"tec_{match}_dm{dm}_down", id=41 + 2 * i, type="shape", tags={"tec"})
-    #     add_shift_aliases(
-    #         cfg,
-    #         f"tec_{match}_dm{dm}",
-    #         {
-    #             "Tau.pt": "Tau.pt_{name}",
-    #             "Tau.mass": "Tau.mass_{name}",
-    #             f"{cfg.x.met_name}.pt": f"{cfg.x.met_name}.pt_{{name}}",
-    #             f"{cfg.x.met_name}.phi": f"{cfg.x.met_name}.phi_{{name}}",
-    #         },
-    #     )
+
+    ##################
+    ### Tau shifts ###
+    ##################
+    
+    cfg.x.tau_syst_names = {
+        'stat1_dm' : [0,1,2,10,11], #PNet decay modes 
+        'stat2_dm': [0,1,2,10,11], #PNet decay modes 
+        }
+    shift_id = 800
+    for the_name, dms in cfg.x.tau_syst_names.items():
+        for the_dm in dms:
+            cfg.add_shift(name=f"tauID_{the_name}{the_dm}_up", id=shift_id+1, type="shape", tags={"tauID"}, aux={"dm": the_dm})
+            cfg.add_shift(name=f"tauID_{the_name}{the_dm}_down", id=shift_id+2, type="shape", tags={"tauID"}, aux={"dm": the_dm})
+            shift_id+=2
+            add_shift_aliases(
+                cfg,
+                f"tauID_{the_name}{the_dm}",
+                {
+                    "tau_weight" : f"tau_weight_tauID_{the_name}{the_dm}_{{direction}}"  
+                },
+    )
+    era = f"Run3_{year}"+tags['short_tag'] #i.e. Run3_ 2022EE
+    cfg.add_shift(name=f"tauID_syst_{era}_up", id=shift_id+1, type="shape", tags={"tauID"}, aux={"dm": -1})
+    cfg.add_shift(name=f"tauID_syst_{era}_down", id=shift_id+2, type="shape", tags={"tauID"}, aux={"dm": -1})
+    shift_id+=2
+    add_shift_aliases(
+        cfg,
+        f"tauID_syst_{era}",
+        {
+            "tau_weight" : f"tau_weight_tauID_syst_{era}_{{direction}}"  
+        },
+    )
+    
+    ###################
+    ### Muon shifts ###
+    ###################
+    
+    
     
     cfg.add_shift(name="mu_up", id=3, type="shape")
     cfg.add_shift(name="mu_down", id=4, type="shape")
     add_shift_aliases(cfg, "mu", {"muon_weight": "muon_weight_{direction}"})
   
-    # cfg.add_shift(name="top_pt_up", id=10, type="shape")
-    # cfg.add_shift(name="top_pt_down", id=11, type="shape")
-    # add_shift_aliases(cfg, "top_pt", {"top_pt_weight": "top_pt_weight_{direction}"}) 
-    
     cfg.x.ip_sig_syst = ['prompt_etaLt1p0_stat',
                    'prompt_eta1p0to1p6_stat',
                    'prompt_etaGt1p6_stat',
@@ -811,7 +833,7 @@ def add_run3(ana: od.Analysis,
         "normalization_weight": [],
         "filter_weight": [],
         #"mc_weight":[],
-        "tau_weight_nom": [],
+        "tau_weight": get_shifts("tauID_*"),
         "pu_weight": [],
         "tauspinner_weight": [],
         "zpt_weight":[],
