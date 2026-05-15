@@ -35,9 +35,9 @@ def setup_plot_styles(config: od.Config) -> None:
     }
     ratio = {
         "yloc" : "center",
-        "ylim" : [0.75, 1.25],
-        "yticks" : np.linspace(0.8,1.2,3),
-        "yminorticks" : np.linspace(0.8,1.2,10),
+        "ylim" : [0.5, 1.6],
+        "yticks" : np.linspace(0.5,1.5,3),
+        "yminorticks" : np.linspace(0.5,1.5,10),
         "grid" : {
             'which': "minor",
             'axis': "y",
@@ -91,7 +91,7 @@ def setup_plot_styles(config: od.Config) -> None:
     }
 
     config.x.default_custom_style_config = "wide_legend"
-    #config.x.default_blinding_threshold = 0
+    config.x.default_blinding_threshold = 1e-4
 
 
 def legend_entries_per_column(ax, handles: list, labels: list, n_cols: int) -> list[int]:

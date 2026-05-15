@@ -51,8 +51,8 @@ def add_ff_config(config: od.Config,
                         'nj',str(the_nj)))
         syst_names.append('_'.join((the_name, syst_name)))
         
-        config.add_shift(name='_'.join((the_name, syst_name, "up")) , id=1000 + 2 * i, type="shape", tags={"ff"})
-        config.add_shift(name= '_'.join((the_name, syst_name, "down")), id=1001 + 2 * i, type="shape", tags={"ff"})
+        config.add_shift(name='_'.join((the_name, syst_name, "up")) , id=1000 + 2 * i, type="shape", tags={"ff"}, aux={'dm':the_dm})
+        config.add_shift(name= '_'.join((the_name, syst_name, "down")), id=1001 + 2 * i, type="shape", tags={"ff"}, aux={'dm':the_dm})
         add_shift_aliases(config, 
                           '_'.join((the_name, syst_name)),
                           {
