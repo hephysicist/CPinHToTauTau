@@ -310,7 +310,14 @@ def tau_selection(
     selected_tau_idx = ak.values_astype(selected_tau_idx, np.int32)
 
     return events, selected_tau_idx
-
+@tau_selection.init
+def tau_selection_init(self: Selector) -> None:
+    # register shifts
+    self.shifts |= {
+        shift_inst.name
+        for shift_inst in self.config_inst.shifts
+        if shift_inst.has_tag(("tes"))
+    }
 
 # ------------------------------------------------------------------------------------------------------- #
 # Jet Selection

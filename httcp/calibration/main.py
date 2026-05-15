@@ -47,6 +47,6 @@ def main(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     #Apply tau energy scale correction
         print("Performing tau energy scale correction...")
         
-        events = self[tau_energy_scale](events, **kwargs)
+        events = self[tau_energy_scale](events, do_syst=True, **kwargs)
 
     return events

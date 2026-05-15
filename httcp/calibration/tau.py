@@ -30,10 +30,13 @@ set_ak_column_f32 = functools.partial(set_ak_column, value_type=np.float32)
         f"Tau.{var}" for var in ["pt","eta","phi","mass"] 
     } | {
         f"Tau.{var}_no_tes" for var in ["pt","mass"]
-        },
+    } | {f"Tau.{var}_TES_dm{dm}_{dir}" 
+         for var in ["pt","eta","phi","mass"]
+         for dm in [0,1,2,10]
+         for dir in ['up','down']},
     mc_only=True,
 )
-def tau_energy_scale(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
+def tau_energy_scale(self: Calibrator, events: ak.Array, do_syst=False, **kwargs) -> ak.Array:
     # fail when running on data
     if self.dataset_inst.is_data:
         raise ValueError("attempt to apply tau energy corrections in data")
@@ -79,6 +82,8 @@ def tau_energy_scale(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
     )
     
     tau3vec = tau_4vec.pvec
+    
+    # Produce nominal correction
     tau3vec_corr = tau3vec * tes_nom
     mass_corr = np.where((dm != 0),
                          mass * tes_nom, 
@@ -107,6 +112,28 @@ def tau_energy_scale(self: Calibrator, events: ak.Array, **kwargs) -> ak.Array:
             phi - 2 * np.pi * np.sign(phi),
             phi)
     events = set_ak_column_f32(events, "Tau.phi", phi_corr)
+    if do_syst:
+        for syst_dir in ['up','down']:
+            tes_var = np.ones_like(pt, dtype=np.float32)
+            tes_var[mask] = self.tes_corrector.evaluate(*tes_args(events, mask,deep_tau, syst_dir)) 
+            for the_name, the_dm in self.config_inst.x.tes_names.items():
+                tau3vec_corr = tau3vec * np.where(dm == the_dm, tes_var, tes_nom)
+                if the_dm == 0:
+                    mass_corr = mass
+                else:
+                    mass_corr = mass * np.where(dm == the_dm, tes_var, tes_nom)
+                
+                corr_tau_p4 = ak.zip(
+                    {
+                        "x": tau3vec_corr.x,
+                        "y": tau3vec_corr.y,
+                        "z": tau3vec_corr.z,
+                        "mass": mass_corr,
+                    },
+                    with_name="PtEtaPhiMLorentzVector",
+                )
+                for var in ['pt', 'eta','phi', 'mass']:
+                    events = set_ak_column_f32(events, f"Tau.{var}_{the_name}_{syst_dir}", ak.unflatten(np.asarray(getattr(corr_tau_p4,var)), arr_shape))
     return events
 
 @tau_energy_scale.requires

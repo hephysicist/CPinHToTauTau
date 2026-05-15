@@ -278,12 +278,55 @@ def add_run3(ana: od.Analysis,
     # process groups for conveniently looping over certain processs
     # (used in wrapper_factory and during plotting)
     cfg.x.process_groups = {
-        #"data" : ["data_mu", "data_tau","data_e"],
-        #"vv"   : ["ww", "wz", "zz"],
-        #"tt"   : ["tt_sl","tt_dl","tt_fh"],
-        #"st"   : ["st_tchannel_tbar","st_tchannel_t","st_schannel_tbar_lep","st_schannel_t_lep",
-        #       "st_twchannel_t_fh","st_twchannel_t_sl","st_twchannel_t_dl",
-        #       "st_twchannel_tbar_sl","st_twchannel_tbar_dl","st_twchannel_tbar_fh",],
+        'signals': [
+            #ggF signal
+        "h_ggf_htt_sm_prod_sm","h_ggf_htt_sm_prod_mm","h_ggf_htt_sm_prod_cpo",
+
+        "h_ggf_htt_mm_prod_sm","h_ggf_htt_mm_prod_mm","h_ggf_htt_mm_prod_cpo",
+        "h_ggf_htt_cpo",
+        "h_ggf_htt_cpo_prod_sm","h_ggf_htt_cpo_prod_mm","h_ggf_htt_cpo_prod_cpo",
+        "h_ggf_htt_flat",
+        "h_ggf_htt_flat_prod_sm","h_ggf_htt_flat_prod_mm","h_ggf_htt_flat_prod_cpo", 
+        #VBF signal
+        "h_vbf_htt_cpo","h_vbf_htt_sm","h_vbf_htt_mm","h_vbf_htt_flat",
+        #VH signal
+        "zh_htt_cpo","zh_htt_sm","zh_htt_mm","zh_htt_flat",
+        "wh_htt_cpo","wh_htt_sm","wh_htt_mm","wh_htt_flat",
+        "wph_htt_cpo","wph_htt_sm","wph_htt_mm","wph_htt_flat",
+        "wmh_htt_cpo","wmh_htt_sm","wmh_htt_mm","wmh_htt_flat",],
+        
+        'backgrounds': [  #Drell-Yan
+        "dy_lep",
+        "dy_ll_m10to50",
+        "dy_ll_m50",
+        "dy_tt_m50",
+        #W + jets
+        "w",
+        "wj",
+        "wj_1j",
+        "wj_2j",
+        "wj_3j",
+        "wj_4j",
+        #diboson + single top
+        "vvt",
+        #diboson
+        "vv", #diboson inclusive
+        "ww",
+        "wz",
+        "zz",
+        #ttbar
+        "tt",#ttbar inclusive
+        "tt_sl",
+        "tt_dl",
+        "tt_fh",
+        #single top
+        "st",
+        "st_twchannel_t_dl",
+        "st_twchannel_t_fh",
+        "st_twchannel_t_sl",
+        "st_twchannel_tbar_dl",
+        "st_twchannel_tbar_fh",
+        "st_twchannel_tbar_sl",] 
     }
     # dataset groups for conveniently looping over certain datasets
     # (used in wrapper_factory and during plotting)
@@ -746,12 +789,14 @@ def add_run3(ana: od.Analysis,
     ### Tau shifts ###
     ##################
     
-    cfg.x.tau_syst_names = {
-        'stat1_dm' : [0,1,2,10,11], #PNet decay modes 
-        'stat2_dm': [0,1,2,10,11], #PNet decay modes 
+    ### Tau ID ###
+    cfg.x.tau_syst_types = {
+        'stat1_dm' : [0,1,2,10], #PNet decay modes 
+        'stat2_dm': [0,1,2,10], #PNet decay modes 
         }
+    cfg.x.tau_unc_names = {}
     shift_id = 800
-    for the_name, dms in cfg.x.tau_syst_names.items():
+    for the_name, dms in cfg.x.tau_syst_types.items():
         for the_dm in dms:
             cfg.add_shift(name=f"tauID_{the_name}{the_dm}_up", id=shift_id+1, type="shape", tags={"tauID"}, aux={"dm": the_dm})
             cfg.add_shift(name=f"tauID_{the_name}{the_dm}_down", id=shift_id+2, type="shape", tags={"tauID"}, aux={"dm": the_dm})
@@ -762,7 +807,8 @@ def add_run3(ana: od.Analysis,
                 {
                     "tau_weight" : f"tau_weight_tauID_{the_name}{the_dm}_{{direction}}"  
                 },
-    )
+            )
+            cfg.x.tau_unc_names[f"tauID_{the_name}{the_dm}"] = the_dm
     era = f"Run3_{year}"+tags['short_tag'] #i.e. Run3_ 2022EE
     cfg.add_shift(name=f"tauID_syst_{era}_up", id=shift_id+1, type="shape", tags={"tauID"}, aux={"dm": -1})
     cfg.add_shift(name=f"tauID_syst_{era}_down", id=shift_id+2, type="shape", tags={"tauID"}, aux={"dm": -1})
@@ -774,7 +820,26 @@ def add_run3(ana: od.Analysis,
             "tau_weight" : f"tau_weight_tauID_syst_{era}_{{direction}}"  
         },
     )
+    cfg.x.tau_unc_names[f"tauID_syst_{era}"] = -1
+    ### TES ###
     
+    cfg.x.tes_names =  {f'TES_dm{d}': d
+                      for d in [0,1,2,10]} #PNet decay modes; DM11 is not used in the analysis, but can be included in case needed 
+    for the_name,the_dm in cfg.x.tes_names.items():
+        cfg.add_shift(name=f"{the_name}_up", id=shift_id+1, type="shape", tags={"tes"}, aux={"dm": the_dm})
+        cfg.add_shift(name=f"{the_name}_down", id=shift_id+2, type="shape", tags={"tes"}, aux={"dm": the_dm})
+        shift_id+=2
+        add_shift_aliases(
+            cfg,
+            the_name,
+            {
+                "Tau.pt"    : f"Tau.pt_{the_name}_{{direction}}",
+                "Tau.eta"   : f"Tau.eta_{the_name}_{{direction}}",
+                "Tau.phi"   : f"Tau.phi_{the_name}_{{direction}}",
+                "Tau.mass"  : f"Tau.mass_{the_name}_{{direction}}",  
+            },
+        )
+        cfg.x.tau_unc_names[the_name] = the_dm
     ###################
     ### Muon shifts ###
     ###################
@@ -826,7 +891,6 @@ def add_run3(ana: od.Analysis,
     #Fake factor config and uncertainties 
     from httcp.config.ff_config import add_ff_config
     add_ff_config(cfg,channel=channel)
-   
     # event weight columns as keys in an OrderedDict, mapped to shift instances they depend on
     get_shifts = functools.partial(get_shifts_from_sources, cfg)   
     cfg.x.event_weights = DotDict({
@@ -847,51 +911,6 @@ def add_run3(ana: od.Analysis,
         "lhe_weight" : get_shifts("CMS_Scale_muR","CMS_Scale_muF"),
         "ps_weight"  : get_shifts("CMS_PS_ISR","CMS_PS_FSR"),
     })
-    #for dataset in cfg.datasets:
-        #if dataset.has_tag("ttbar"):
-        #    dataset.x.event_weights = {"top_pt_weight": get_shifts("top_pt")} 
-    # thisdir = os.path.dirname(os.path.abspath(__file__))
-    
-    # with open(os.path.join(thisdir, "jec_sources.yaml"), "r") as f:
-    #     all_jec_sources = yaml.load(f, yaml.Loader)["names"]
-
-    # for jec_source in cfg.x.jec["uncertainty_sources"]:
-    #     idx = all_jec_sources.index(jec_source)
-    #     cfg.add_shift(
-    #         name=f"jec_{jec_source}_up",
-    #         id=5000 + 2 * idx,
-    #         type="shape",
-    #         tags={"jec"},
-    #         aux={"jec_source": jec_source},
-    #     )
-    #     cfg.add_shift(
-    #         name=f"jec_{jec_source}_down",
-    #         id=5001 + 2 * idx,
-    #         type="shape",
-    #         tags={"jec"},
-    #         aux={"jec_source": jec_source},
-    #     )
-    #     add_shift_aliases(
-    #         cfg,
-    #         f"jec_{jec_source}",
-    #         {"Jet.pt": "Jet.pt_{name}", "Jet.mass": "Jet.mass_{name}"},
-    #     )
-
-    #     if jec_source in ["Total", *cfg.x.btag_sf_jec_sources]:
-    #         # when jec_source is a known btag SF source, add aliases for btag weight column
-    #         add_shift_aliases(
-    #             cfg,
-    #             f"jec_{jec_source}",
-    #             {
-    #                 "btag_weight": f"btag_weight_jec_{jec_source}_" + "{direction}",
-    #                 "normalized_btag_weight": f"normalized_btag_weight_jec_{jec_source}_" + "{direction}",
-    #                 "normalized_njet_btag_weight": f"normalized_njet_btag_weight_jec_{jec_source}_" + "{direction}",
-    #             },
-    #         )
-
-    # cfg.add_shift(name="jer_up", id=6000, type="shape", tags={"jer"})
-    # cfg.add_shift(name="jer_down", id=6001, type="shape", tags={"jer"})
-    # add_shift_aliases(cfg, "jer", {"Jet.pt": "Jet.pt_{name}", "Jet.mass": "Jet.mass_{name}"})
     
    
     cfg.x.shift_groups = {
