@@ -8,7 +8,7 @@ args=(
         --configs $configs
         --processes $processes
         --datasets  $datasets
-        --categories  cat_mutau_sr__fake_incl__bdt_incl
+        --categories  cat_mutau_sr__prompt__bdt_incl
         
         --cf.CalibrateEvents-workflow $workflow
         --cf.CalibrateEvents-version $version

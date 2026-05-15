@@ -70,13 +70,7 @@ case $1 in
         datasets='dy_lep_madgraph'
         processes='dy_z2tautau,dy_z2mumu,dy_z2ee'
 	    categories=$categories_etau
-	    variables=$variables_etau
-        workflow='local'
-    ;;
-    "22pre_mt_lim")
-        config="run3_2022_preEE_mutau_limited"	
-        datasets='DYto2L_M_50_0J_amcatnloFXFX,DYto2Tau_MLL_50_0J_amcatnloFXFX'
-        processes='dy_ll_m50_0j,dy_tt_m50_0j'
+        processes='dy_ll_m50_0j,data'
 	    categories=$categories_mutau
         workflow='local'
     ;;

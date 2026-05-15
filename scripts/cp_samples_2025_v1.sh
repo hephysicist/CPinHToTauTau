@@ -2,7 +2,7 @@
 
 set_common_vars() {
 
-version="merge_check"
+version="apr_10"
 
 data_muoneg_2022preEE='data_muoneg_C,data_muoneg_D,'
 data_mu_2022preEE='data_mu_C,data_mu_D,data_singlemu_C,'
@@ -16,6 +16,9 @@ bkg_vv='WW,WZ,ZZ,'
 bkg_top='TbarWplusto4Q,TWminusto4Q,TbarWplusto2L2Nu,TbarWplustoLNu2Q,TWminusto2L2Nu,TWminustoLNu2Q,'
 bkg_ttbar='TTto2L2Nu,TTto4Q,TTtoLNu2Q,'
 signal='h_ggf_htt_sm_prod_sm_filtered,h_ggf_htt_mm_prod_sm_filtered,h_ggf_htt_cpo_prod_sm_filtered,h_vbf_htt_sm_filtered,h_vbf_htt_mm_filtered,h_vbf_htt_cpo_filtered'
+signal_ggh='h_ggf_htt_sm_prod_sm_filtered,h_ggf_htt_mm_prod_sm_filtered,h_ggf_htt_cpo_prod_sm_filtered'
+
+signal_sm='h_ggf_htt_sm_prod_sm_filtered,h_vbf_htt_sm_filtered,'
 
 data_egamma_2023preBPix='data_egamma_Cv123,data_egamma_Cv4,'
 data_egamma_2023postBPix='data_egamma_D,'
@@ -25,21 +28,24 @@ data_mu_2023preBPix='data_mu_Cv123,data_mu_Cv4,'
 data_mu_2023postBPix='data_mu_D,'
 
 
-signal_procs='h_ggf_htt_sm_prod_sm,h_ggf_htt_mm_prod_sm,h_ggf_htt_cpo_prod_sm' #,h_vbf_htt_sm,h_vbf_htt_mm,h_vbf_htt_cpo'
+signal_procs='h_ggf_htt_sm_prod_sm,h_ggf_htt_mm_prod_sm,h_ggf_htt_cpo_prod_sm,h_vbf_htt_sm,h_vbf_htt_mm,h_vbf_htt_cpo'
+signal_procs_ggh='h_ggf_htt_sm_prod_sm,h_ggf_htt_mm_prod_sm,h_ggf_htt_cpo_prod_sm'
+signal_procs_vbf='h_vbf_htt_sm,h_vbf_htt_mm,h_vbf_htt_cpo'
+signal_procs_sm='h_ggf_htt_sm_prod_sm,h_vbf_htt_sm'
 
 case $1 in
 
 ##############################
-####### Combined datasets ############
+####### Combined datasets ####
 ##############################
-"22and23_mt_")
+"22and23_mt_sm")
         configs="run3_2022_preEE_mutau,run3_2022_postEE_mutau,run3_2023_preBPix_mutau,run3_2023_postBPix_mutau"
-        bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar"
+        bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal_sm"
         datasets="$data_mu_2022preEE${bkgs}:"
         datasets="${datasets}$data_mu_2022postEE${bkgs}:"
         datasets="${datasets}$data_mu_2023preBPix${bkgs}:"
         datasets="${datasets}$data_mu_2023postBPix${bkgs}"
-        processes='dy_tt_m50,dy_ll_m50,vv,tt,st,wj,data'
+        processes="$signal_procs_sm,dy_tt_m50,dy_lep,vv,tt,st,w,data"
         workflow='htcondor'
      ;;
 "22and23_mt")
@@ -49,13 +55,23 @@ case $1 in
         datasets="${datasets}$data_mu_2022postEE${bkgs}:"
         datasets="${datasets}$data_mu_2023preBPix${bkgs}:"
         datasets="${datasets}$data_mu_2023postBPix${bkgs}"
-        processes="$signal_procs,dy_tt_m50,dy_lep,vv,tt,st,wj,data"
+        processes="$signal_procs,dy_tt_m50,dy_lep,vv,tt,st,w,data"
+        workflow='htcondor'
+     ;;
+"22and23_mt_nosig")
+        configs="run3_2022_preEE_mutau,run3_2022_postEE_mutau,run3_2023_preBPix_mutau,run3_2023_postBPix_mutau"
+        bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar"
+        datasets="$data_mu_2022preEE${bkgs}:"
+        datasets="${datasets}$data_mu_2022postEE${bkgs}:"
+        datasets="${datasets}$data_mu_2023preBPix${bkgs}:"
+        datasets="${datasets}$data_mu_2023postBPix${bkgs}"
+        processes="dy_tt_m50,dy_lep,vv,tt,st,w,data"
         workflow='htcondor'
      ;;
 "22and23_mt_sig")
         configs="run3_2022_preEE_mutau,run3_2022_postEE_mutau,run3_2023_preBPix_mutau,run3_2023_postBPix_mutau"
-        datasets="$signal:$signal:$signal:$signal"
-        processes="$signal_procs"
+        datasets="$signal_ggh:$signal_ggh:$signal_ggh:$signal_ggh"
+        processes="$signal_procs_ggh"
         workflow='htcondor'
       ;;
 ##############################
@@ -65,7 +81,7 @@ case $1 in
         configs="run3_2022_preEE_mutau"
         bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal"
         datasets="$data_mu_2022preEE${bkgs}"
-        processes="$signal_procs",'dy_tt_m50,dy_ll_m50,vv,tt,st,wj,data'
+        processes="$signal_procs",'dy_tt_m50,dy_ll_m50,vv,tt,st,w,data'
         workflow='htcondor'
       ;; 
 "22pre_mt_sim")
@@ -77,8 +93,8 @@ case $1 in
       ;; 
 "22pre_mt_lim")
         configs="run3_2022_preEE_mutau_limited"	
-        datasets='DYto2Tau_MLL_50_0J_amcatnloFXFX'
-        processes='dy_tt_m50'
+        datasets='data_mu_C,WtoLNu_madgraphMLM'
+        processes='h_ggf_htt_sm_prod_sm,dy_lep,vv,tt,st,w,data'
         workflow='local'
       ;;
 "22pre_mt_sig")
@@ -94,23 +110,30 @@ case $1 in
         configs="run3_2022_postEE_mutau"
         bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal"
         datasets="$data_mu_2022postEE${bkgs}"
-        processes="$signal_procs",'dy_tt_m50,dy_ll_m50,vv,tt,st,wj,data'
+        processes="$signal_procs",'dy_tt_m50,dy_ll_m50,vv,tt,st,w,data'
+        workflow='htcondor'
+      ;; 
+"22post_mt_nosig")
+        configs="run3_2022_postEE_mutau"
+        bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar"
+        datasets="$data_mu_2022postEE${bkgs}"
+        processes='dy_tt_m50,dy_ll_m50,vv,tt,st,w,jet_fakes,qcd,data'
         workflow='htcondor'
       ;; 
 "22post_mt_lim")
         configs="run3_2022_postEE_mutau_limited"	
-        datasets='WtoLNu_madgraphMLM' 
-        processes='wj' 
+        datasets='DYto2Tau_MLL_50_0J_amcatnloFXFX,data_mu_E' 
+        processes='dy_tt_m50,data' 
         workflow='local'
     ;;
-"22post_mt")
-        config="run3_2022_postEE_mutau"
-        data=$data_mu_2022postEE
-        signal='h_ggf_htt_sm_prod_sm_filtered,'
-      	datasets=$data$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal
-        processes='dy_tt_m50,dy_ll_m50,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,data'
-	    workflow='local'
-    ;;
+# "22post_mt")
+#         config="run3_2022_postEE_mutau"
+#         data=$data_mu_2022postEE
+#         signal='h_ggf_htt_sm_prod_sm_filtered,'
+#       	datasets=$data$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal
+#         processes='dy_tt_m50,dy_ll_m50,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,data'
+# 	    workflow='local'
+#     ;;
 ##############################
 ####### 2023preBPix ##########
 ##############################
@@ -118,23 +141,23 @@ case $1 in
         configs="run3_2023_preBPix_mutau"
         bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal"
         datasets="$data_mu_2023preBPix${bkgs}"
-        processes="$signal_procs",'dy_tt_m50,dy_ll_m50,vv,tt,st,wj,data'
+        processes="$signal_procs",'dy_tt_m50,dy_ll_m50,vv,tt,st,w,data'
         workflow='htcondor'
     ;;
 "23pre_mt_lim")
         configs="run3_2023_preBPix_mutau_limited"	
-        datasets='WtoLNu_madgraphMLM' 
-        processes='wj' 
+        datasets='WtoLNu_madgraphMLM,data_mu_Cv123' 
+        processes='w,data' 
         workflow='local'
     ;;
-"23pre_mt")
-        config="run3_2023_preBPix_mutau"
-        data=$data_mu_2023preBPix
-        signal='h_ggf_htt_sm_prod_sm_filtered,'
-      	datasets=$data$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal 
-        processes='dy_tt_m50,dy_ll_m50,vv,tt,st,wj,h_ggf_htt_sm_prod_sm,data'
-	    workflow='local'
-    ;;
+# "23pre_mt")
+#         config="run3_2023_preBPix_mutau"
+#         data=$data_mu_2023preBPix
+#         signal='h_ggf_htt_sm_prod_sm_filtered,'
+#       	datasets=$data$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal 
+#         processes='dy_tt_m50,dy_ll_m50,vv,tt,st,w,h_ggf_htt_sm_prod_sm,data'
+# 	    workflow='local'
+#     ;;
 #     ;;
 # ##############################
 # ####### 2023postBPix #########
@@ -143,7 +166,7 @@ case $1 in
         configs="run3_2023_postBPix_mutau"
         bkgs="$bkg_wj$bkg_dy$bkg_vv$bkg_top$bkg_ttbar$signal"
         datasets="$data_mu_2023postBPix${bkgs}"
-        processes="$signal_procs",'dy_tt_m50,dy_ll_m50,vv,tt,st,wj,data'
+        processes="$signal_procs",'dy_tt_m50,dy_ll_m50,vv,tt,st,w,data'
         workflow='htcondor'
       ;;
 "23post_mt_lim")

@@ -131,12 +131,12 @@ class ComputeFakeFactors(
         import matplotlib as mpl
         import correctionlib.schemav2 as cs
         from numpy import exp
-        plt.figure(dpi=200)
-        plt.rcParams.update({
-            "text.usetex": True,
-            "font.family": "monospace",
-            "font.monospace": 'Computer Modern Typewriter'
-        })
+        plt.figure(dpi=300)
+        #plt.rcParams.update({
+        #    "text.usetex": False,
+        #    "font.family": "monospace",
+        #    "font.monospace": 'Computer Modern Typewriter'
+        #})
         # preare inputs and outputs
         inputs = self.input()
         outputs = self.output()
@@ -174,7 +174,7 @@ class ComputeFakeFactors(
         def eval_formula(formula_str, popt,make_rounding=False):
                 for i,p in enumerate(popt):
                     if make_rounding:
-                        formula_str = formula_str.replace(f'p{i}', '{:.3e}'.format(p))
+                        formula_str = formula_str.replace(f'p{i}', '{:.1e}'.format(p))
                     else:
                         formula_str = formula_str.replace(f'p{i}',str(p))
                 return formula_str
@@ -234,7 +234,7 @@ class ComputeFakeFactors(
                                     p[1]*exp(p[2]*(x-p[3]))*p[2]/(1+exp(p[2]*(x-p[3])))**2,
                                     ])
                         return ders 
-                    bounds = ([0,0,-0.5,20],[0.3,0.3,-0.005,50]) 
+                    bounds = ([0,0,-0.5,10],[0.3,0.5,-0.005,50]) 
                 else:
                     formula_str = 'p0+p1/(1+exp(p2*(x-p3)))'
                     def fitf(x,p0,p1,p2,p3): 
@@ -435,7 +435,91 @@ class ComputeFakeFactors(
                     chi2_string += ','
         self.output()['fitres'].dump(chi2_string, formatter="json")
         
-        #Plot fake factors:
+        # #Plot fake factors:
+        # for h_name in ['wj', 'qcd']:
+        #     h_raw       = eval(f'{h_name}_raw')
+        #     fitres_dict = eval(f'{h_name}_fitres')
+        #     dm_axis     = h_raw.axes['tau_dm_pnet']
+        #     nj_axis     = h_raw.axes['n_j']
+        #     pt_axis     = h_raw.axes['tau_pt']
+        #     for nj in nj_axis:
+        #         print(f"Plotting 2d map for n jets = {nj}")
+        #         fig, ax = plt.subplots(figsize=(12, 8))
+                
+        #         single2d_h = h_raw[{'n_j': hist.loc(nj),
+        #                'syst': hist.loc('nominal')}]
+        #         pcm = ax.pcolormesh(*np.meshgrid(*single2d_h.axes.edges), single2d_h.view().value.T, cmap="viridis", vmin=0, vmax=0.1)
+        #         ax.set_yticks(dm_axis.centers, labels=list(map(dm_axis.bin, range(dm_axis.size))))
+        #         plt.colorbar(pcm, ax=ax)
+        #         plt.xlabel(single2d_h.axes.label[0])
+        #         plt.ylabel(single2d_h.axes.label[1])
+        #         plt.title(single2d_h.label)
+
+        #         self.output()['plots']['_'.join((h_name,'nominal',f'n_j_{str(nj)}'))].dump(fig, formatter="mpl")
+        #         for dm in dm_axis:
+        #             print(f"Plotting 1d plot for n jets = {nj}, dm = {dm}")
+        #             h1d = h_raw[{'tau_dm_pnet': hist.loc(dm),
+        #                          'n_j': hist.loc(nj),
+        #                             'syst': hist.loc('nominal')}]
+        #             fig, ax = plt.subplots(figsize=(8, 6))
+        #             mask = h1d.counts() > 0
+        #             if np.sum(mask) > 0: 
+        #                 x = h1d.axes[0].centers[mask]
+        #                 y = h1d.counts()[mask]
+        #                 xerr = (np.diff(h1d.axes[0]).flatten()/2.)[mask],
+        #                 yerr = np.sqrt(h1d.variances()).flatten()[mask],
+        #             else:
+        #                 x = h1d.axes[0].centers
+        #                 y = np.zeros_like(x)
+        #                 xerr = (np.diff(h1d.axes[0]).flatten()/2.)
+        #                 yerr = np.ones_like(y),
+                   
+        #             ax.errorbar(x, y, xerr = xerr, yerr = yerr,
+        #                             label=f"PNet decay mode = {dm}",
+        #                             marker='o',
+        #                             fmt='o',
+        #                             line=None, color='#2478B7', capsize=4)
+        #             x = fitres_dict[nj][dm]['x']
+        #             y_fitf = fitres_dict[nj][dm]['y']['nom']
+        #             y_fitf_up = fitres_dict[nj][dm]['y']['up']
+        #             y_fitf_down = fitres_dict[nj][dm]['y']['down']
+        #             ax.plot(x,
+        #                     y_fitf,
+        #                     color='#FF867B')
+        #             ax.fill_between(x, y_fitf_up,  y_fitf_down, color='#83d55f', alpha=0.5)
+        #             ax.set_ylim(0,1.3*np.max(y_fitf_up))
+        #             #from IPython import embed; embed()
+        #             ax.set_xscale('log', base=10)
+        #             from matplotlib.ticker import LogFormatter,LogLocator,ScalarFormatter
+        #             formatter = LogFormatter(labelOnlyBase=False, minor_thresholds = (5,0.8))
+        #             ax.get_xaxis().set_minor_formatter(formatter)
+        #             ax.get_xaxis().set_major_formatter(ScalarFormatter())
+        #             #ax.set_xticks(pt_axis.edges, pt_axis.edges)
+                    
+        #             ax.set_ylabel('Fake Factor')
+        #             ax.set_xlabel('Tau pT [GeV]')
+        #             ax.grid()
+        #             ax.set_title(f'Jet Fake Factors : Tau PNet Decay Mode {dm}, Njets {nj}')
+        #             ax.annotate(rf"$\frac{{\chi^2}}{{ndf}} = \frac{{{np.round(fitres_dict[nj][dm]['chi2'],2)}}}{{{fitres_dict[nj][dm]['ndf']}}}$",
+        #                         (0.8, 0.75),
+        #                         xycoords='axes fraction',
+        #                         fontsize=20)
+                    
+        #             formula_str = eval_formula(fitres['fitf_str'],fitres_dict[nj][dm]['popt'], make_rounding=True)
+                    
+        #             ax.annotate('y=' + formula_str,
+        #                         (0.01, 0.95),
+        #                         xycoords='axes fraction',
+        #                         fontsize=12)
+                    
+        #             self.output()['plots1d']['_'.join((h_name,str(dm),str(nj)))].dump(fig, formatter="mpl")
+
+        import mplhep as hep
+
+        # Set CMS style globally once (put this at the top of your file/init)
+        hep.style.use(hep.style.CMS)
+
+        # Plot fake factors:
         for h_name in ['wj', 'qcd']:
             h_raw       = eval(f'{h_name}_raw')
             fitres_dict = eval(f'{h_name}_fitres')
@@ -444,10 +528,10 @@ class ComputeFakeFactors(
             pt_axis     = h_raw.axes['tau_pt']
             for nj in nj_axis:
                 print(f"Plotting 2d map for n jets = {nj}")
-                fig, ax = plt.subplots(figsize=(12, 8))
-                
+                fig, ax = plt.subplots(figsize=(20, 20))
+
                 single2d_h = h_raw[{'n_j': hist.loc(nj),
-                       'syst': hist.loc('nominal')}]
+                    'syst': hist.loc('nominal')}]
                 pcm = ax.pcolormesh(*np.meshgrid(*single2d_h.axes.edges), single2d_h.view().value.T, cmap="viridis", vmin=0, vmax=0.1)
                 ax.set_yticks(dm_axis.centers, labels=list(map(dm_axis.bin, range(dm_axis.size))))
                 plt.colorbar(pcm, ax=ax)
@@ -455,61 +539,90 @@ class ComputeFakeFactors(
                 plt.ylabel(single2d_h.axes.label[1])
                 plt.title(single2d_h.label)
 
+                hep.cms.label(
+                    "Work in Progress",
+                    data=True,
+                    lumi=62.4,
+                    com=13.6,
+                    ax=ax,
+                )
+
                 self.output()['plots']['_'.join((h_name,'nominal',f'n_j_{str(nj)}'))].dump(fig, formatter="mpl")
+
                 for dm in dm_axis:
                     print(f"Plotting 1d plot for n jets = {nj}, dm = {dm}")
                     h1d = h_raw[{'tau_dm_pnet': hist.loc(dm),
-                                 'n_j': hist.loc(nj),
+                                'n_j': hist.loc(nj),
                                     'syst': hist.loc('nominal')}]
-                    fig, ax = plt.subplots(figsize=(8, 6))
+                    fig, ax = plt.subplots(figsize=(12, 10))
                     mask = h1d.counts() > 0
-                    if np.sum(mask) > 0: 
-                        x = h1d.axes[0].centers[mask]
-                        y = h1d.counts()[mask]
+                    if np.sum(mask) > 0:
+                        x    = h1d.axes[0].centers[mask]
+                        y    = h1d.counts()[mask]
                         xerr = (np.diff(h1d.axes[0]).flatten()/2.)[mask],
                         yerr = np.sqrt(h1d.variances()).flatten()[mask],
                     else:
-                        x = h1d.axes[0].centers
-                        y = np.zeros_like(x)
+                        x    = h1d.axes[0].centers
+                        y    = np.zeros_like(x)
                         xerr = (np.diff(h1d.axes[0]).flatten()/2.)
                         yerr = np.ones_like(y),
-                   
-                    ax.errorbar(x, y, xerr = xerr, yerr = yerr,
+
+                    ax.errorbar(x, y, xerr=xerr, yerr=yerr,
                                     label=f"PNet decay mode = {dm}",
                                     marker='o',
                                     fmt='o',
-                                    line=None, color='#2478B7', capsize=4)
-                    x = fitres_dict[nj][dm]['x']
-                    y_fitf = fitres_dict[nj][dm]['y']['nom']
-                    y_fitf_up = fitres_dict[nj][dm]['y']['up']
+                                    linestyle='none',
+                                    color='#2478B7', capsize=4)
+
+                    x           = fitres_dict[nj][dm]['x']
+                    y_fitf      = fitres_dict[nj][dm]['y']['nom']
+                    y_fitf_up   = fitres_dict[nj][dm]['y']['up']
                     y_fitf_down = fitres_dict[nj][dm]['y']['down']
-                    ax.plot(x,
-                            y_fitf,
-                            color='#FF867B')
-                    ax.fill_between(x, y_fitf_up,  y_fitf_down, color='#83d55f', alpha=0.5)
-                    ax.set_ylim(0,1.3*np.max(y_fitf_up))
-                    #from IPython import embed; embed()
+
+                    ax.plot(x, y_fitf, color='#FF867B', label='Fit')
+                    ax.fill_between(x, y_fitf_up, y_fitf_down, color='#83d55f', alpha=0.5, label='Fit uncertainty')
+
+                    ax.set_ylim(0, 1.3*np.maximum( np.max(y),  np.max(y_fitf_up)))
                     ax.set_xscale('log', base=10)
-                    from matplotlib.ticker import LogFormatter,LogLocator,ScalarFormatter
-                    formatter = LogFormatter(labelOnlyBase=False, minor_thresholds = (5,0.8))
+
+                    from matplotlib.ticker import LogFormatter, LogLocator, ScalarFormatter
+                    formatter = LogFormatter(labelOnlyBase=False, minor_thresholds=(5, 0.8))
                     ax.get_xaxis().set_minor_formatter(formatter)
                     ax.get_xaxis().set_major_formatter(ScalarFormatter())
-                    #ax.set_xticks(pt_axis.edges, pt_axis.edges)
-                    
+
                     ax.set_ylabel('Fake Factor')
                     ax.set_xlabel('Tau pT [GeV]')
-                    ax.grid()
-                    ax.set_title(f'Jet Fake Factors : Tau PNet Decay Mode {dm}, Njets {nj}')
-                    ax.annotate(rf"$\frac{{\chi^2}}{{ndf}} = \frac{{{np.round(fitres_dict[nj][dm]['chi2'],2)}}}{{{fitres_dict[nj][dm]['ndf']}}}$",
-                                (0.8, 0.75),
-                                xycoords='axes fraction',
-                                fontsize=20)
-                    
-                    formula_str = eval_formula(fitres['fitf_str'],fitres_dict[nj][dm]['popt'], make_rounding=True)
-                    
-                    ax.annotate('y=' + formula_str,
-                                (0.01, 0.95),
-                                xycoords='axes fraction',
-                                fontsize=12)
-                    
-                    self.output()['plots1d']['_'.join((h_name,str(dm),str(nj)))].dump(fig, formatter="mpl")
+                    ax.grid(which='both', linestyle='--', alpha=0.4)
+                    #ax.legend(loc='upper right', fontsize=14)
+
+                    # CMS label — sits at top of axes, above the frame
+                    hep.cms.label(
+                        "Work in Progress",
+                        data=True,
+                        lumi=62.4,
+                        com=13.6,
+                        ax=ax,
+                        fontsize=22
+                    )
+
+                    ax.annotate(
+                        rf"$\frac{{\chi^2}}{{ndf}} = \frac{{{np.round(fitres_dict[nj][dm]['chi2'], 2)}}}{{{fitres_dict[nj][dm]['ndf']}}}$",
+                        (0.03, 0.78),
+                        xycoords='axes fraction',
+                        fontsize=28,
+                    )
+
+                    formula_str = eval_formula(fitres['fitf_str'], fitres_dict[nj][dm]['popt'], make_rounding=True)
+                    ax.annotate(
+                        'TF[pT]=' + formula_str.replace('(x','(pT'),
+                        (0.03, 0.87),
+                        xycoords='axes fraction',
+                        fontsize=20,
+                    )
+                    ax.annotate(
+                        f'Tau PNet Decay Mode {dm},  $N_\\mathrm{{jets}}$ = {nj}', 
+                        (0.03, 0.93),
+                        xycoords='axes fraction',
+                        fontsize=20,
+                    )
+                    self.output()['plots1d']['_'.join((h_name, str(dm), str(nj)))].dump(fig, formatter="mpl")
