@@ -1,13 +1,20 @@
 """
 Inference base models with common functionality.
 """
+from __future__ import annotations
 
 import re
 import abc
+import functools
+import dataclasses
 
+import law
 import order as od
 
-from columnflow.inference import InferenceModel
+from columnflow.inference import InferenceModel, FlowStrategy
+from columnflow.config_util import get_datasets_from_process
+from columnflow.util import DotDict
+
 
 
 class HCPModelBase(InferenceModel):
@@ -129,4 +136,26 @@ class HCPModelBase(InferenceModel):
                 f"The following systematics were not considered in the inference model: "
                 f"{', '.join(not_considered)}. Please check your configuration.",
             )
-                    
+    def process_matches(
+        self,
+        *,
+        processes: list[str]| None=None,
+        configs: list[od.Config]| None=None,
+        skip_qcd: bool = False,
+    ) -> list[str]:
+        # helper to create process patterns to match specific rules
+        patterns = []
+        # build a single regexp that matches processes and configs
+        name_parts = []
+        if processes:
+            name_parts.append(law.util.make_list(processes))
+        if configs:
+            #this does not work, ommiting the configs for a time-being. #TODO specify campaign_keys
+            name_parts.append([self.campaign_keys[c] for c in law.util.make_list(configs)])
+        if name_parts:
+            re_parts = [f"({'|'.join(n)})" for n in name_parts]
+            patterns.append(rf"^.*{'.*'.join(re_parts)}.*$")
+        if skip_qcd:
+            patterns.append("!QCD")
+            patterns.append("!JetFakes")
+        return patterns or None              

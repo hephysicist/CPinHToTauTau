@@ -212,7 +212,7 @@ def add_categories(config: od.Config,
 
         "tau2a1_3pr": {'selection': ["pnet_dm10","has_refit_sv"],
                         'label': f"\n mu a1 3pr",
-                        'aux'       : {'fit_var': 'phi_cp_mu_a1_3pr_dp'},
+                        'aux'       : {'fit_var': 'phi_cp_mu_a1_3pr_pv_gef'},
                         },
         })
     

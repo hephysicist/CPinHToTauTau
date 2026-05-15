@@ -17,12 +17,11 @@ class hcp_model(HCPModelBase):
     
     name = 'hcp_model'
     add_qcd = True
-    add_fakes = False
+    ff_method = True
     processes: list = []
     config_categories: list = []
     systematics: list = []
-    variable = "phi_cp_mu_a1_3pr_pv_gef"
-      
+   
     def init_proc_map(self) -> None:
         # mapping of process names in the datacard ("combine name") to configs and process names in a dict
         
@@ -68,11 +67,12 @@ class hcp_model(HCPModelBase):
             #('WH_ps_htt125',   'wh_htt_cpo'),
             #('WH_flat_htt125', 'wh_htt_flat'),
         ])
+       
         if self.add_qcd:
             name_map["QCD"] = "qcd"
-        if self.add_fakes:
-            name_map["JetFakes"] = "qcd"
-        
+            #if self.ff_method:
+            #    name_map["JetFakes"] = "jet_fakes"
+            
         self.proc_map = {}
 
         for combine_name, proc_name in name_map.items():
@@ -93,16 +93,18 @@ class hcp_model(HCPModelBase):
             "tau2a1":  'mua11pr',
             "tau2a1_3pr":'mua1'
         }
-        #for cat in ["tau2pi", "tau2rho", "tau2a1", "tau2a1_3pr"]:
-        for cat in ["tau2a1_3pr"]:
+        bkg_cat_type = 'prompt' if self.ff_method else 'fake_incl'
+        
+        for cat in ["tau2pi", "tau2rho", "tau2a1", "tau2a1_3pr"]:
+        #for cat in ["tau2a1_3pr"]:
             for bdt_reg in ["cat0","cat1","cat2"]:
-                the_cat = cfg.get_category(f"cat_{ch}_sr__fake_incl__hig__{bdt_reg}__{cat}")
+                the_cat = cfg.get_category(f"cat_{ch}_sr__{bkg_cat_type}__hig__{bdt_reg}__{cat}")
                 ch_name = ch_names[cat]
                 self.add_category(
                     f"mt_mva_higgs_{bdt_reg}_{ch_name}",
                     config_data={
                         cfg.name: self.category_config_spec(
-                            category=f"cat_{ch}_sr__fake_incl__hig__{bdt_reg}__{cat}",
+                            category=f"cat_{ch}_sr__{bkg_cat_type}__hig__{bdt_reg}__{cat}",
                             variable=the_cat.x.fit_var[0],
                             data_datasets=data_datasets)
                     },
@@ -111,14 +113,14 @@ class hcp_model(HCPModelBase):
                 )
         #Adding background categories
         for cat_name in ['gtau','fake']:
-            the_cat = cfg.get_category(f"cat_mutau_sr__fake_incl__{cat_name}")
+            the_cat = cfg.get_category(f"cat_mutau_sr__{bkg_cat_type}__{cat_name}")
             if cat_name == 'gtau': dc_name = 'tau'
             else : dc_name = cat_name
             self.add_category(
                     f"mt_mva_{dc_name}",
                     config_data={
                         cfg.name: self.category_config_spec(
-                            category=f"cat_mutau_sr__fake_incl__{cat_name}",
+                            category=f"cat_mutau_sr__{bkg_cat_type}__{cat_name}",
                             variable=the_cat.x.fit_var[0],
                             data_datasets=data_datasets,)
                     },
@@ -129,7 +131,7 @@ class hcp_model(HCPModelBase):
     def init_processes(self) -> None:
         cfg = self.config_insts[0]
         for combine_name, proc_name in self.proc_map.items():
-            is_data_driven = (proc_name == "qcd")
+            is_data_driven = (proc_name == "qcd") |  (proc_name == "jet_fakes") 
             is_signal = False
             dataset_names = []
             if not is_data_driven:
@@ -170,10 +172,63 @@ class hcp_model(HCPModelBase):
                 unc_name,
                 type=ParameterType.rate_gauss,
                 effect=lumi.get(names=unc_name, direction=("down", "up"), factor=True),
-                process=[f"*", "!QCD*"],
-                group="experiment",
+                process=["!Data*", "!QCD","!WJ"],
+                process_match_mode=all,
+                group=["experiment"],
             )
-        #from IPython import embed; embed()
+        
+        # Tau weights
+        ch2dm_mapping =  {
+            -1: '',
+            0:  'mupi',
+            1:  'murho',
+            2:  'mua11pr',
+            10: 'mua1'
+        }
+       
+        for name in cfg.x.tau_unc_names:
+            # each uncertainty only applies to specific channels
+           
+            unc_ch= ch2dm_mapping[cfg.get_shift(f"{name}_up").x.dm]
+            self.add_parameter(
+                f"CMS_{name}",
+                type=ParameterType.shape,
+                config_data={
+                    cfg.name: self.parameter_config_spec(shift_source=name),
+                },
+                category= [f"*_{unc_ch}", "mt_mva_tau", "mt_mva_fake"] if unc_ch != "" else ["*"],
+                process=["!QCD","!WJ"],
+                process_match_mode=all,
+                group=["experiment", "shape_nuisances"],
+            )
+            
+        th_uncs = ["CMS_PS_ISR","CMS_PS_FSR","CMS_Scale_muR","CMS_Scale_muF"]
+        for the_unc in th_uncs:
+            self.add_parameter(
+                the_unc,
+                type=ParameterType.shape,
+                config_data={
+                    cfg.name: self.parameter_config_spec(shift_source=the_unc),
+                },
+                category= ["*"],
+                process=["qqH*", "ggH*"],
+                #process_match_mode=all,
+                group=["theory", "shape_nuisances"],
+            )
+        for the_unc in cfg.x.ff_syst_names:
+            if "dm11" in the_unc: continue
+            unc_ch = ch2dm_mapping[cfg.get_shift(f"{the_unc}_up").x.dm]
+            self.add_parameter(
+                the_unc,
+                type=ParameterType.shape,
+                config_data={
+                    cfg.name: self.parameter_config_spec(shift_source=the_unc),
+                },
+                category= [f"*_{unc_ch}", "mt_mva_tau", "mt_mva_fake"],
+                process = ["QCD"] if 'qcd' in the_unc else ["WJ"],
+                process_match_mode=all,
+                group=["experiment", "shape_nuisances"],
+            )
             #self.add_shape_parameters()
                 
     # def add_shape_parameters(self: InferenceModel):
